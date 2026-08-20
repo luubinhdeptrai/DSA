@@ -6,7 +6,7 @@ public class Main {
     {
         BankAccount ac = new BankAccount(100);
 
-        String[] depositInputs = {"50", "abc", "-20"};
+        String[] depositInputs = {"50", "-10", "abc"};
         String[] withdrawInputs = {"30", "500"};
 
         try
