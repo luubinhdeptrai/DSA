@@ -34,15 +34,44 @@ public class Main {
 
         // System.out.println("All initial worker completed");
 
-        WorkerThread threadf = new WorkerThread("Thread 1", 10);
-        WorkerThread threads = new WorkerThread("Thread 2", 10);
+        Counter counter = new Counter();
 
-        threadf.setPriority(Thread.MIN_PRIORITY);
-        threads.setPriority(Thread.MAX_PRIORITY);
+        Thread t1 = new Thread ( () -> {
+            for (int i=0; i<10000; i++)
+            {
+                counter.increment();
+            }
+        });
 
-        threadf.start();
-        threads.start();
+        Thread t2 = new Thread ( () -> {
+            for (int i=0; i<10000; i++)
+            {
+                counter.increment();
+            }
+        });
 
+        t1.start();
+        t2.start();
+        
+        try
+        {
+            t1.join();
+        }
+        catch (InterruptedException e)
+        {
+            System.out.println( "T1: " + e.getMessage());
+        }
+
+        try 
+        {
+            t2.join();
+        }
+        catch (InterruptedException e)
+        {
+            System.out.println ("T2: " + e.getMessage());
+        }
+
+        System.out.println (counter.getCount());
 
     }
 }
