@@ -9,7 +9,7 @@ public class Counter {
         this.count = 0;
     }
 
-    public void increment()
+    public synchronized void increment()
     {
         this.count++;
     }

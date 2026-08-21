@@ -1,5 +1,8 @@
 package thread;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class Main {
     public static void main (String[] args)
     {
@@ -34,28 +37,31 @@ public class Main {
 
         // System.out.println("All initial worker completed");
 
+        /* Task 8 + 9 */
+
+
         Counter counter = new Counter();
 
-        Thread t1 = new Thread ( () -> {
+        Thread tf = new Thread ( () -> {
             for (int i=0; i<10000; i++)
             {
                 counter.increment();
             }
         });
 
-        Thread t2 = new Thread ( () -> {
+        Thread ts = new Thread ( () -> {
             for (int i=0; i<10000; i++)
             {
                 counter.increment();
             }
         });
 
-        t1.start();
-        t2.start();
+        tf.start();
+        ts.start();
         
         try
         {
-            t1.join();
+            tf.join();
         }
         catch (InterruptedException e)
         {
@@ -64,7 +70,7 @@ public class Main {
 
         try 
         {
-            t2.join();
+            ts.join();
         }
         catch (InterruptedException e)
         {
@@ -72,6 +78,22 @@ public class Main {
         }
 
         System.out.println (counter.getCount());
+
+        /* Task 10 */
+        
+        WorkerTask t1 = new WorkerTask("t1", 3);
+        WorkerTask t2 = new WorkerTask("t2", 3);
+        WorkerTask t3 = new WorkerTask("t3", 3);
+        WorkerTask t4 = new WorkerTask("t4", 3);
+
+        ExecutorService executor = Executors.newFixedThreadPool (2);
+
+        executor.submit(t1);
+        executor.submit(t2);
+        executor.submit(t3);
+        executor.submit(t4);
+
+        executor.shutdown();
 
     }
 }
