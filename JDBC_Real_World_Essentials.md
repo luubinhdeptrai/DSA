@@ -1,6 +1,6 @@
 # JDBC Real-World Essentials
 
-This guide turns foundational JDBC knowledge into the practical habits needed in plain Java projects that use PostgreSQL. It uses Java 17, Maven, JDBC, and PostgreSQL—without Spring, JPA, Hibernate, or helper libraries that hide the JDBC calls.
+This guide turns foundational JDBC knowledge into the practical habits needed in plain Java projects that use PostgreSQL. In this learning environment, Java 17 and Maven run on the host computer, while PostgreSQL runs in an official Docker container—without Spring, JPA, Hibernate, or helper libraries that hide the JDBC calls.
 
 > **Source note:** The two referenced PDFs were not included in the available workspace or attachments. Labels such as **PDF foundation** are therefore based on the detailed PDF-topic inventory supplied in the request, not on page-level inspection. **Real-world addition** marks material beyond that inventory, and **Modernization** identifies older techniques that should no longer be normal practice.
 
@@ -23,16 +23,25 @@ This guide turns foundational JDBC knowledge into the practical habits needed in
 **JDBC** means **Java Database Connectivity**. It is the standard Java API for sending SQL to a relational database and reading the results.
 
 ```text
-Java Application
-      ↓
+Java Maven application (host machine)
+        ↓
 JDBC API (`java.sql` and parts of `javax.sql`)
-      ↓
-PostgreSQL JDBC Driver (pgJDBC)
-      ↓
-PostgreSQL network protocol
-      ↓
-PostgreSQL
+        ↓
+PostgreSQL JDBC driver (pgJDBC)
+        ↓ TCP
+jdbc:postgresql://localhost:5432/jdbc_practice
+        ↓
+host port 5432
+        ↓ Docker publishes 5432:5432
+PostgreSQL container
+        ↓
+jdbc_practice database
 ```
+
+JDBC does not care whether PostgreSQL runs directly on the host, inside Docker,
+on a virtual machine, or on a remote server. It needs a reachable host, port,
+database, and valid credentials. Here, Java runs on the host, so `localhost`
+means the host's Docker-published port.
 
 For a query, data returns in the other direction:
 
@@ -89,12 +98,19 @@ import java.sql.SQLException;
 The PostgreSQL dependency supplies concrete implementations behind those interfaces. A value declared as `Connection` may internally be a pgJDBC connection object, but normal CRUD code should program against the standard interface.
 
 ```text
-Your code calls Connection.prepareStatement(...)
-                  ↓
+Your host Java code calls Connection.prepareStatement(...)
+                    ↓
 pgJDBC implementation receives the call
-                  ↓
-driver communicates with PostgreSQL
+                    ↓
+pgJDBC opens TCP to localhost:5432
+                    ↓
+Docker maps host port 5432 to container port 5432
+                    ↓
+PostgreSQL container receives the request
 ```
+
+Docker changes where the server process runs; it does not change the JDBC
+interfaces or SQL execution model.
 
 `javax.sql.DataSource` is also part of Java SE despite the `javax` package name. It is covered later as a real-world connection-factory abstraction.
 
@@ -111,7 +127,7 @@ driver communicates with PostgreSQL
 
 A JDBC driver is a library that implements JDBC contracts for a particular database. PostgreSQL needs its own driver because PostgreSQL authentication, data types, messages, and network protocol differ from other database products.
 
-The PostgreSQL driver is called **pgJDBC**. It is a pure-Java **Type 4** driver and communicates directly with PostgreSQL using PostgreSQL's native network protocol.
+The PostgreSQL driver is called **pgJDBC**. It is a pure-Java **Type 4** driver and communicates directly with PostgreSQL using PostgreSQL's native network protocol. Here, “directly” means without an ODBC bridge or middleware tier; the TCP traffic can still pass through a Docker-published port.
 
 ### The four traditional driver types
 
@@ -217,6 +233,27 @@ A normal Maven JAR is usually thin: declaring the driver does not automatically 
 
 **Common mistake:** Seeing that `mvn compile` succeeds and assuming the driver is definitely available to a separately launched `java -jar` command.
 
+Docker and pgJDBC solve different problems:
+
+```text
+Docker
+→ runs the PostgreSQL server
+
+pgJDBC Maven dependency
+→ gives the host Java process a PostgreSQL client driver
+
+Java application on host
+        ↓ java.sql API
+pgJDBC
+        ↓ TCP localhost:5432
+Docker port mapping
+        ↓
+PostgreSQL container
+```
+
+Docker does not replace pgJDBC. The container supplies the server; the Maven
+dependency supplies the Java-side driver.
+
 **Remember:** Maven manages the dependency. The driver must still be present on the runtime classpath.
 
 ---
@@ -229,11 +266,11 @@ A normal Maven JAR is usually thin: declaring the driver does not automatically 
 A JDBC URL tells `DriverManager` which driver and database endpoint to use.
 
 ```text
-jdbc:postgresql://localhost:5432/student_db
+jdbc:postgresql://localhost:5432/jdbc_practice
  │       │              │       │       │
  │       │              │       │       └─ database name
- │       │              │       └───────── TCP port
- │       │              └───────────────── hostname
+ │       │              │       └───────── published host port
+ │       │              └───────────────── host Java's destination
  │       └──────────────────────────────── PostgreSQL subprotocol
  └──────────────────────────────────────── JDBC URL prefix
 ```
@@ -242,9 +279,21 @@ jdbc:postgresql://localhost:5432/student_db
 |---|---|---|
 | Prefix | `jdbc` | A JDBC connection URL |
 | Subprotocol | `postgresql` | Selects pgJDBC |
-| Host | `localhost` | Database server is on this computer |
-| Port | `5432` | PostgreSQL's conventional default port |
-| Database | `student_db` | Specific database to connect to |
+| Host | `localhost` | Host-machine address where Docker publishes PostgreSQL |
+| Port | `5432` | Published host port; forwarded to container port `5432` |
+| Database | `jdbc_practice` | Specific database to connect to |
+
+```text
+Java application (host)
+        ↓
+localhost:5432
+        ↓
+Docker host port 5432
+        ↓ 5432:5432
+PostgreSQL container port 5432
+        ↓
+jdbc_practice
+```
 
 The general pgJDBC form is:
 
@@ -255,21 +304,37 @@ jdbc:postgresql:[//host[:port]/][database][?property=value&...]
 Credentials are separate connection properties in the examples:
 
 ```java
-String url = "jdbc:postgresql://localhost:5432/student_db";
+String url = "jdbc:postgresql://localhost:5432/jdbc_practice";
 String username = "jdbc_app";
 String password = configurationValue;
 ```
 
-`localhost` is a host, not a database name. A PostgreSQL server can contain many databases, and a database can contain schemas. Those are different levels.
+`localhost` is the host Java process's destination, not the database name. It
+works here because Compose publishes container port `5432` as host port `5432`.
+PostgreSQL then selects the `jdbc_practice` database named after the final slash.
+A PostgreSQL server can contain many databases, and a database can contain
+schemas; those are different levels.
+
+> **Future knowledge only:** If Java later ran inside another Compose container,
+> `localhost` would refer to that Java container itself. It would normally use the
+> Compose service name, such as `postgres`. This project does not containerize Java.
+
+The exercise's short `"5432:5432"` mapping may publish PostgreSQL on all host
+network interfaces even though Java uses `localhost`. A loopback-only local
+mapping can be written as `"127.0.0.1:5432:5432"`; follow the mini-project's
+security note before using the learning setup on a shared network.
 
 Do not put a password in a URL that may be logged. When URL parameters are necessary, follow URL-encoding and driver documentation.
 
-**Common mistakes:** wrong port, misspelled database, using a table name as the database name, or pointing to `localhost` when PostgreSQL actually runs on another machine.
+**Common mistakes:** wrong published port, misspelled database, using a table
+name as the database name, using `postgres` as the hostname from the host Java
+process, or changing the host mapping without changing the JDBC URL.
 
 **Remember:**
 
 ```text
-jdbc:postgresql://HOST:PORT/DATABASE
+General:      jdbc:postgresql://HOST:PORT/DATABASE
+This project: jdbc:postgresql://localhost:5432/jdbc_practice
 ```
 
 ---
@@ -279,10 +344,11 @@ jdbc:postgresql://HOST:PORT/DATABASE
 > Priority: ⭐⭐⭐⭐⭐ MUST KNOW for a first plain JDBC project  
 > Source: **PDF foundation + modernization**
 
-`DriverManager.getConnection(...)` asks registered JDBC drivers to open a connection for a URL.
+`DriverManager.getConnection(...)` asks registered JDBC drivers to open a client
+connection for a URL. It does not install or start PostgreSQL.
 
 ```java
-String url = "jdbc:postgresql://localhost:5432/student_db";
+String url = "jdbc:postgresql://localhost:5432/jdbc_practice";
 
 try (Connection connection =
          DriverManager.getConnection(url, username, password)) {
@@ -293,15 +359,19 @@ try (Connection connection =
 Conceptually:
 
 ```text
-driver JAR is on runtime classpath
+Docker daemon is running
         ↓
-DriverManager discovers registered drivers
+Compose postgres service is running and ready
         ↓
-URL begins jdbc:postgresql:
+pgJDBC JAR is on the runtime classpath
         ↓
-pgJDBC accepts that URL
+DriverManager selects pgJDBC for jdbc:postgresql:
         ↓
-TCP connection + PostgreSQL authentication
+pgJDBC connects to localhost:5432
+        ↓
+Docker forwards traffic to container port 5432
+        ↓
+PostgreSQL authenticates jdbc_app
         ↓
 Connection is returned or SQLException is thrown
 ```
@@ -363,7 +433,8 @@ Section 17 explains this transaction pattern and its rules in detail.
 
 Changing auto-commit from `false` back to `true` while a transaction is active commits that transaction. Never use `setAutoCommit(true)` as cleanup before an explicit `commit()` or `rollback()`.
 
-Closing a connection does not mean shutting down PostgreSQL. It ends/releases this application's session.
+Closing a connection does not shut down PostgreSQL or stop its Docker container.
+It only ends or releases this application's database session.
 
 `isClosed() == false` does not prove the network/server session is healthy; it mainly reports JDBC closed state. `isValid(timeoutSeconds)` is the dedicated validation API, although a maintained pool normally owns health checks in a server application.
 
@@ -1272,7 +1343,7 @@ Important distinction:
 
 Some data sources create a physical connection on every call; a pooling library can expose a pooling `DataSource`. pgJDBC also provides vendor data-source implementations, but using them directly introduces a compile-time vendor dependency.
 
-For concrete names, pgJDBC's `PGSimpleDataSource` is nonpooling. Its old `PGPoolingDataSource` is deprecated and not recommended; a larger application should use a maintained pool such as HikariCP (or its runtime/container's pool) behind the `DataSource` abstraction.
+For concrete names, pgJDBC's `PGSimpleDataSource` is nonpooling. Its old `PGPoolingDataSource` is deprecated and not recommended; a larger application should use a maintained pool such as HikariCP, or an application server's built-in pool, behind the `DataSource` abstraction.
 
 **Mental model:** `DataSource` is the connection vending machine interface; pooling describes how the machine manages/reuses its inventory.
 
@@ -1367,6 +1438,27 @@ db.username=jdbc_app
 db.password=change_me_local_only
 ```
 
+The two configuration sides have different jobs:
+
+```text
+compose.yaml POSTGRES_* values
+→ initialize the PostgreSQL server, initial user, and database
+  when an empty data directory is initialized
+
+database.properties / DB_* values
+→ tell the host Java client how to connect on each run
+```
+
+They must agree. `POSTGRES_USER=jdbc_app`,
+`POSTGRES_PASSWORD=change_me_local_only`, and
+`POSTGRES_DB=jdbc_practice` correspond to the Java username, password, and URL.
+
+The Compose password is acceptable only as an explicitly labeled
+**development-only learning credential**. Real production secrets should not
+normally be committed directly in a Compose file. Also, changing a `POSTGRES_*`
+value does not rewrite an already initialized database stored in a named volume;
+these are first-initialization settings, not ongoing account-management commands.
+
 Keep the real file out of version control and commit only an example template:
 
 ```gitignore
@@ -1412,7 +1504,8 @@ StudentDAO
  ↓ uses JDBC
 PreparedStatement / ResultSet
  ↓
-PostgreSQL
+PostgreSQL container
+(reached through the configured endpoint)
 ```
 
 ```java
@@ -1485,19 +1578,35 @@ This is why the mini project's transfer example uses a small service rather than
 | Add `Class.forName` automatically | Obsolete noise in normal JDBC 4+ setup | Rely on modern driver discovery |
 | Copy JARs into JRE/IDE folders | Non-reproducible historical setup | Declare Maven dependency |
 | Assume Maven's thin JAR contains pgJDBC | Runtime driver can be missing | Build/provide the runtime classpath |
+| Assume Docker replaces pgJDBC | Docker runs the server; it is not a Java driver | Keep the pgJDBC Maven dependency |
+| Use `postgres` as the host Java URL hostname | Compose service names belong to container networking | Use `localhost` and the published host port |
+| Assume installing Docker means PostgreSQL is running | Docker daemon or Compose service may be stopped | Check `docker compose ps` and service logs |
+| Change `POSTGRES_PASSWORD` and expect an existing volume to update | Initialization is skipped for existing database data | Change the role deliberately or reset only disposable practice data |
+| Map `"5433:5432"` but keep port 5432 in Java | The host and container ports are different sides | Change the URL to `localhost:5433` |
+| Run `docker compose down -v` casually | `-v` removes the named database volume | Use it only for an intentional destructive practice reset |
 
 When debugging, reduce the flow one boundary at a time:
 
 ```text
-server running?
-→ URL/credentials correct?
-→ driver resolved at runtime?
-→ connection opens?
-→ SQL works in psql?
-→ parameter order/types correct?
-→ cursor advanced?
-→ transaction committed?
+Docker CLI available?
+→ Docker daemon running?
+→ `docker compose ps` shows postgres running?
+→ `docker compose logs postgres` shows startup completed?
+→ published host port matches the JDBC URL?
+→ `docker compose exec postgres psql -U jdbc_app -d jdbc_practice` works?
+→ Compose and Java credentials agree?
+→ pgJDBC resolved at runtime?
+→ Java Connection opens?
+→ SQL/parameters/cursor/transaction correct?
 ```
+
+| Infrastructure symptom | First checks |
+|---|---|
+| Cannot connect to the Docker daemon | Start Docker Desktop or Docker Engine |
+| PostgreSQL service stopped/exited | Run `docker compose ps` and `docker compose logs postgres` |
+| Port `5432` already in use | Stop the conflict, or map `"5433:5432"` and use `localhost:5433` |
+| Authentication failed | Compare all Compose `POSTGRES_*` values with Java configuration; consider existing-volume state |
+| Container runs but Java cannot connect | Check logs, published port, in-container `psql`, JDBC URL, credentials, then `mvn dependency:tree` |
 
 ---
 
@@ -1507,32 +1616,38 @@ server running?
 > Source: **Integrated foundation + real-world additions**
 
 ```text
-Java Application
-      ↓ calls DAO/service
+Java application (host machine)
+        ↓ calls DAO/service
 StudentDAO / transaction service
-      ↓ obtains a connection through one configured path
+        ↓ obtains a connection through one configured path
 
 external config → DatabaseConfig → DriverManager
 or
 external config → pooled DataSource
 
-      ↓ both paths supply
+        ↓
 Connection
-      ↓ prepares SQL template
-PreparedStatement
-      ↓ binds typed values separately
-SQL + parameters
-      ↓ through pgJDBC and PostgreSQL protocol
-PostgreSQL
-      ├── write → int affected-row count
-      ├── generated key → generated-keys ResultSet
-      └── query rows → query ResultSet
+        ↓
+PreparedStatement + bound values
+        ↓
+pgJDBC
+        ↓ TCP to localhost:5432
+Docker-published host port 5432
+        ↓ 5432:5432
+PostgreSQL container port 5432
+        ↓
+jdbc_practice database
+        ↓
+students / accounts tables
+        ├── write → affected-row count
+        ├── generated key → generated-keys ResultSet
+        └── query → query ResultSet
                          ↓ cursor + getters
-                      row mapping
+                     row mapping
                          ↓
-                      Java Objects
+                    Java objects
                          ↓
-                  Main/application logic
+                Main/application logic
 ```
 
 Cross-cutting responsibilities surround the flow:
@@ -1543,6 +1658,7 @@ SQLException       → reports failure details
 transaction        → makes related statements atomic
 configuration      → supplies endpoint/credentials safely
 connection pool    → reuses connections in server applications
+Docker             → runs the reachable PostgreSQL server process
 ```
 
 For a read:
@@ -1580,8 +1696,12 @@ Memorize this 80/20 core:
 2. URL shape:
 
    ```text
-   jdbc:postgresql://host:5432/database
+   General:      jdbc:postgresql://host:5432/database
+   This project: jdbc:postgresql://localhost:5432/jdbc_practice
    ```
+
+   `localhost` is correct here because Java runs on the host and Docker publishes
+   PostgreSQL to host port `5432`.
 
 3. Main JDBC types:
 
@@ -1615,6 +1735,8 @@ Memorize this 80/20 core:
 12. Request/read generated keys explicitly.
 13. `addBatch()` collects parameter sets; `executeBatch()` runs them.
 14. Keep real credentials outside committed Java source.
+15. Docker runs PostgreSQL; pgJDBC connects Java to it. They are complementary,
+    not alternatives.
 
 ---
 
@@ -1637,6 +1759,8 @@ Understand these without memorizing implementation details:
 | Auto-commit | Each independent statement commits automatically unless disabled |
 | Thin JAR | Maven dependency declaration does not automatically embed pgJDBC |
 | DAO structure | Keeps SQL/resource/mapping code separate from console logic |
+| Docker boundary | JDBC only needs a reachable endpoint; the server may be containerized, virtualized, local, or remote |
+| Host versus Compose hostname | Host Java uses `localhost`; another Compose service would normally use the service name |
 
 ---
 
@@ -1656,6 +1780,7 @@ Understand these without memorizing implementation details:
 - SSL/TLS and certificate deployment details
 - Advanced batch rewrite/performance tuning
 - Framework abstractions such as Spring JDBC, JPA, or Hibernate—after plain JDBC is comfortable
+- Containerizing Java and Compose service-to-service networking; Java remains a host process in this exercise
 
 Recognize these names, but do not delay practical CRUD work to master them.
 
@@ -1666,12 +1791,33 @@ Recognize these names, but do not delay practical CRUD work to master them.
 > Priority: ⭐⭐⭐⭐⭐ MUST KNOW
 > Source: **Synthesis of PDF foundation + real-world additions**
 
+### PostgreSQL infrastructure for this learning project
+
+```bash
+docker compose up -d
+docker compose ps
+docker compose logs postgres
+docker compose exec postgres psql -U jdbc_app -d jdbc_practice
+```
+
+These commands start/check the container and open its bundled `psql`; they do
+not replace the pgJDBC Maven dependency used by Java.
+
 ### Connect
 
 ```java
 try (Connection con = DriverManager.getConnection(url, user, password)) {
     // work
 }
+```
+
+```properties
+db.url=jdbc:postgresql://localhost:5432/jdbc_practice
+```
+
+```text
+host Java → localhost:5432 → Docker 5432:5432
+→ PostgreSQL container → jdbc_practice
 ```
 
 ### Query one/many
@@ -1724,10 +1870,14 @@ setAutoCommit(false)
 
 | Symptom | First check |
 |---|---|
+| Cannot connect to Docker daemon | Start Docker Desktop or Docker Engine |
+| PostgreSQL service absent/stopped | `docker compose ps` and `docker compose logs postgres` |
+| Port `5432` conflict | Stop conflict or publish `"5433:5432"` and update the Java URL |
 | No suitable driver | pgJDBC on runtime classpath and correct URL prefix |
-| Connection refused | Server/host/port/listening status |
-| Authentication failed | Role/password/`pg_hba.conf` policy |
-| Database not found | URL database name |
+| Connection refused | Compose readiness, published port, and JDBC host port |
+| Authentication failed | Compose credentials, Java credentials, and existing named-volume state |
+| Changed Compose credentials still fail | Initialization variables do not update an existing database volume |
+| Database not found | `POSTGRES_DB`, URL database name, and volume initialization state |
 | Relation not found | Connected database/schema/table creation |
 | Duplicate email | SQLState `23505` and unique constraint |
 | Parameter error | Count/order; indexes begin at 1 |
@@ -1744,6 +1894,12 @@ multiple atomic writes → one connection + transaction
 errors → inspect SQLState and preserve cause
 server application → DataSource + maintained pool
 secrets → external configuration
+Docker → runs PostgreSQL
+pgJDBC → lets Java speak to PostgreSQL
+host Java + published PostgreSQL port → use localhost
+another Compose container → service-name networking (learn later)
+docker compose down → removes container/network; named volume remains
+docker compose down -v → also deletes the database volume and its data
 ```
 
 ---
@@ -1755,12 +1911,14 @@ secrets → external configuration
 
 ### Foundation
 
-- [ ] I can draw Java → JDBC API → pgJDBC → PostgreSQL.
+- [ ] I can draw host Java → JDBC API → pgJDBC → `localhost:5432` → Docker port mapping → PostgreSQL container.
 - [ ] I know which parts are standard Java interfaces and which part is vendor-specific.
 - [ ] I can add the PostgreSQL driver with Maven.
 - [ ] I can break down a PostgreSQL JDBC URL.
 - [ ] I understand modern automatic driver discovery.
 - [ ] I can open and close a `Connection`.
+- [ ] I can explain why Docker does not replace pgJDBC.
+- [ ] I know why this host Java project uses `localhost`, not `postgres`.
 
 ### Daily JDBC work
 
@@ -1789,28 +1947,40 @@ secrets → external configuration
 - [ ] I can explain connection borrowing and returning in a pool.
 - [ ] I keep credentials out of committed source code.
 - [ ] I know a normal Maven JAR may still need runtime dependency packaging/classpath setup.
+- [ ] I can verify the Compose PostgreSQL service and inspect its logs.
+- [ ] I can enter `psql` with `docker compose exec` without installing it on the host.
+- [ ] I understand that a named volume preserves data across ordinary container recreation.
+- [ ] I understand that `docker compose down -v` deletes the practice database data.
 
 Explain this final flow aloud:
 
 ```text
-Java Application
-      ↓
+Java Maven application on my computer
+        ↓
 JDBC API
-      ↓
-PostgreSQL JDBC Driver
-      ↓
-Connection / DataSource
-      ↓
+        ↓
+pgJDBC
+        ↓
+jdbc:postgresql://localhost:5432/jdbc_practice
+        ↓
+host port 5432
+        ↓
+Docker port mapping 5432:5432
+        ↓
+PostgreSQL container
+        ↓
+jdbc_practice database
+        ↓
+students / accounts tables
+        ↓
 PreparedStatement + bound parameters
-      ↓
-PostgreSQL executes SQL
-      ↓
+        ↓
 row count / generated key / ResultSet
-      ↓
+        ↓
 Java object or application result
-      ↓
+        ↓
 commit or rollback when required
-      ↓
+        ↓
 resources close automatically
 ```
 
@@ -1826,3 +1996,6 @@ If every arrow has a clear reason, you have the practical JDBC foundation needed
 - [pgJDBC queries and `PreparedStatement`](https://jdbc.postgresql.org/documentation/query/)
 - [pgJDBC data sources and pooling](https://jdbc.postgresql.org/documentation/datasource/)
 - [PostgreSQL documentation](https://www.postgresql.org/docs/current/)
+- [Docker Compose documentation](https://docs.docker.com/compose/)
+- [Docker port publishing](https://docs.docker.com/engine/network/port-publishing/)
+- [PostgreSQL Docker Official Image](https://hub.docker.com/_/postgres)
