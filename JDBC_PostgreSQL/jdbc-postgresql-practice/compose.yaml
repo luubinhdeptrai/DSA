@@ -1,0 +1,15 @@
+services:
+  postgresql:
+    image: postgres:17
+    container_name: jdbc-postgres
+    environment:
+      POSTGRES_DB: jdbc_practice
+      POSTGRES_USER: jdbc_app
+      POSTGRES_PASSWORD: development_only
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
