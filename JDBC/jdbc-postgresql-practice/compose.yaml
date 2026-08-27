@@ -1,11 +1,11 @@
 services:
-  postgresql:
+  postgres:
     image: postgres:17
     container_name: jdbc-postgres
     environment:
       POSTGRES_DB: jdbc_practice
       POSTGRES_USER: jdbc_app
-      POSTGRES_PASSWORD: development_only
+      POSTGRES_PASSWORD: change_me_local_only
     ports:
       - "5432:5432"
     volumes:
