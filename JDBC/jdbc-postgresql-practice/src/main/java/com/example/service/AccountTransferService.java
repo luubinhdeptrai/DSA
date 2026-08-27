@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import com.example.config.DatabaseConfig;
@@ -22,6 +23,9 @@ public class AccountTransferService
             SET balance = balance + ?
             WHERE id = ? 
             """;
+
+     private static final String BALANCE_SQL =
+            "SELECT balance FROM accounts WHERE id = ?";
 
     public void transfer (long fromId, long toId, BigDecimal amount) throws SQLException
     {
@@ -111,6 +115,24 @@ public class AccountTransferService
             connection.rollback();
         } catch (SQLException rollbackFailure) {
             originalFailure.addSuppressed(rollbackFailure);
+        }
+    }
+
+        public BigDecimal findBalance(long accountId)
+            throws SQLException {
+        try (Connection connection =
+                     DatabaseConfig.getConnection();
+             PreparedStatement statement =
+                     connection.prepareStatement(BALANCE_SQL)) {
+
+            statement.setLong(1, accountId);
+
+            try (ResultSet resultSet =
+                         statement.executeQuery()) {
+                return resultSet.next()
+                        ? resultSet.getBigDecimal("balance")
+                        : null;
+            }
         }
     }
 }

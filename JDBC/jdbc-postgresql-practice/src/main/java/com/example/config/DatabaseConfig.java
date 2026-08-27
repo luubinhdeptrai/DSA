@@ -10,7 +10,7 @@ import java.util.Properties;
 public final class DatabaseConfig {
 
     private static final Properties PROPERTIES = loadProperties();
-    private static final String CONFIG_FILE = "database_properties";
+    private static final String CONFIG_FILE = "database.properties";
 
     private DatabaseConfig()
     {
@@ -22,7 +22,7 @@ public final class DatabaseConfig {
         return DriverManager.getConnection(
                 requiredValue("DB_URL", "db.url"),
                 requiredValue("DB_USERNAME", "db.username"),
-                requiredValue("DB_PASSWORD", "db.passwird"));
+                requiredValue("DB_PASSWORD", "db.password"));
     }
 
     private static Properties loadProperties()

@@ -126,7 +126,7 @@ public class StudentDAO
         }
     }
 
-    public int[] batchInsert (ArrayList<Student> students) throws SQLException
+    public int[] batchInsert (List<Student> students) throws SQLException
     {
         if (students.isEmpty())
         {
