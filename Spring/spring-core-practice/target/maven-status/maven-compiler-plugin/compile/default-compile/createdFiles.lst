@@ -1,0 +1,9 @@
+com\example\springpractice\config\AppConfig.class
+com\example\springpractice\Main.class
+com\example\springpractice\sender\SmsNotificationSender.class
+com\example\springpractice\sender\NotificationSender.class
+com\example\springpractice\service\NotificationService.class
+com\example\springpractice\sender\EmailNotificationSender.class
+com\example\springpractice\repository\InMemoryNotificationRepository.class
+com\example\springpractice\repository\NotificationRepository.class
+com\example\springpractice\model\Notification.class
