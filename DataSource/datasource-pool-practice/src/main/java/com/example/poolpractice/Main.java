@@ -12,6 +12,8 @@ import com.example.poolpractice.diagnostics.PoolDiagnostics;
 
 
 import java.util.ArrayList;
+import com.example.poolpractice.service.TransferService;
+
 
 public class Main {
 
@@ -23,17 +25,28 @@ public class Main {
             DatabaseSettings settings = DatabaseSettings.fromEnvironment();
             try (HikariDataSource pool = DataSourceFactory.create(settings))
             {
-                PoolDiagnostics.print(pool, "startup");
+                // PoolDiagnostics.print(pool, "startup");
 
                 AccountRepository repo = new AccountRepository(pool);
-                repo.insert("Binh Luu 1", new BigDecimal("1.00"));
-                repo.insert("Binh Luu 2", new BigDecimal("2.00"));
-                repo.insert("Binh Luu 3", new BigDecimal("3.00"));
-                repo.insert("Binh Luu 4", new BigDecimal("4.00"));
-                repo.insert("Binh Luu 5", new BigDecimal("5.00"));
+                repo.delete();
+                long fromId = repo.insert("Binh Luu 1", new BigDecimal("100.00"));
+                long toId = repo.insert("Binh Luu 2", new BigDecimal("200.00"));
+                // repo.insert("Binh Luu 3", new BigDecimal("3.00"));
+                // repo.insert("Binh Luu 4", new BigDecimal("4.00"));
+                // repo.insert("Binh Luu 5", new BigDecimal("5.00"));
+                try {
+                    TransferService tf = new TransferService(pool);
+                    tf.transfer(fromId, -2, new BigDecimal(20.00));
+                }
+                catch (Exception e)
+                {
+                    System.out.println(e.getMessage());
+                }
+
+                System.out.println(repo.listAll());
 
 
-
+            
 
 
             }
@@ -42,6 +55,7 @@ public class Main {
         {
             System.out.println (e.getMessage());
         }
+
     }
     
 }

@@ -25,6 +25,10 @@ public final class AccountRepository {
             ORDER BY id 
             """;
 
+    private static final String DELETE_SQL = """
+            DELETE FROM accounts
+            """;
+
     private final DataSource dataSource;
 
     public AccountRepository(DataSource dataSource)
@@ -81,6 +85,15 @@ public final class AccountRepository {
             }
         }
         return list;
+    }
+
+    public void delete () throws SQLException
+    {
+        try (Connection connection = dataSource.getConnection();
+        PreparedStatement statement = connection.prepareStatement(DELETE_SQL))
+        {
+            statement.executeUpdate();
+        }
     }
 
 
