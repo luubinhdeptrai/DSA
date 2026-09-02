@@ -12,6 +12,9 @@ import java.util.Objects;
 import com.example.poolpractice.model.Account;
 import java.util.ArrayList;
 
+import java.util.List;
+
+
 
 public final class AccountRepository {
 
@@ -46,7 +49,7 @@ public final class AccountRepository {
 
             int affectedRow = statement.executeUpdate();
 
-            if (affectedRow == 0)
+            if (affectedRow != 1)
             {
                 throw new SQLException ("Creating account failing.");
             }
@@ -72,9 +75,9 @@ public final class AccountRepository {
 
     }
 
-    public ArrayList<Account> listAll () throws SQLException
+    public List<Account> listAll () throws SQLException
     {
-        ArrayList<Account> list = new ArrayList<>();
+        List<Account> list = new ArrayList<>();
         try(Connection connection = dataSource.getConnection();
             PreparedStatement statement = connection.prepareStatement(SELECT_SQL);
             ResultSet rs = statement.executeQuery())

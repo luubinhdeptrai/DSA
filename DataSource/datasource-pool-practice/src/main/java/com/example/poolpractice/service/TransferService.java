@@ -60,10 +60,17 @@ public final class TransferService {
 
                 connection.commit();
             }
-            catch (SQLException | RuntimeException e)
+            catch (SQLException | RuntimeException origin)
             {
-                connection.rollback();
-                throw e;
+                try 
+                {
+                    connection.rollback();
+                }
+                catch (SQLException rollbackFailure)
+                {
+                    origin.addSuppressed(rollbackFailure);
+                }
+                throw origin;
             }
 
         }
@@ -74,7 +81,7 @@ public final class TransferService {
             s1.setBigDecimal(1, money);
             s1.setLong(2, fromId);
             s1.setBigDecimal(3, money);
-            if (s1.executeUpdate() == 0)
+            if (s1.executeUpdate() != 1)
             {
                 throw new SQLException("Something went wrong at DEBIT process");
             }
@@ -84,7 +91,7 @@ public final class TransferService {
     {
         s2.setBigDecimal(1, money);
         s2.setLong(2, toId);
-        if (s2.executeUpdate() == 0)
+        if (s2.executeUpdate() != 1)
         {
             throw new SQLException ("Something went wrong at CREDIT process");
         }

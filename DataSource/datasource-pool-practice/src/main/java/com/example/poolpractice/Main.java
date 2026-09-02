@@ -12,6 +12,8 @@ import com.example.poolpractice.diagnostics.PoolDiagnostics;
 
 
 import java.util.ArrayList;
+import java.util.List;
+
 import com.example.poolpractice.service.TransferService;
 
 
@@ -19,7 +21,6 @@ public class Main {
 
     public static void main (String[] args)
     {
-        ArrayList<Account> list = new ArrayList<>();
         try 
         {
             DatabaseSettings settings = DatabaseSettings.fromEnvironment();
@@ -36,7 +37,7 @@ public class Main {
                 // repo.insert("Binh Luu 5", new BigDecimal("5.00"));
                 try {
                     TransferService tf = new TransferService(pool);
-                    tf.transfer(fromId, -2, new BigDecimal(20.00));
+                    tf.transfer(fromId, toId, new BigDecimal(20.00));
                 }
                 catch (Exception e)
                 {
