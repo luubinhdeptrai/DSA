@@ -40,7 +40,7 @@ Spring Boot is easiest to understand when it is treated as an automation layer o
 
 This guide targets the current stable Spring Boot **4.1.1** release as of September 2026. Spring Boot 4.1.1 requires Java 17 or newer and Maven 3.6.3 or newer. The examples deliberately use the Java 17 baseline even if your local JDK is newer.
 
-Boot 4.1.1 manages Spring Framework 7.0.9 or newer within its compatible dependency set, along with supported third-party versions. Do not separately pin Spring Framework modules. Use the Maven wrapper or verify the actual toolchain with:
+Spring Boot 4.1.1's dependency management selects Spring Framework 7.0.9. If you manage Spring Framework yourself, Boot 4.1.1 requires Framework 7.0.9 or later, but independently upgrading Framework modules bypasses Boot's tested dependency set. Normally, do not separately pin Spring Framework modules. Use the Maven wrapper or verify the actual toolchain with:
 
 ```powershell
 java -version
@@ -439,10 +439,6 @@ The parent supplies dependency management and useful plugin defaults. Therefore 
 <dependencies>
     <dependency>
         <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-jdbc</artifactId>
     </dependency>
     <dependency>
@@ -477,7 +473,9 @@ Dependency management supplies a version only if you declare or transitively rec
 | JDBC and pooled `DataSource` | `spring-boot-starter-jdbc` plus database driver |
 | Operational endpoints | `spring-boot-starter-actuator` |
 | Boot-aware testing | `spring-boot-starter-test` with test scope |
-| REST/MVC later | A web/MVC starter—deliberately postponed here |
+| REST/MVC later | `spring-boot-starter-webmvc`—the Boot 4 Spring MVC/Tomcat starter, deliberately postponed here |
+
+Older examples commonly use `spring-boot-starter-web`. In Boot 4.1 it is deprecated in favor of the more explicit `spring-boot-starter-webmvc` name.
 
 Do not add every starter “in case.” Classpath contents influence auto-configuration and application startup.
 
@@ -547,13 +545,14 @@ class DatabaseConfig {
 
     @Bean
     DataSource dataSource() {
-        // Your code has accepted DataSource creation and lifecycle responsibility.
+        // Your configuration has accepted DataSource creation/customization
+        // responsibility. The ApplicationContext still manages this bean's lifecycle.
         return createCustomDataSource();
     }
 }
 ```
 
-For `DataSource` specifically, Boot's pooled data-source configuration is conditional on a missing `DataSource` (and missing XA data source). Defining your own is therefore a significant architectural choice, not a harmless duplicate.
+For `DataSource` specifically, Boot's pooled data-source configuration is conditional on a missing `DataSource` (and missing XA data source). Defining your own is therefore a significant architectural choice, not a harmless duplicate. Only Boot's default `DataSource` creation backs off: other auto-configurations can still consume your Spring-managed `DataSource`, including JDBC templates, database initialization, health, metrics, and transaction support when their conditions match.
 
 ### Override properties before replacing infrastructure
 
@@ -639,7 +638,7 @@ spring:
     url: jdbc:postgresql://localhost:5432/boot_practice
 ```
 
-Both forms become keys in the same `Environment`. Choose one format consistently. YAML is compact for nested groups; properties are explicit and easy to override one key at a time. YAML is not a mechanism for type safety—that comes from binding to a Java type.
+Both forms become keys in the same `Environment`. Choose one format consistently. If both formats exist in the same location, `.properties` takes precedence over YAML; avoid relying on that tie-breaker. YAML is compact for nested groups; properties are explicit and easy to override one key at a time. YAML is not a mechanism for type safety—that comes from binding to a Java type.
 
 ### Useful precedence model
 
@@ -851,6 +850,8 @@ application-prod.yaml        ← prod overrides
 
 Profile-specific files are loaded by convention. At the same location, their values override the non-profile file.
 
+`spring.profiles.active` and `spring.profiles.default` belong in non-profile-specific documents or external sources. Do not place them in `application-prod.yaml` or inside a document activated with `spring.config.activate.on-profile`.
+
 Activate a profile from outside the artifact:
 
 ```powershell
@@ -1001,6 +1002,8 @@ spring:
 
 Boot supports duration syntax such as `20s` for properties declared as durations. Hikari's `connectionTimeout` setting is a millisecond `long`, so use the unit its configuration metadata/API declares rather than assuming every timeout accepts duration syntax.
 
+Boot normally derives the JDBC driver class from `spring.datasource.url`; do not set `spring.datasource.driver-class-name` unless automatic deduction is insufficient. The driver artifact must still be on the runtime classpath.
+
 Configure only settings you understand. Defaults are not proof of production sizing, but copying a large block of pool values is not tuning either.
 
 ### Ownership rules remain
@@ -1017,6 +1020,8 @@ Configure only settings you understand. Defaults are not proof of production siz
 ### Boot's JDBC conveniences do not erase choices
 
 The JDBC starter can also auto-configure a `JdbcTemplate`. You may use it later or continue with raw JDBC for this learning boundary. The existence of a `JdbcTemplate` does not create tables, define transaction boundaries, or choose correct SQL.
+
+With the JDBC transaction classes and an eligible single `DataSource`, Boot can also auto-configure a `JdbcTransactionManager`. Boot supplies transaction infrastructure; your application still chooses the business transaction boundary. `@Transactional` is Spring transaction behavior enabled by that infrastructure, not a boundary inferred by Boot. Deeper declarative-transaction behavior belongs later in the roadmap.
 
 Boot can run `schema.sql` and `data.sql`. For an external database such as PostgreSQL, script initialization is not simply something to assume; configure the intended mode deliberately, for example in a disposable learning project:
 
@@ -1138,7 +1143,7 @@ The main class starts the application. It should not become a container for data
 
 **Priority: ⭐⭐⭐⭐ IMPORTANT**
 
-Non-web applications often need work to run after the context is ready. Boot provides two runner interfaces:
+Non-web applications often need work to run after the context has refreshed. Boot invokes runners after `ApplicationStartedEvent` and before `ApplicationReadyEvent`; `SpringApplication.run(...)` returns only after the runners finish. Boot provides two runner interfaces:
 
 | Interface | Argument view |
 |---|---|
@@ -1376,16 +1381,16 @@ Common endpoint concepts include:
 
 | Endpoint | Purpose |
 |---|---|
-| `health` | Aggregated readiness of the application and dependencies |
+| `health` | Aggregated application and dependency health |
 | `info` | Deliberately supplied application information |
 | `metrics` | Named measurements when the relevant observation support exists |
 | `env` | Configuration view—sensitive and not for broad exposure |
 | `configprops` | Bound configuration-properties view—also sensitive |
 | `conditions` | Why auto-configurations matched or did not match |
 
-When a web application is added later, the conventional base path is `/actuator`, so health is commonly available at `/actuator/health`. Actuator alone does not turn a non-web command-line application into an HTTP server; a web transport must exist.
+When a web application is added later, the conventional base path is `/actuator`, so health is commonly available at `/actuator/health`. When health probes are enabled, readiness is a distinct health group commonly available at `/actuator/health/readiness`; aggregate health and readiness are not synonyms. Actuator alone does not turn a non-web command-line application into an HTTP server; a web transport must exist.
 
-Exposure is a security decision:
+In Boot 4.1, only `health` is exposed over HTTP and JMX by default. Endpoint access, transport exposure, and caller authorization are separate controls: access determines whether an endpoint is available, exposure maps it over HTTP or JMX, and network controls or Spring Security determine who may invoke it.
 
 ```yaml
 management:
@@ -1408,7 +1413,7 @@ A health indicator answers an operational question such as “Can this dependenc
 
 With the relevant observation/metrics infrastructure, Boot can expose pool measurements. These measurements help diagnose saturation and leaks, but they do not choose a correct `maximumPoolSize`. Interpret active, idle, pending, and total connections in the context of workload and database limits.
 
-**Mental model:** Actuator makes selected runtime state observable; exposure policy decides who can see it.
+**Mental model:** Actuator makes selected state observable; access controls availability, exposure selects a transport, and security controls callers.
 
 **Common mistakes:**
 
@@ -1464,20 +1469,33 @@ class BootPracticeApplicationTest {
 
 This verifies that the full application context can start with the test configuration. It can detect missing beans, invalid bindings, and some auto-configuration problems. An empty `contextLoads` test does **not** prove SQL correctness or business behavior.
 
+A full `@SpringBootTest` starts the Boot application context and can invoke `ApplicationRunner` and `CommandLineRunner` beans. Keep startup workflows deterministic, and provide a deliberate test property or profile when they must not mutate an external system.
+
 ### 3. Focused test slice
 
-Boot test slices load a constrained part of the application. A JDBC-focused test can use `@JdbcTest`; later web work has its own slice. A slice is not simply a faster spelling of `@SpringBootTest`: excluded components must be imported or supplied deliberately.
+Boot test slices load a constrained part of the application. A JDBC-focused test can use Boot 4's `org.springframework.boot.jdbc.test.autoconfigure.JdbcTest`; later web work has its own slice. `@JdbcTest` configures an embedded database and `JdbcTemplate` by default, runs tests transactionally with rollback, and does not scan ordinary `@Component` or `@ConfigurationProperties` beans. A slice is not simply a faster spelling of `@SpringBootTest`: excluded components must be imported or supplied deliberately. To use provisioned PostgreSQL, deliberately prevent test-database replacement, commonly with `@AutoConfigureTestDatabase(replace = Replace.NONE)`.
 
 ### 4. Real integration test
 
 An integration test may start a real PostgreSQL dependency, load relevant configuration, execute repository/service behavior, and assert database state. This has more confidence and more cost than a unit test. Testcontainers is valuable later, but its details are not required before REST.
 
-### Test dependency
+### Test dependencies
+
+```xml
+<!-- Core Boot/JUnit testing, including @SpringBootTest -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-test</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+Boot 4 provides focused test modules. A project that uses `@JdbcTest` can declare the JDBC test starter, which brings the core test starter transitively:
 
 ```xml
 <dependency>
     <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-test</artifactId>
+    <artifactId>spring-boot-starter-jdbc-test</artifactId>
     <scope>test</scope>
 </dependency>
 ```
