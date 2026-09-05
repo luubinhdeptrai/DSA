@@ -1,15 +1,15 @@
-# DSA Interview Guide
+# Java DSA Interview Guide
 
 > An interview-first roadmap and reference for learning how to turn **problem clues → constraints → patterns → data structures → algorithms → correct code**.
 
-All implementations and language-specific examples use **C++17 as the sole implementation language**. Blocks labeled `text` are intentionally language-independent pseudocode. Learn the invariants and decisions; a template is a starting shape, not a solution to memorize.
+All implementations and language-specific examples use **Java 17-compatible code**, with Java-native collections, object references, and immutable strings. Blocks labeled `text` are intentionally language-independent pseudocode. Learn the invariants and decisions; a template is a starting shape, not a solution to memorize.
 
 ---
 
 ## Table of Contents
 
 1. [How to Use This Guide](#1-how-to-use-this-guide)
-   - [C++ for DSA Interviews — Essential STL Reference](#c-for-dsa-interviews-essential-stl-reference)
+   - [Java for DSA Interviews — Essential Reference](#java-for-dsa-interviews-essential-reference)
 2. [DSA Interview Priority Map](#2-dsa-interview-priority-map)
 3. [Complexity Analysis and Foundations](#3-complexity-analysis-and-foundations)
 4. [Arrays & Strings](#4-arrays-strings)
@@ -41,7 +41,7 @@ All implementations and language-specific examples use **C++17 as the sole imple
 
 ### Deep links for the longest reference sections
 
-- **C++17:** [essential STL reference](#c-for-dsa-interviews-essential-stl-reference)
+- **Java:** [essential reference](#java-for-dsa-interviews-essential-reference)
 - **Trees:** [recursive DFS](#122-recursive-dfs-traversals), [iterative DFS](#123-iterative-dfs-traversals), [BFS](#124-tree-bfs-level-order-traversal), [BST](#126-binary-search-trees), [LCA](#127-lowest-common-ancestor)
 - **Graphs:** [representations](#141-graph-representations), [DFS](#142-graph-dfs), [BFS](#143-graph-bfs-and-unweighted-shortest-paths), [topological sort](#148-topological-sorting), [DSU](#149-union-find-disjoint-set-union-dsu), [Dijkstra](#1412-dijkstras-algorithm)
 - **Dynamic programming:** [recognition](#182-how-to-recognize-dp), [design process](#183-the-six-part-dp-design-process), [worked evolution](#186-worked-evolution-from-brute-force-to-optimized-dp), [knapsack](#1810-knapsack-style-dp), [subsequences](#1811-subsequence-dp)
@@ -57,143 +57,300 @@ This document works in two modes:
 - **Course mode:** follow the phases in [Learning Roadmap](#27-learning-roadmap). Within each phase, learn Tier 1 material before Tier 2, and defer Tier 3/4.
 - **Reference mode:** use the Table of Contents, [Pattern Recognition](#21-dsa-pattern-recognition), [Code Templates](#24-code-templates), and final [Cheat Sheet](#29-dsa-interview-cheat-sheet).
 
-### C++ for DSA Interviews — Essential STL Reference
+<a id="java-for-dsa-interviews-essential-reference"></a>
+### Java for DSA Interviews — Essential Reference
 
-Use the Standard Library to express the algorithm clearly. Interview preparation should make these operations automatic, but syntax must remain subordinate to the invariant.
+Use Java to express the invariant clearly. This guide targets **Java 17-compatible source**, including records where named immutable fields help. The examples also work on Java 21. Select a supported Java version on your coding platform; if records are unavailable, use a small class with final fields and a constructor. No algorithm depends on a record-specific trick.
 
-**Snippet convention:** Examples omit repetitive headers and assume **C++17**, the needed standard headers, and `using namespace std;`. `<bits/stdc++.h>` is convenient on many competitive-programming and interview judges, but it is non-standard and less portable; use normal headers when portability or production-style code matters.
+**Snippet convention:** Algorithm blocks contain members to put inside a `class Solution`; API demonstrations contain statements to put inside a method. Add `import java.util.*;` once. Helper types declared earlier in the same topic are identified where needed; adapt judge-provided `ListNode`/`TreeNode` field names and signatures instead of redefining them. Each block is an independent example, not a file to concatenate with every other block. `text` fences are deliberately language-independent reasoning or pseudocode.
 
-#### Sequences: `vector` and `string`
+**Input contract:** Unless a snippet says otherwise, arrays, strings, collections, and their required elements are non-null; dimensions and indices satisfy the stated problem contract. A null node is the normal empty linked-list/tree representation. Empty sequences are handled or explicitly ruled out. Agree on invalid-input behavior before adding checks; do not silently treat an invalid input as a valid empty answer.
 
-```cpp
-vector<int> nums{4, 1, 7};
-nums.push_back(9);                    // amortized O(1)
-int first = nums.front();             // require !nums.empty()
-nums.pop_back();                      // require !nums.empty()
+**Complexity convention:** Indexed `List` parameters assume constant-time access, as with `ArrayList`; using `LinkedList.get(i)` repeatedly can change the bound. Graph examples use an array-backed outer adjacency list. Numeric operations assume the stated fixed-width result bounds. Report auxiliary memory separately from required output, and include copies, table initialization, and recursion frames.
 
-string text = "algorithm";
-text[0] = 'A';                        // std::string is mutable
-text += "s";                         // append; reserve first if size is predictable
-string piece = text.substr(2, 4);     // copies four characters: O(4)
+#### Memory, understanding, and lookup budget
+
+| Must know from memory | Must understand and reconstruct | Safe to look up occasionally |
+|---|---|---|
+| Array indexing and `.length`; String `length()`, `charAt()`, `equals()`; list `add/get/set/remove/size` | Aliasing, shallow copying, mutation, object identity vs logical equality | Less common `NavigableMap` operations beyond their purpose |
+| `HashMap` lookup/default/update/iteration; `HashSet` membership | Stable equality and hashing; why a map stores counts, indices, or states | Specialized collection constructors and capacity tuning |
+| `ArrayDeque` as stack/queue; `PriorityQueue` min/max direction | LIFO/FIFO/heap invariants and expected/amortized costs | Exact sorting implementation internals and rare APIs |
+| `Arrays.sort`, `List.sort`, safe comparators; `StringBuilder` | Overflow bounds, UTF-16 assumptions, recursion depth, DP state sufficiency | Unicode normalization/grapheme libraries when a real contract needs them |
+
+Make the first column automatic with tiny blank-page drills. Reconstruct algorithms from their invariants; do not memorize complete problem solutions. This reference can be read in pieces alongside the relevant topic.
+
+#### Arrays and ArrayList
+
+```java
+int[] values = {4, 1, 7};
+int[] counts = new int[26];            // primitive elements default to 0
+int size = values.length;
+int first = values[0];                // require length > 0
+values[1] = 9;
+for (int value : values) {
+    // value is a copy; assigning value does not update the array
+}
+Arrays.fill(counts, -1);
+int[] copy = Arrays.copyOf(values, values.length);
+Arrays.sort(copy);                    // ascending; values is unchanged
+
+List<Integer> numbers = new ArrayList<>();
+numbers.add(4);                       // amortized O(1) append
+numbers.add(7);
+int number = numbers.get(0);          // unboxes Integer
+numbers.set(0, 9);                    // replaces an existing element
+numbers.remove(0);                    // removes index 0; shifts the suffix
+numbers.remove(Integer.valueOf(7));   // removes first matching value
+int listSize = numbers.size();
 ```
 
-- `vector<T>` provides `O(1)` indexing, amortized `O(1)` `push_back`, and `O(n)` middle insertion/erasure because later elements shift.
-- `string` is a mutable character sequence in C++17. Repeated `+=` is normally amortized linear in total output; `reserve` can avoid reallocations when the final size is predictable.
-- C++ has no built-in vector-slice syntax. Iterator-range construction and `string::substr` create copies, so include their cost.
-- `size()` returns unsigned `size_t`. Guard emptiness and convert deliberately: `int right = static_cast<int>(nums.size()) - 1;`. Do not evaluate `nums.size() - 1` first on an empty vector.
+An `int[]` has fixed length, unboxed values, and `O(1)` indexing; use it for known-size input, counts, visited state, and DP. `ArrayList<Integer>` grows and stores object references to boxed numbers; use it for variable-size results. Its `get/set/size` are `O(1)`, append amortized `O(1)`, and insertion/removal at an arbitrary index `O(n)` in the worst case. Removing the final element by index is `O(1)`; `remove(Object)` must search. Initial capacity does **not** create elements: `new ArrayList<>(n)` still has size zero. [ArrayList API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/ArrayList.html)
 
-#### Hash tables and ordered maps/sets
+Array allocation/initialization and full `Arrays.fill` are `O(n)`; copying into length `m` is `O(m)` including initialization. `Integer[]` initially contains null references, so unboxing an unfilled cell fails. `new int[rows][cols]` creates distinct zero-filled rows; a Java 2D array may also be jagged, so rectangular algorithms must state that assumption.
 
-```cpp
-unordered_map<string, int> frequency;
-++frequency["cat"];                    // operator[] inserts a missing key with value 0
-if (auto it = frequency.find("dog"); it != frequency.end()) {
-    int count = it->second;
+`List<T>`, `Set<T>`, `Map<K,V>`, `Queue<T>`, and `Deque<T>` describe needed operations; concrete classes choose storage and performance. Generic type arguments are reference types: `List<Integer>` is valid, `List<int>` is not. Enhanced `for` over objects copies each reference; mutating the referenced object is visible, but reassigning the loop variable does not replace a list element.
+
+> 🌐 **Java Backend Relevance — HIGH:** Collection interfaces and generics make method contracts clearer. Choose the implementation from required operations; prefer primitive arrays for dense numeric state and meaningful object types for application data.
+
+#### Strings, StringBuilder, and character assumptions
+
+**`String` is immutable in Java.** A method such as `substring` returns a string; it never edits the original.
+
+```java
+String text = "algorithm";
+int length = text.length();
+char first = text.charAt(0);
+String piece = text.substring(2, 6);   // "gori": [begin, end)
+boolean same = text.equals("algorithm");
+int order = "cat".compareTo("dog");   // negative, zero, or positive
+char[] letters = text.toCharArray();
+letters[0] = 'A';                     // text stays "algorithm"
+String changed = new String(letters);
+
+StringBuilder builder = new StringBuilder();
+for (char letter : letters) {
+    builder.append(letter);
+}
+builder.append('s');
+builder.setCharAt(0, 'a');
+String result = builder.toString();
+```
+
+`length()` and `charAt()` are constant time in the implementations used here. Budget `O(k)` time and space for a copied proper substring of length `k`, `O(n)` for `toCharArray()`, and up to `O(min(n,m))` character comparisons for equality/lexicographic comparison (length checks can reject equality earlier). Full/empty substrings may be optimized. Building a length-`n` output with repeated `result += nextCharacter` in a loop can copy growing prefixes for `O(n²)` total work. Repeated builder append takes amortized time proportional to total appended content; one final `toString()` copies `O(n)` content. Front/middle insertion or deletion still shifts content. Avoid taking a substring or converting the builder to a string inside each window iteration. [String API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/String.html), [StringBuilder API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/StringBuilder.html)
+
+`char` is a **16-bit UTF-16 code unit**, not always a complete Unicode code point. `"😀".length()` is 2. A frequency array of length 26 requires lowercase English letters; size 128 requires ASCII. For code-point processing, `s.codePoints().toArray()` gives an `int[]` at `O(n)` time/space. Code points are still not always whole user-perceived characters; normalization and grapheme boundaries require a separate contract. Do not complicate an explicitly ASCII interview task. [Character API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Character.html)
+
+> 🌐 **Java Backend Relevance — HIGH:** Immutability, efficient text construction, and explicit character assumptions transfer directly to parsing, validation, identifiers, and text transformations.
+
+#### HashMap, HashSet, equality, and iteration
+
+```java
+Map<String, Integer> frequency = new HashMap<>();
+frequency.put("cat", frequency.getOrDefault("cat", 0) + 1);
+Integer count = frequency.get("dog");  // null if absent here
+boolean known = frequency.containsKey("dog");
+frequency.remove("dog");
+for (Map.Entry<String, Integer> entry : frequency.entrySet()) {
+    String word = entry.getKey();
+    int occurrences = entry.getValue();
 }
 
-unordered_set<int> seen;
-bool inserted = seen.insert(42).second;
-bool present = seen.find(42) != seen.end();
+Set<Integer> seen = new HashSet<>();
+boolean added = seen.add(42);          // false if already present
+boolean present = seen.contains(42);
+seen.remove(42);
 
-map<int, string> ordered;              // O(log n), keys stay sorted
-set<int> unique_sorted;
+Map<String, List<String>> groups = new HashMap<>();
+groups.computeIfAbsent("act", key -> new ArrayList<>()).add("cat");
 ```
 
-- `unordered_map`/`unordered_set`: expected `O(1)` lookup, insertion, and erasure; no sorted-order guarantee.
-- `map`/`set`: worst-case `O(log n)` operations plus sorted iteration and bound queries.
-- `operator[]` on a map inserts a default value. Use `find`, `contains` only in C++20 (not C++17), or `at` when insertion is not intended.
-- Keys are effectively immutable while stored. C++17 provides standard hashes for common scalar/string types, but not a general hash for `pair` or `tuple`; use `map<pair<...>, ...>`, encode a safe key, or define a custom hasher.
+Use `entrySet()` when both key and value are needed, `keySet()` for keys, and `values()` for values. Views are backed by the map. `get` never inserts; `put` inserts or replaces. `getOrDefault` supplies a default for an **absent** key, not for a present null value. For interview count maps, keep stored values non-null. `computeIfAbsent` creates a value when absent or mapped to null; its callback should not structurally modify the same map.
 
-#### Stack, queue, deque, and priority queue
+Expected lookup/removal is `O(1)` for well-distributed constant-cost hashes/equality; insertion is expected amortized `O(1)`, with occasional linear resizing. There is no general worst-case constant-time guarantee. Current implementations can treeify collision bins, but do not promise every arbitrary custom-key operation becomes `O(log n)`. Iteration costs `O(size + capacity)` for these hash tables, so extreme over-allocation hurts. A new string key's hashing/equality may cost `O(key length)`; include that work. No sorted or insertion-order guarantee exists. [HashMap API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/HashMap.html), [HashSet API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/HashSet.html)
 
-```cpp
-stack<int> st;
-st.push(3); int newest = st.top(); st.pop();
+`==` on object references tests identity; `.equals()` tests the type's logical equality. Use `Objects.equals(a, b)` if either might be null. Never compare boxed `Integer` values with `==`; caching can make this appear to work for some numbers. When overriding `equals`, also override `hashCode`: equal keys must have equal hashes; equal hashes need not imply equality. Never mutate fields used by equality or hashing while a key is stored.
 
-queue<int> q;
-q.push(3); int oldest = q.front(); q.pop();
+Arrays use identity equality by default. Use `Arrays.equals` for primitive contents and `Arrays.deepEquals` for suitable nested arrays; neither changes a `HashMap<int[], ...>` into a content-keyed map. Prefer an immutable encoded key or a class with consistent content-based equality/hash behavior. A record with primitive/String components is often simplest.
 
-deque<int> dq;
-dq.push_front(1); dq.push_back(2);
-dq.pop_front(); dq.pop_back();
+> 🌐 **Java Backend Relevance — HIGH:** Equality and hashing determine correct deduplication, grouping, map lookup, and cache keys. Shared mutable keys can make entries effectively unreachable even though they are still stored.
 
-priority_queue<int> max_heap;
-priority_queue<int, vector<int>, greater<int>> min_heap;
-max_heap.push(5); int largest = max_heap.top(); max_heap.pop();
+#### TreeMap and TreeSet when order is required
+
+```java
+TreeMap<Integer, String> events = new TreeMap<>();
+events.put(10, "start");
+events.put(20, "finish");
+Integer floor = events.floorKey(15);    // greatest key <= 15: 10
+Integer ceiling = events.ceilingKey(15); // smallest key >= 15: 20
+Integer lower = events.lowerKey(10);   // strictly smaller: null here
+Integer higher = events.higherKey(10); // strictly larger: 20
+TreeSet<Integer> times = new TreeSet<>();
+times.add(10);
+times.add(20);
+Integer previous = times.floor(15);
 ```
 
-All listed end operations are `O(1)` except priority-queue `push`/`pop`, which are `O(log n)`; heap `top` is `O(1)`. Check `empty()` before `top`, `front`, `back`, or `pop`—calling them on an empty container is invalid.
+Use ordered trees for sorted iteration, predecessor/successor, or range queries. Basic insert/remove/lookup costs `O(log n)`; these navigation operations also follow tree height. Navigation can return null; check before unboxing. Iterating `k` matching entries adds output-sensitive work. A comparison of zero identifies the same key in a tree collection, so ordering should be consistent with logical equality; otherwise distinct records may collapse unexpectedly. Know this use case from memory; look up rare navigation names when needed. [TreeMap API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/TreeMap.html), [TreeSet API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/TreeSet.html)
 
-#### Sorting, bounds, and comparators
+#### Stack, queue, and deque with ArrayDeque
 
-```cpp
-sort(nums.begin(), nums.end());
-stable_sort(nums.begin(), nums.end());
+```java
+Deque<Integer> stack = new ArrayDeque<>();
+stack.push(3);                        // addFirst
+int newest = stack.peek();            // known nonempty here
+int removed = stack.pop();            // removeFirst, returns removed value
 
-auto first_ge = lower_bound(nums.begin(), nums.end(), 7); // first value >= 7
-auto first_gt = upper_bound(nums.begin(), nums.end(), 7); // first value > 7
-int index = static_cast<int>(first_ge - nums.begin());
+Queue<Integer> queue = new ArrayDeque<>();
+queue.offer(3);                       // add at tail
+Integer oldest = queue.peek();        // head, or null if empty
+Integer polled = queue.poll();        // remove head, or null if empty
 
-struct Interval { int start; int end; };
-vector<Interval> intervals;
-sort(intervals.begin(), intervals.end(), [](const Interval& a, const Interval& b) {
-    if (a.start != b.start) return a.start < b.start;
-    return a.end > b.end;              // tie: descending end
-});
+Deque<Integer> deque = new ArrayDeque<>();
+deque.addFirst(1);
+deque.addLast(2);
+Integer front = deque.peekFirst();
+Integer back = deque.peekLast();
+deque.pollFirst();
+deque.pollLast();
 ```
 
-- `sort` is `O(n log n)` worst-case in C++17 and is not stable; `stable_sort` preserves equal-key order and may use extra memory.
-- `lower_bound`/`upper_bound` require a range sorted under a compatible ordering and take `O(log n)` comparisons on random-access iterators.
-- A comparator must define a **strict weak ordering**. Return `false` for equal elements; use `<`, not `<=`, and never compare integers by overflow-prone subtraction.
-- Lambdas use `[&]` to capture surrounding values by reference and `[=]` by value. Prefer explicit captures when lifetime or mutation could be unclear.
+Use `Deque<Integer> stack = new ArrayDeque<>();` for stack behavior instead of legacy `java.util.Stack`. `ArrayDeque` usually has less allocation overhead than a linked-node queue. End insertions are amortized `O(1)` (a growth operation can cost `O(n)`); end reads/removals are `O(1)`. Searching/removing a particular value is `O(n)`. It forbids null elements. `pop`/`removeFirst` throw `NoSuchElementException` when empty; `poll`/`peek` return null, which still causes `NullPointerException` if unboxed. Guard empty state, and never enqueue null tree children. [ArrayDeque API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/ArrayDeque.html)
 
-#### `pair`, `tuple`, and structured bindings
+#### PriorityQueue: a min-heap by default
 
-```cpp
-pair<int, int> edge{2, 5};
-auto [u, v] = edge;                    // copies the fields
-auto& [stored_u, stored_v] = edge;     // aliases the fields
-
-tuple<int, long long, string> state{3, 12LL, "open"};
-auto [index_value, cost, label] = state;
+```java
+PriorityQueue<Integer> minHeap = new PriorityQueue<>();
+PriorityQueue<Integer> maxHeap = new PriorityQueue<>(Comparator.reverseOrder());
+minHeap.offer(5);
+minHeap.offer(2);
+int smallest = minHeap.peek();        // 2; known nonempty
+minHeap.poll();
+maxHeap.offer(5);
+maxHeap.offer(2);
+int largest = maxHeap.poll();         // 5
 ```
 
-Pairs and tuples make compact records and lexicographic ordered-map keys. Prefer a named `struct` when fields have domain meaning or a comparator becomes hard to read.
+`offer`/`poll` are `O(log n)` heap operations, `peek` is `O(1)`, and `contains`/`remove(Object)` are `O(n)`. Growth can add occasional allocation work to insertion. There is no indexed decrease-key API; Dijkstra normally inserts an updated immutable state and later skips stale entries. Heap iteration is **not sorted**; drain a copy if sorted extraction without mutation is required. Null elements are forbidden, and equal-priority order is unspecified unless you add a tie-breaker. Do not mutate the priority of an element already in the heap. [PriorityQueue API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/PriorityQueue.html)
 
-#### References, copies, numeric safety, and pointers
+#### Sorting and safe comparators
 
-```cpp
-long long sum_values(const vector<int>& nums) { // read-only, no vector copy
-    long long total = 0;
-    for (int value : nums) total += value;
-    return total;
+```java
+int[] values = {7, 1, 4};
+Arrays.sort(values);                  // primitive ascending sort
+List<Integer> numbers = new ArrayList<>(List.of(7, 1, 4));
+numbers.sort(Comparator.reverseOrder());
+Collections.sort(numbers);           // also valid; List.sort is direct
+
+int[][] intervals = {{2, 4}, {1, 3}, {1, 5}};
+Arrays.sort(intervals, (a, b) -> {
+    int byStart = Integer.compare(a[0], b[0]);
+    return byStart != 0 ? byStart : Integer.compare(b[1], a[1]);
+});                                   // start ascending, end descending
+```
+
+A comparator returns **negative / zero / positive**, not a boolean. It must be transitive, sign-symmetric, and consistent on ties. Use `Integer.compare`, `Long.compare`, `Comparator.comparingInt`, or `comparingLong`; `(a, b) -> a - b` can overflow and reverse the ordering. `reversed()` on an entire comparator reverses all keys; reverse only the tie comparator when that is the intent. Comparator overloads apply to object arrays (including `int[][]`), not `int[]`; sort a primitive array ascending then reverse it if needed.
+
+Object-array sorting and `List.sort` are stable; allow `O(n)` temporary reference storage in worst-case analysis. Primitive `Arrays.sort(int[])` is a different implementation; its documented JDK implementation has `O(n log n)` time and implementation-dependent scratch storage. Budget conservatively rather than inferring `O(1)` space from mutation. Key comparisons of cost `C` make comparison sorting `O(C n log n)`. [Arrays API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Arrays.html), [List API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/List.html), [Comparator API](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Comparator.html)
+
+`Arrays.binarySearch` returns an arbitrary matching index, or `-(insertionPoint)-1` if absent; it does not promise the first duplicate. Reconstruct [lower and upper bounds](#102-lower-bound-and-upper-bound) when the task needs boundaries.
+
+> 🌐 **Java Backend Relevance — HIGH:** Explicit comparators make multi-field ordering and tie behavior reviewable. Stable ordering and overflow-safe comparisons matter when sorting application records as well as intervals.
+
+#### Primitive types, wrappers, and numeric safety
+
+| Type | Interview use | Rule |
+|---|---|---|
+| `int` | Indices, bounded counts, input values | Signed 32-bit; range `-2^31` through `2^31-1` |
+| `long` | Sums, products, distances, answer counts | Signed 64-bit; still finite |
+| `double` | Averages or approximate real calculations | Binary floating point; not exact for arbitrary large integers |
+| `char` | A UTF-16 code unit | Unsigned 16-bit; alphabet assumptions matter |
+| `Integer`, `Long` | Values in generic collections, nullable results | Boxing adds references/possible objects; null unboxing throws |
+
+```java
+int value = 1_000_000;
+long product = (long) value * value;   // promote BEFORE multiplication
+long sum = 0L;
+int maxInt = Integer.MAX_VALUE;
+long maxLong = Long.MAX_VALUE;
+double average = 5 / 2.0;             // 2.5; 5 / 2 would be integer 2
+long positiveA = 10L, positiveB = 3L;
+long ceiling = positiveA / positiveB + (positiveA % positiveB == 0 ? 0 : 1);
+```
+
+Integer arithmetic can silently overflow; assigning `a * b` to `long` after an `int` multiplication is too late. Narrowing casts can lose data. Division truncates toward zero; division by integer zero throws `ArithmeticException`. For positive modulus `m`, `Math.floorMod(x, m)` avoids negative residues and the overflow risk of adding `m` to a large remainder. `Math.abs(Integer.MIN_VALUE)` is still negative; promote first when needed. Never add a cost to an infinity sentinel without proving the state is reachable and the finite sum fits. Use checked arithmetic such as `Math.addExact` when the contract calls for reporting overflow; it does not extend the range.
+
+Java masks shift distances: `int` uses the low 5 bits and `long` the low 6. Require `0 <= bit < 32` or `< 64`; use `1L << bit` for long masks. `>>` sign-extends; `>>>` fills with zeros. These rules matter in bitmask bounds, not in every array solution.
+
+> 🌐 **Java Backend Relevance — HIGH:** Nullable wrappers, unboxing, and integer promotion affect totals, counters, and optional data. State the numeric range and null contract instead of relying on accidental behavior.
+
+#### References, mutation, and copying
+
+**Java is always pass-by-value. For objects, the value being copied is the object reference.** A parameter can mutate the referenced object, but reassigning that parameter does not reassign the caller's variable.
+
+```java
+static void mutateThenReassign(int[] values) {
+    values[0] = 99;                    // caller sees this, require nonempty
+    values = new int[] {1, 2};        // only the local reference changes
 }
 
-void reverse_in_place(vector<int>& nums) {      // caller-visible mutation
-    reverse(nums.begin(), nums.end());
+static void demonstrateAliasing() {
+    int[] original = {3, 4};
+    int[] alias = original;            // same array, O(1)
+    int[] copy = original.clone();     // independent primitive values, O(n)
+    mutateThenReassign(alias);         // original now {99, 4}; copy still {3, 4}
 }
-
-long long infinity = numeric_limits<long long>::max();
-long long product = 1LL * 1'000'000 * 1'000'000;
-struct ListNode;                        // forward declaration for the pointer example
-ListNode* head = nullptr;
 ```
 
-- Pass large read-only inputs as `const T&`, mutable inputs as `T&`, and by value only when a deliberate copy/ownership transfer is useful. A copied `vector` or `string` costs linear time and space.
-- Use `long long` for sums, distances, products, and answer-search bounds that may exceed `int`; promote before arithmetic with `1LL * value`.
-- `numeric_limits<T>::max()`/`lowest()` give type-correct sentinels. Avoid adding to a maximum sentinel, which can overflow.
-- Use `nullptr`, not `0` or `NULL`, for pointer absence. Interview list/tree node pointers are normally borrowed; delete nodes only when ownership is explicitly part of the task.
-- Integer division truncates toward zero. For positive `a, b`, overflow-safe ceiling division is `a / b + (a % b != 0)`.
+| Operation | What gets copied | What remains shared |
+|---|---|---|
+| `int b = a` | Primitive value | Nothing |
+| `int[] b = a` / object parameter | Reference, `O(1)` | The same array/object |
+| `a.clone()` / `Arrays.copyOf` on `int[]` | New array of primitive values | Nothing mutable inside its elements |
+| Copy `TreeNode[]` or `new ArrayList<>(nodes)` | New container of references | Node objects |
+| `grid.clone()` for `int[][]` | Outer array of row references | Rows; clone each row for an independent grid |
+| `new ArrayList<>(path)` in backtracking | A snapshot of the list's references | Mutable element objects; boxed integers are safe immutable elements |
 
-#### Recursion, invalidation, and high-frequency C++ traps
+For tree/list methods, changing `node.next` or `node.left` mutates an object. Assigning `head = head.next` changes only a local variable; return the new head and let the caller assign it. A `final` reference prevents reassignment, not mutation of the object. Garbage collection reclaims unreachable objects; an unreachable cycle is collectible, but retaining references in a cache/list can retain the whole reachable structure.
 
-- C++ specifies no portable recursion-depth limit, but the native call stack is finite. A skewed tree or graph with depth `O(n)` can overflow it; mention an iterative stack when depth is uncontrolled.
-- A `vector` reallocation invalidates all iterators, pointers, and references to its elements. Insertion/erasure without reallocation still invalidates positions at or after the change.
-- Rehashing an `unordered_map`/`unordered_set` invalidates iterators. Do not insert unpredictably while iterating; call `reserve` when appropriate or separate traversal from mutation.
-- When erasing during iterator traversal, use the returned iterator when supported: `it = values.erase(it);`.
-- `for (const auto& item : container)` avoids copies; use `auto&` only when mutation is intended.
-- `std::ctype` functions such as `tolower` should receive `static_cast<unsigned char>(ch)` to avoid undefined behavior for negative signed `char` values.
-- Other common traps: accidental map insertion through `operator[]`, signed/unsigned comparisons, dangling references after container growth, reading heap storage as sorted, using a non-strict comparator, and forgetting that `sort` mutates its range.
+**Collection-copy traps:** `Arrays.asList(objectArray)` is a fixed-size view backed by that array: `set` writes through, structural add/remove fails. `Arrays.asList(new int[] {1, 2})` has **one `int[]` element**, not two boxed integers. `List.of(...)` is unmodifiable and rejects nulls; contained mutable objects are still mutable. `new ArrayList<>(existing)` creates a growable shallow copy. These are different contracts, not interchangeable spellings.
+
+> 🌐 **Java Backend Relevance — HIGH:** Mutation ownership and defensive copying prevent callers from changing shared data accidentally. A final field or unmodifiable collection does not make an entire object graph immutable.
+
+#### Small classes and records
+
+```java
+record Coordinate(int row, int col) {}
+record Job(int start, int end) {}
+
+static void orderJobs(List<Job> jobs) {
+    jobs.sort(Comparator.comparingInt(Job::start)
+            .thenComparing(Comparator.comparingInt(Job::end).reversed()));
+}
+```
+
+A record supplies a constructor, accessors such as `row()`, and component-based `equals/hashCode`. Components are final; referenced mutable objects are not deep-copied. In particular, a record containing an `int[]` inherits that array component's identity equality, not content equality. Use mutable classes for list/tree nodes. An interview state `new int[] {row, col}` is quick and practical; a `Coordinate` gives named fields and appropriate value equality for a map key. Choose one representation and document its field order.
+
+> 🌐 **Java Backend Relevance — HIGH:** Small named data types clarify meaning and equality. Records work well for immutable values with suitable components; mutable linked nodes serve a different purpose.
+
+#### Recursion, iteration, nulls, and safe traversal
+
+Java's call stack is finite, and there is no portable safe recursion-depth number. A chain of `O(n)` recursive calls can throw `StackOverflowError`; Java does not guarantee tail-call elimination. Recursive DFS is clear for moderate tree depth and backtracking. Prefer iterative BFS/DFS for unbounded chains, and include explicit stack/queue memory in the analysis. Catching `StackOverflowError` is not a substitute for choosing a suitable traversal.
+
+Do not structurally modify a collection through a separate API while its fail-fast iterator is in progress. Use the iterator's supported `remove()`, use `removeIf`, or collect changes for a later pass. Fail-fast behavior is best-effort bug detection, not a correctness or synchronization guarantee.
+
+```java
+List<Integer> values = new ArrayList<>(List.of(-2, 3, -1));
+Iterator<Integer> iterator = values.iterator();
+while (iterator.hasNext()) {
+    if (iterator.next() < 0) {
+        iterator.remove();
+    }
+}
+```
+
+> 🌐 **Java Backend Relevance — MEDIUM:** `ArrayList`, `HashMap`, `ArrayDeque`, and `PriorityQueue` are not thread-safe for concurrent mutation. Interview-local state is normally single-threaded; shared application state needs a deliberate synchronization or concurrent-collection contract, including compound operations.
+
+**Five-minute Java recall drill:** Build a count map, drain a min-heap, use a deque both ways, sort two fields without subtraction, and predict the aliasing example. Explain one empty/null case and one operation cost. If an API error appears in practice, record its general rule in the [mistake log](#26-mistake-log-system).
 
 ### Priority legend
 
@@ -213,6 +370,19 @@ Useful but less frequent. Understand the concept and solve basic versions after 
 
 Rare in general SWE interviews. Study deeply only for algorithm-heavy roles, competitive programming, or evidence that a target company expects it.
 
+### What to study next
+
+Start with [the roadmap](#27-learning-roadmap), not a cover-to-cover read of the reference. In your next session: retrieve one due problem cold, learn one missing invariant, attempt one problem, then write a mistake rule and the next revisit date. Keep only one new pattern active until its mechanics are clear; interleave already learned patterns.
+
+| Tier | First-pass practice budget per major pattern | Memory expectation | Advancement evidence |
+|---|---|---|---|
+| 🔴 Tier 1 | 3–4 distinct problems plus delayed revisits | Common APIs and core traversal/search shape unaided | Recognize, explain, implement, test, and analyze a variation cold |
+| 🟠 Tier 2 | 2–4 distinct problems plus delayed revisits | Reconstruct standard forms from invariant/state | Solve canonical and one variation with no full-solution hint |
+| 🟡 Tier 3 | 1–2 selected problems after core gates | Explain idea; reconstruct a basic form if selected | Recognize applicability and trade-offs; consult reference for details |
+| ⚪ Tier 4 | 0 by default; 1–2 only with target evidence | Recognition is normally sufficient | Explain why a core alternative is inadequate before investing |
+
+Counts are starting budgets, not quotas or separate charges for every table row. Shared problems count once; a cold revisit is another attempt at an existing problem. Add a new variation only when it addresses a demonstrated gap. Section-level checklists are depth targets for the appropriate tier, not reasons to postpone mixed practice until every box is checked.
+
 ### The study loop
 
 For each pattern:
@@ -227,7 +397,7 @@ For each pattern:
 
 ### How much depth is enough?
 
-For Tier 1, be able to derive and adapt; for Tier 2, handle common forms and explain trade-offs; for Tier 3, know when it applies and implement a basic version; for Tier 4, recognition is normally sufficient. “I watched a video” and “I once accepted a solution” are exposure, not mastery.
+For Tier 1, derive and adapt; for Tier 2, handle common forms and explain trade-offs; for Tier 3, recognize it and implement a basic version only when selected; for Tier 4, recognition is normally sufficient. “I watched a video” and “I once accepted a solution” are exposure, not mastery.
 
 ### A note on representative problems
 
@@ -243,7 +413,7 @@ When extending this guide, integrate new material into the relevant topic instea
 
 Priorities reflect typical general Software Engineering coding interviews. A company, level, or role can shift them; use company-specific evidence only after building the common core.
 
-As a sanity check, current interview curricula from [HackerRank](https://www.hackerrank.com/interview/interview-preparation-kit) and [LeetCode](https://leetcode.com/discuss/post/2580423/new-data-structures-and-algorithms-conte-8ov1/) emphasize the same broad core: arrays/strings, hashing, sorting/search, stacks/queues, trees/graphs, heaps, greedy, backtracking, and DP. The tiers below apply this guide's own transfer-value and required-depth judgment; they do not copy a platform's percentages.
+The tiers are curriculum judgments about broad transfer and prerequisite value, not measured company-frequency statistics. “Frequency” below is qualitative; use observed target-role questions to adjust emphasis after mastering the common core.
 
 | Topic or major subtopic | Priority | Frequency | Required depth | Practice priority | Why this priority |
 |---|---|---:|---|---|---|
@@ -257,11 +427,11 @@ As a sanity check, current interview curricula from [HackerRank](https://www.hac
 | Difference arrays | 🟡 Tier 3 — Nice to Know | Low/medium | Basic | Low | Powerful for batch range updates, but less common than prefix sums. |
 | Matrix / grid traversal | 🔴 Tier 1 — Must Master | High | Deep | Very high | It tests indexing, traversal, BFS/DFS, and state modeling across a frequent interview input shape. |
 | Hash maps and sets | 🔴 Tier 1 — Must Master | Very high | Deep | Very high | Expected linear-time solutions often depend on fast membership or association. |
-| Linked lists | 🟠 Tier 2 — Very Important | Medium/high | Strong | High | Pointer manipulation is a classic correctness and communication test. |
+| Linked lists | 🟠 Tier 2 — Very Important | Medium/high | Strong | High | Reference rewiring is a classic correctness and communication test. |
 | Fast/slow pointers and reversal | 🟠 Tier 2 — Very Important | Medium | Strong | High | These cover most high-value linked-list variations. |
-| Stacks | 🟠 Tier 2 — Very Important | High | Strong | High | Essential for nested structure, DFS simulation, and unresolved-candidate problems, but narrower than the core array/hash patterns. |
+| Basic stack use / nested delimiters | 🔴 Tier 1 — Must Master | High | Strong | High | LIFO operations and delimiter invariants underpin traversal and parsing; advanced stack patterns have their own tiers. |
 | Monotonic stacks | 🟠 Tier 2 — Very Important | Medium/high | Strong | High | A recurring linear-time answer to next greater/smaller and span questions. |
-| Queues and deques | 🟠 Tier 2 — Very Important | High | Strong | High | Queues are fundamental to BFS; deques support both ends efficiently. |
+| Basic FIFO queue use | 🔴 Tier 1 — Must Master | High | Strong | High | FIFO discovery order is required for BFS correctness; double-ended and monotonic variants are learned separately. |
 | Monotonic queues | 🟡 Tier 3 — Nice to Know | Low/medium | Basic | Medium/low | Useful for window extrema, but specialized compared with ordinary windows. |
 | Two pointers | 🔴 Tier 1 — Must Master | High | Deep | Very high | A broadly reusable way to exploit order or compact data in place. |
 | Sliding window | 🔴 Tier 1 — Must Master | High | Deep | Very high | The standard family for contiguous ranges with maintainable constraints. |
@@ -313,7 +483,7 @@ Choose from required operations and invariants, not from familiarity.
 
 | Choice | Prefer the first when | Prefer the second when | Main trade-off |
 |---|---|---|---|
-| **Array vs linked list** | You need indexing, cache-friendly scans, or simple storage. | You already have a node and need local `O(1)` link changes. | Arrays shift on middle insertion/deletion; lists require `O(n)` search and extra pointers. |
+| **Array vs linked list** | You need indexing, cache-friendly scans, or simple storage. | You already have a node and need local `O(1)` link changes. | Arrays shift on middle insertion/deletion; lists require `O(n)` search and extra references. |
 | **Hash map vs tree map** | Exact lookup speed matters and order does not. | Sorted traversal, lower bounds, predecessor/successor, or worst-case `O(log n)` matters. | Hashing is expected `O(1)` and unordered; balanced trees are ordered with `O(log n)` operations. |
 | **Stack vs queue** | Work is nested, reversible, or last-in-first-out. | Work is layered, arrival-ordered, or first-in-first-out. | The removal order changes traversal and often correctness. |
 | **BFS vs DFS** | You need minimum unweighted edges or explicit levels. | You need subtree/postorder state, reachability, or lower memory on very wide graphs. | Both traverse in `O(V+E)`; frontier/call-stack shape and path guarantees differ. |
@@ -325,7 +495,7 @@ Choose from required operations and invariants, not from familiarity.
 
 ### How to allocate study time
 
-A reasonable default is roughly **60–70% Tier 1**, **25–35% Tier 2**, and **at most 5–10% Tier 3/4** until mock interviews reveal a specific weakness. Priority controls depth, not permission: you may encounter a rare topic, but mastering common reasoning produces a much higher return.
+A reasonable default is **65% Tier 1**, **30% Tier 2**, and **5% Tier 3/4** until mock interviews reveal a specific weakness. Priority controls depth, not permission: you may encounter a rare topic, but mastering common reasoning produces a much higher return.
 
 ---
 
@@ -374,6 +544,7 @@ A reasonable default is roughly **60–70% Tier 1**, **25–35% Tier 2**, and **
 | Advanced amortized methods | ⚪ Tier 4 — Low Priority / Specialized | Not needed for ordinary interviews |
 | Number theory beyond gcd/modular basics | ⚪ Tier 4 — Low Priority / Specialized | Study only for a role or company that emphasizes algorithms |
 
+<a id="31-big-o-time-and-space"></a>
 ### 3.1 Big-O, Time, and Space — 🔴 Tier 1 — Must Master
 
 #### Core intuition
@@ -440,7 +611,7 @@ end while                                number of doublings is O(log n)
 
 Two nested pointers can still be linear. If `right` advances `n` times and `left` advances at most `n` times over the **entire** algorithm, the total is `O(n)`, not `O(n²)`. This is the key accounting argument behind sliding windows.
 
-If an operation inside the loop is not constant, include it. Sorting inside an `n`-iteration loop costs at least `O(n · k log k)` when each sort handles `k` items.
+If an operation inside the loop is not constant, include it. Sorting inside an `n`-iteration loop has worst-case `O(n · k log k)` time when each iteration uses an `O(k log k)` comparison sort on `k` items; adaptive sorts may do less work on easier inputs.
 
 #### Derive space correctly
 
@@ -458,7 +629,7 @@ Examples:
 | Scan array and keep two counters | `O(n)` | `O(1)` |
 | Copy or hash every element | `O(n)` | `O(n)` |
 | Recursive linked-list traversal | `O(n)` | `O(n)` stack |
-| Balanced-tree DFS | `O(n)` | `O(h)`, typically `O(log n)`, worst `O(n)` |
+| Binary-tree DFS | `O(n)` | `O(h)`, typically `O(log n)`, worst `O(n)` |
 | Sort in place | Depends on library/algorithm | Do not claim `O(1)` without knowing its implementation |
 
 #### Recurring whole-algorithm examples
@@ -489,9 +660,10 @@ Ask these questions before optimizing:
 - Omitting recursion-stack space.
 - Treating an `n × m` matrix as `n²`; its size is `nm` unless it is known to be square.
 - Claiming `O(1)` space after sorting without knowing whether the sort allocates memory.
-- Counting a required output vector as auxiliary storage without stating the convention.
+- Counting a required output array/list as auxiliary storage without stating the convention.
 - Optimizing away useful memory prematurely. An `O(n)` map that reduces `O(n²)` time to `O(n)` is frequently the right interview trade-off.
 
+<a id="32-amortized-complexity"></a>
 ### 3.2 Amortized Complexity — 🟠 Tier 2 — Very Important
 
 #### Intuition and mechanics
@@ -507,6 +679,7 @@ Typical interview examples include dynamic-array append and monotonic-stack algo
 
 **Mistake to avoid:** Calling an individual resize `O(1)`. The individual event is `O(n)`; the sequence gives amortized `O(1)` append.
 
+<a id="33-recursion-and-iteration"></a>
 ### 3.3 Recursion and Iteration — 🔴 Tier 1 — Must Master
 
 #### Core model
@@ -540,13 +713,14 @@ end function
 | Prefer recursion when | Prefer iteration when |
 |---|---|
 | The structure is recursive: trees, divide-and-conquer, backtracking | A simple loop expresses the state clearly |
-| Backtracking requires natural choose/recurse/unchoose flow | Input depth may exhaust the finite native call stack and cause stack overflow |
+| Backtracking requires natural choose/recurse/unchoose flow | Input depth may exhaust the finite Java call stack and throw `StackOverflowError` |
 | Recursive clarity outweighs stack overhead | Constant auxiliary space is important and achievable |
 
 Both can express many of the same algorithms. Recursion uses an implicit call stack; iteration may use explicit state or an explicit stack. Do not rewrite elegant tree DFS iteratively merely to claim superiority, but do discuss deep-tree stack risks.
 
 **Common failures:** Missing or overly broad base cases, no progress, mutating shared state without undoing it, returning from only one branch, recomputing the same state, and confusing recursion depth with total number of calls.
 
+<a id="34-mathematics-useful-in-interviews"></a>
 ### 3.4 Mathematics Useful in Interviews — 🟠 Tier 2 — Very Important
 
 Focus on practical tools:
@@ -557,11 +731,12 @@ Focus on practical tools:
 | Logarithms | Count repeated halving/doubling | Binary search, balanced trees | Usually `O(log n)` steps |
 | Remainder/modulo | Wrap indices or track residue classes | Circular arrays, divisible subarrays | `O(1)` per operation |
 | `gcd` via Euclid | Reduce ratios; cycle/step reasoning | Fraction normalization | `O(log min(a,b))` |
-| Integer division and ceiling division | Bound groups/pages | Search-on-answer feasibility | For positive values: `a / b + (a % b != 0)` |
+| Integer division and ceiling division | Bound groups/pages | Search-on-answer feasibility | For positive values: `a / b + (a % b == 0 ? 0 : 1)` |
 | Overflow awareness | Prevent silent wrong answers | Midpoints, sums, products | Use wider type or rearrange safely |
 
-In C++17, integer division truncates toward zero and a negative dividend can produce a negative remainder. For positive `m`, normalize a mathematical modulo when needed with `((x % m) + m) % m`.
+In Java, integer division truncates toward zero and a negative dividend can produce a negative remainder. For positive `m`, use `Math.floorMod(x, m)` when mathematical nonnegative modulo is required. Promote before multiplication, for example `(long) n * (n + 1L) / 2`, and prove that the final result fits.
 
+<a id="35-bit-manipulation-basics"></a>
 ### 3.5 Bit Manipulation Basics — 🟡 Tier 3 — Nice to Know
 
 Bits are compact Boolean flags. They matter occasionally in interviews but should not displace arrays, hashing, trees, graphs, or DP.
@@ -581,6 +756,12 @@ XOR is associative and `a ^ a = 0`, so paired values cancel. This supports “on
 - **Space:** Usually `O(1)`.
 - **Trade-off:** Compact and fast, but easy to make unreadable. Explain the invariant instead of presenting it as magic.
 - **Optional / Specialized:** Bitmask enumeration and bitmask DP are advanced topics covered later, not prerequisites here.
+
+### Selected foundation practice ladder
+
+Use four short exercises, not an extra platform checklist: **mechanics** — count work in a scan and triangular loop; **canonical** — analyze and implement array reversal; **variation** — contrast recursive and iterative stack space; **mixed** — compare duplicate detection by brute force, sorting, and hashing. **Cold revisit:** re-derive all three duplicate-detection costs after several days. Fibonacci's full DP progression belongs in Section 18; do not block basic arrays on DP mastery.
+
+> ⭐ **Canonical Interview Problem:** Reverse String / array reversal. Connect the symmetric-position invariant to the actual Java mutations and space cost.
 
 ### Representative Foundation Exercises
 
@@ -614,17 +795,18 @@ XOR is associative and `a ^ a = 0`, so paired values cancel. This supports “on
 
 ---
 
+<a id="4-arrays-strings"></a>
 ## 4. Arrays & Strings
 
 **Priority:** 🔴 Tier 1 — Must Master
 
 ### Topic Overview
 
-- **What it is:** In C++17, `vector<T>` is the default resizable indexed sequence and `string` is a mutable byte/character sequence.
+- **What it is:** Java uses fixed-length primitive arrays such as `int[]`, resizable lists such as `ArrayList<Integer>`, and immutable `String` values. Choose the representation from the operations required.
 - **Why it exists:** Indexed sequential storage gives fast access and efficient traversal, making it the default representation for many problems.
 - **Why it matters in interviews:** Arrays and strings are the most common input forms and the surface on which hashing, two pointers, windows, binary search, sorting, greedy reasoning, and DP are practiced.
 - **Interview priority:** 🔴 Tier 1 — Must Master.
-- **Prerequisites:** Loops, indexing, complexity analysis, and C++ value/reference semantics.
+- **Prerequisites:** Loops, indexing, complexity analysis, and Java references, mutation, and copying.
 - **Common use cases:** Scans, aggregation, in-place transformation, contiguous ranges, frequency counting, and matrices/grids.
 - **Common problem patterns:** Running state, prefix aggregates, write pointers, marking, rotation, range updates, and row/column traversal.
 - **Recognition clues:** Indexed sequence, contiguous subarray/substring, range query, “in place,” “preserve order,” duplicates, or a 2D grid.
@@ -646,7 +828,7 @@ XOR is associative and `a ^ a = 0`, so paired values cancel. This supports “on
 
 | Subtopic | Priority | Target depth |
 |---|---|---|
-| Matrix/grid traversal | 🔴 Tier 1 — Must Master | Boundaries, direction vectors, visited/state marking |
+| Matrix/grid traversal | 🔴 Tier 1 — Must Master | Boundaries, direction offsets, visited/state marking |
 | Multi-dimensional prefix sums | 🟡 Tier 3 — Nice to Know | Basic rectangle-sum idea |
 | Difference arrays | 🟡 Tier 3 — Nice to Know | Many offline range updates |
 
@@ -657,6 +839,7 @@ XOR is associative and `a ^ a = 0`, so paired values cancel. This supports “on
 | Advanced string matching | 🟡 Tier 3 — Nice to Know | KMP/Rabin–Karp awareness; addressed in advanced topics |
 | High-dimensional prefix structures | ⚪ Tier 4 — Low Priority / Specialized | Rare in general interviews |
 
+<a id="41-traversal-and-running-invariants"></a>
 ### 4.1 Traversal and Running Invariants — 🔴 Tier 1 — Must Master
 
 #### Intuition and use
@@ -670,15 +853,16 @@ A scan is not merely “loop through the array.” Define what is true before or
 
 That sentence is the **loop invariant**. It guides initialization, updates, and the returned result.
 
-```cpp
-optional<int> maximum_value(const vector<int>& values) {
-    if (values.empty()) return nullopt;
-
-    int best = values[0];
-    for (int i = 1; i < static_cast<int>(values.size()); ++i) {
-        best = max(best, values[i]);
+```java
+static OptionalInt maximumValue(int[] values) {
+    if (values.length == 0) {
+        return OptionalInt.empty();
     }
-    return best;
+    int best = values[0];
+    for (int i = 1; i < values.length; i++) {
+        best = Math.max(best, values[i]);
+    }
+    return OptionalInt.of(best);
 }
 ```
 
@@ -686,10 +870,11 @@ optional<int> maximum_value(const vector<int>& values) {
 - **Recognition:** Asked for a count, extreme, total, trend, or transformation with no need to revisit arbitrary prior positions.
 - **Time:** `O(n)`; reading all items is often a lower bound.
 - **Space:** `O(1)` if only fixed state is maintained; output storage may be additional.
-- **Empty-input semantics:** This version returns `nullopt`. If the problem guarantees a nonempty vector, returning `int` directly is simpler; otherwise agree on `optional`, a documented sentinel, or an exception before coding.
+- **Empty-input semantics:** This version returns `OptionalInt.empty()` for an empty array. If the contract guarantees nonempty input, a plain `int` return is simpler. `OptionalInt` is an occasional lookup API; agree on absence semantics before coding.
 - **Edge cases:** Empty input, one element, all negative values, duplicates, and values at numeric limits.
 - **Alternative:** Sorting can expose order but usually costs `O(n log n)` and may mutate input.
 
+<a id="42-in-place-operations"></a>
 ### 4.2 In-Place Operations — 🔴 Tier 1 — Must Master
 
 “In place” usually means `O(1)` auxiliary storage, not literally zero variables. Common techniques:
@@ -719,23 +904,48 @@ return write                              (the valid prefix length)
 - **Common mistake:** Overwriting unread data. A forward compaction is safe when `write ≤ read`; other transformations may require traversing backward.
 - **Trade-off:** Mutation saves memory but can surprise callers, destroy original information, and complicate debugging. State it explicitly.
 
+#### Java compaction and reversal
+
+The compaction method retains nonzero values and returns a valid prefix length; it does not promise zero-filled trailing cells. For Move Zeroes, fill the remaining suffix with zeros after compaction. Both methods mutate the supplied array and use `O(1)` auxiliary space.
+
+```java
+static int compactNonzero(int[] values) {
+    int write = 0;
+    for (int read = 0; read < values.length; read++) {
+        if (values[read] != 0) {
+            values[write++] = values[read];
+        }
+    }
+    return write;
+}
+
+static void reverseArray(int[] values) {
+    for (int left = 0, right = values.length - 1; left < right; left++, right--) {
+        int temporary = values[left];
+        values[left] = values[right];
+        values[right] = temporary;
+    }
+}
+```
+
+<a id="43-prefix-sums"></a>
 ### 4.3 Prefix Sums — 🔴 Tier 1 — Must Master
 
 #### Intuition
 
 Precompute cumulative information so a range can be answered by subtracting two prefixes. With an exclusive prefix array:
 
-```cpp
-vector<long long> build_prefix(const vector<int>& values) {
-    vector<long long> prefix(values.size() + 1, 0);
-    for (int i = 0; i < static_cast<int>(values.size()); ++i) {
+```java
+static long[] buildPrefix(int[] values) {
+    long[] prefix = new long[values.length + 1];
+    for (int i = 0; i < values.length; i++) {
         prefix[i + 1] = prefix[i] + values[i];
     }
     return prefix;
 }
 
-long long inclusive_range_sum(const vector<long long>& prefix,
-                              int left, int right) {
+// Require 0 <= left <= right < number of original values.
+static long inclusiveRangeSum(long[] prefix, int left, int right) {
     return prefix[right + 1] - prefix[left];
 }
 ```
@@ -752,6 +962,7 @@ For a subarray `l..r`, `sum(l..r) = prefix[r+1] - prefix[l]`. Therefore a subarr
 
 **Mistakes and edge cases:** Mixing inclusive/exclusive definitions, forgetting the initial zero, integer overflow, assuming nonnegative values when negative values invalidate a sliding-window approach, and storing only a set when the number of occurrences matters.
 
+<a id="44-difference-arrays"></a>
 ### 4.4 Difference Arrays — 🟡 Tier 3 — Nice to Know
 
 A difference array stores changes between adjacent positions. To add `delta` to every index in inclusive range `[l, r]`:
@@ -772,6 +983,7 @@ One final prefix sum reconstructs all values.
 - **Trade-off:** Excellent for batch updates; unsuitable when each update must be followed immediately by arbitrary online queries.
 - **Typical mistake:** Placing the negative boundary at `r` instead of `r + 1` for inclusive ranges.
 
+<a id="45-frequency-counting"></a>
 ### 4.5 Frequency Counting — 🔴 Tier 1 — Must Master
 
 Frequency counting compresses a sequence into `value → count`.
@@ -788,24 +1000,21 @@ Frequency counting compresses a sequence into `value → count`.
 
 Typical patterns: anagrams, majority/frequency, duplicates, bucket by count, and window validity. Define whether case, Unicode normalization, whitespace, and punctuation matter before processing strings.
 
+<a id="46-matrix-and-grid-problems"></a>
 ### 4.6 Matrix and Grid Problems — 🔴 Tier 1 — Must Master
 
 A matrix is usually `rows × cols`; traversal is `O(rows · cols)`, not automatically `O(n²)`. Grid problems range from simple iteration to graph search; DFS/BFS details belong in the graph section, but safe representation starts here.
 
-```cpp
-vector<pair<int, int>> valid_neighbors(int row, int col,
-                                       int rows, int cols) {
-    constexpr array<pair<int, int>, 4> directions{{
-        {1, 0}, {-1, 0}, {0, 1}, {0, -1}
-    }};
-
-    vector<pair<int, int>> neighbors;
-    for (auto [dr, dc] : directions) {
-        int next_row = row + dr;
-        int next_col = col + dc;
-        if (0 <= next_row && next_row < rows &&
-            0 <= next_col && next_col < cols) {
-            neighbors.emplace_back(next_row, next_col);
+```java
+// Require a valid (row, col) in a rows-by-cols rectangle.
+static List<int[]> validNeighbors(int row, int col, int rows, int cols) {
+    int[] directions = {1, 0, -1, 0, 1};
+    List<int[]> neighbors = new ArrayList<>(4);
+    for (int direction = 0; direction < 4; direction++) {
+        int nextRow = row + directions[direction];
+        int nextCol = col + directions[direction + 1];
+        if (0 <= nextRow && nextRow < rows && 0 <= nextCol && nextCol < cols) {
+            neighbors.add(new int[] {nextRow, nextCol});
         }
     }
     return neighbors;
@@ -830,9 +1039,20 @@ For repeated immutable rectangle-sum queries, a 2D prefix sum gives `O(1)` queri
 | Many offline range increments | Difference array | Are intermediate online answers unnecessary? |
 | Small fixed alphabet | Count array | Is the domain truly bounded and normalized? |
 | Contiguous segment with a condition | Window or prefix relation | Are values nonnegative/monotone, or can negatives occur? |
-| Grid neighbors/regions | Direction vectors + DFS/BFS | What is a node, neighbor, and visited state? |
+| Grid neighbors/regions | Direction offsets + DFS/BFS | What is a node, neighbor, and visited state? |
 
-### Representative Problems
+### Selected practice ladder
+
+Start with 3–4 distinct problems for the selected pattern; reuse overlaps across chapters. Work left to right only when the previous invariant can be explained unaided. The bank below provides substitutions and targeted follow-ups, not additional quotas. For a Tier 3 row, one mechanics/canonical pair is enough unless later evidence justifies the harder columns.
+
+| Pattern | 1. Mechanics | 2. Canonical | 3. Variation | 4. Mixed pattern | 5. Cold revisit |
+|---|---|---|---|---|---|
+| Scan / prefix | Running Sum of 1D Array | Product of Array Except Self | Range Sum Query — Immutable | Subarray Sum Equals K | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+| In-place / grid | Move Zeroes | Set Matrix Zeroes | Rotate Image | Spiral Matrix | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+
+> ⭐ **Canonical Interview Problem:** Product of Array Except Self; Set Matrix Zeroes. Explain the invariant before opening the implementation.
+
+### Representative problem bank — choose as needed
 
 #### Beginner
 
@@ -857,11 +1077,11 @@ For repeated immutable rectangle-sum queries, a 2D prefix sum gives `O(1)` queri
 
 ### Common Mistakes and Interview Tips
 
-- `string` is mutable in C++17. Prefer appending at the end, call `reserve` when the final size is predictable, and remember that repeated front insertion or middle erasure can be quadratic. Also clarify whether input is ASCII bytes or requires real Unicode processing; `string` does not decode Unicode code points for you.
+- `String` is immutable. Use `char[]` for indexed mutation or `StringBuilder` for incremental output. Repeated concatenation, front insertion, or middle deletion can be quadratic; use the [Java reference](#java-for-dsa-interviews-essential-reference) for copying and Unicode rules.
 - State whether the input may be mutated before using an in-place approach.
 - Name index semantics: “`right` is inclusive” or “the window is `[left, right)`.”
 - Do not use a sliding window for arbitrary negative values unless a monotonic property still holds; prefix sums plus hashing may be correct.
-- For grid code, guard `grid.empty()` before reading `grid[0]`, then calculate `rows` and `cols` once.
+- For grid code, check `grid.length == 0` before reading `grid[0]`, then calculate `rows` and `cols` once. For rectangular algorithms, assume non-null rows of equal length; otherwise use each row's length.
 - Manually test empty, one element, all equal, duplicates, negative values, already transformed input, first/last range, one row, and one column.
 
 ### Arrays and Strings Mastery Checklist
@@ -909,7 +1129,7 @@ For repeated immutable rectangle-sum queries, a 2D prefix sum gives `O(1)` queri
 
 | Subtopic | Priority | Target depth |
 |---|---|---|
-| Canonical keys for grouping | 🟠 Tier 2 — Very Important | Sorted signatures and count tuples |
+| Canonical keys for grouping | 🟠 Tier 2 — Very Important | Sorted signatures and count signatures |
 | Prefix state + hash map | 🟠 Tier 2 — Very Important | Count or longest-range variants |
 | Hash-table internals | 🟡 Tier 3 — Nice to Know | Collisions, load factor, resizing at a conceptual level |
 
@@ -920,6 +1140,7 @@ For repeated immutable rectangle-sum queries, a 2D prefix sum gives `O(1)` queri
 | Implementing a robust hash table | ⚪ Tier 4 — Low Priority / Specialized | Only if explicitly requested |
 | Custom rolling hashes | ⚪ Tier 4 — Low Priority / Specialized | Collision-sensitive string algorithms; covered later |
 
+<a id="51-hash-map-and-hash-set-fundamentals"></a>
 ### 5.1 Hash Map and Hash Set Fundamentals — 🔴 Tier 1 — Must Master
 
 #### Core intuition and mechanics
@@ -932,20 +1153,18 @@ This yields typical interview costs:
 |---|---:|---:|---|
 | Lookup | `O(1)` | `O(n)` | Depends on hashing, collisions, and implementation |
 | Insert/update | `O(1)` amortized expected | `O(n)` | A resize can be expensive occasionally |
-| Delete | `O(1)` expected | `O(n)` | `unordered_map`/`unordered_set` provide no sorted-order guarantee |
-| Iterate all entries | `O(k)` | `O(k)` | `k` stored keys |
+| Delete | `O(1)` expected | Do not assume constant worst case | `HashMap`/`HashSet` provide no sorted-order guarantee |
+| Iterate all entries | `O(k + capacity)` | `O(k + capacity)` | `k` stored keys; avoid excessive preallocation |
 
-Hash keys must have stable equality and a compatible hash. C++ associative containers expose stored keys as `const`; do not try to mutate them in place. In C++17, scalar and string keys have standard hashes, but `pair`, `tuple`, and fixed count arrays need a custom hasher for `unordered_map`/`unordered_set`, an encoded string key, or an ordered `map`/`set` alternative.
+Hash keys must have stable equality and a compatible hash. Java does not prevent you from mutating a stored key; changing equality/hash fields breaks lookup assumptions. Primitive wrappers and strings are useful immutable keys. Use records with suitable immutable components or an unambiguous encoded signature for compound state; raw arrays have identity equality. Costs above assume constant-cost hashing/equality; include string-key length and resize work as described in the [Java reference](#java-for-dsa-interviews-essential-reference).
 
 #### Set pattern: “Have I seen this?”
 
-```cpp
-bool contains_duplicate(const vector<int>& values) {
-    unordered_set<int> seen;
-    seen.reserve(values.size());
-
+```java
+static boolean containsDuplicate(int[] values) {
+    Set<Integer> seen = new HashSet<>();
     for (int value : values) {
-        if (!seen.insert(value).second) {
+        if (!seen.add(value)) {
             return true;
         }
     }
@@ -957,24 +1176,28 @@ The crucial design choice is **when** to insert. Checking before insertion preve
 
 #### Map pattern: retain the information future positions need
 
-```cpp
-optional<pair<int, int>> find_pair_indices(const vector<int>& values,
-                                           long long target) {
-    unordered_map<long long, int> position;
-    for (int i = 0; i < static_cast<int>(values.size()); ++i) {
-        long long needed = target - values[i];
-        auto it = position.find(needed);
-        if (it != position.end()) {
-            return pair<int, int>{it->second, i};
-        }
-        position[values[i]] = i;
+```java
+// Return zero-based indices, or an empty array when no answer exists.
+static int[] findPairIndices(int[] values, long target) {
+    if (target < 2L * Integer.MIN_VALUE || target > 2L * Integer.MAX_VALUE) {
+        return new int[0];
     }
-    return nullopt;
+    Map<Long, Integer> position = new HashMap<>();
+    for (int i = 0; i < values.length; i++) {
+        long needed = target - values[i];
+        Integer previousIndex = position.get(needed);
+        if (previousIndex != null) {
+            return new int[] {previousIndex, i};
+        }
+        position.put((long) values[i], i);
+    }
+    return new int[0];
 }
 ```
 
 Here `position` contains eligible indices strictly before `i`. Storing an index rather than only membership is driven by the required output.
 
+<a id="52-frequency-tables-and-lookup-techniques"></a>
 ### 5.2 Frequency Tables and Lookup Techniques — 🔴 Tier 1 — Must Master
 
 Choose what the map value means:
@@ -982,7 +1205,7 @@ Choose what the map value means:
 - `value → count`: frequency, multiset equality, or window validity.
 - `value → first index`: longest distance/range; do not overwrite the earliest occurrence.
 - `value → latest index`: most recent conflict or boundary.
-- `key → vector<Item>`: grouping.
+- `key → List<Item>`: grouping.
 - `state → number of prior occurrences`: count ranges/pairs.
 - `state → best result so far`: memoization or DP.
 
@@ -999,14 +1222,38 @@ for each value in values do
 end for
 ```
 
-The initial mapping from prefix `0` to count `1` represents an empty prefix, allowing a valid subarray that begins at index `0`. In C++ this can be initialized as `unordered_map<long long, long long> count_by_prefix{{0, 1}};`. Update **after** querying so an empty current subarray is not accidentally counted when inappropriate.
+The initial mapping from prefix `0` to count `1` represents an empty prefix, allowing a valid subarray that begins at index `0`. In Java, seed a `Map<Long, Long>` with `countByPrefix.put(0L, 1L);`. Update **after** querying so an empty current subarray is not accidentally counted when inappropriate.
+
+#### Java prefix-frequency implementation
+
+This handles negative values and zero targets. Both the accumulated sum and answer count use `long`. For any Java `int[]`, prefix sums fit `long`; an arbitrary extreme target is rejected before subtraction could overflow. Time is expected `O(n)` and auxiliary space `O(n)`.
+
+```java
+static long countSubarraysWithSum(int[] values, long target) {
+    long minimumPossible = (long) values.length * Integer.MIN_VALUE;
+    long maximumPossible = (long) values.length * Integer.MAX_VALUE;
+    if (target < minimumPossible || target > maximumPossible) {
+        return 0L;
+    }
+    Map<Long, Long> countByPrefix = new HashMap<>();
+    countByPrefix.put(0L, 1L);
+    long prefix = 0L;
+    long answer = 0L;
+    for (int value : values) {
+        prefix += value;
+        answer += countByPrefix.getOrDefault(prefix - target, 0L);
+        countByPrefix.put(prefix, countByPrefix.getOrDefault(prefix, 0L) + 1L);
+    }
+    return answer;
+}
+```
 
 #### Canonical grouping keys — 🟠 Tier 2 — Very Important
 
 To group objects that are equivalent under a transformation, map each object to a canonical signature:
 
 - Sort characters: `O(L log L)` per string of length `L`.
-- Count a fixed alphabet and use a stable signature: encode the counts into a string, use `map<array<int, 26>, ...>`, or provide a custom hash for `array<int, 26>`. Building the signature costs `O(L + alphabet)`.
+- Count a fixed alphabet and use a stable signature: encode all counts with delimiters into a `String`, or use an immutable content-key class with matching `equals/hashCode`. An `int[]` itself is not a content-based hash key. Building the signature costs `O(L + alphabet)`.
 - Normalize signs or divide by gcd for ratios, being careful with zero.
 
 The signature must satisfy: equivalent objects have the same key, and non-equivalent objects should not accidentally share it.
@@ -1034,7 +1281,18 @@ The signature must satisfy: equivalent objects have the same key, and non-equiva
 
 Check empty input, duplicate keys, zero/negative values, Unicode/case normalization, large numeric values, and whether key iteration order is relevant. Never rely on arbitrary hash iteration order for correctness.
 
-### Representative Problems
+### Selected practice ladder
+
+Start with 3–4 distinct problems for the selected pattern; reuse overlaps across chapters. Work left to right only when the previous invariant can be explained unaided. The bank below provides substitutions and targeted follow-ups, not additional quotas. For a Tier 3 row, one mechanics/canonical pair is enough unless later evidence justifies the harder columns.
+
+| Pattern | 1. Mechanics | 2. Canonical | 3. Variation | 4. Mixed pattern | 5. Cold revisit |
+|---|---|---|---|---|---|
+| Lookup / signatures | Contains Duplicate | Two Sum | Group Anagrams | Longest Consecutive Sequence | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+| Prefix state | Running Sum of 1D Array | Subarray Sum Equals K | Contiguous Array (earliest balance index) | Binary Subarrays With Sum | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+
+> ⭐ **Canonical Interview Problem:** Two Sum; Subarray Sum Equals K. Explain the invariant before opening the implementation.
+
+### Representative problem bank — choose as needed
 
 #### Beginner
 
@@ -1060,13 +1318,13 @@ Check empty input, duplicate keys, zero/negative values, Unicode/case normalizat
 - Using membership when the result needs counts, indices, or grouped values.
 - Overwriting an earliest index required for a maximum-length answer.
 - Reading a missing key without a default or membership check.
-- Trying to use a compound key without a valid C++17 hash/equality definition, or deriving a key from data that later changes without rebuilding the key.
+- Using array identity as a content signature, forgetting a matching `hashCode` override, or mutating a key's equality fields while it is stored.
 - Assuming hash operations are unconditional worst-case `O(1)`.
 - Forgetting that a map can have up to `O(n)` distinct keys even when each value is small.
 - Decrementing counts but leaving logic that treats zero-count keys as present.
 - Creating a key that omits relevant state, especially in memoization.
 
-In an interview, say what each key and value represent: “After processing index `i`, this `unordered_map` stores the count of every prefix sum through `i`.” That explanation is more valuable than saying only “I use a hash table.”
+In an interview, say what each key and value represent: “After processing index `i`, this `HashMap` stores the count of every prefix sum through `i`.” That explanation is more valuable than saying only “I use a hash table.”
 
 ### Hashing Mastery Checklist
 
@@ -1075,7 +1333,7 @@ In an interview, say what each key and value represent: “After processing inde
 - [ ] I implement one-pass complement lookup without matching an element to itself.
 - [ ] I design map values deliberately: count, first index, latest index, group, or cached result.
 - [ ] I can derive prefix-state lookup for count and longest-length variants.
-- [ ] I can create a stable canonical grouping key and choose an encoded key, ordered map, or custom C++ hasher deliberately.
+- [ ] I can create a stable canonical grouping key and choose an immutable encoded key or a type with consistent Java equality and hashing deliberately.
 - [ ] I explain hashability, collisions, load factor, and resizing at a high level.
 - [ ] I solve standard medium hashing problems and explain their time–space trade-offs.
 
@@ -1123,6 +1381,7 @@ In an interview, say what each key and value represent: “After processing inde
 | Multi-pointer geometric tricks | 🟡 Tier 3 — Nice to Know | Learn only after standard invariants are comfortable |
 | Quickselect-style partition internals | 🟡 Tier 3 — Nice to Know | Useful for selection; not a first-line two-pointer topic |
 
+<a id="61-opposite-direction-pointers"></a>
 ### 6.1 Opposite-Direction Pointers — 🔴 Tier 1 — Must Master
 
 #### Intuition and safe movement
@@ -1135,7 +1394,7 @@ right = n - 1
 while left < right do
     total = a[left] + a[right]
     if total equals target then
-        report the pair
+        return the pair
     else if total is less than target then
         left = left + 1
     else
@@ -1153,6 +1412,30 @@ If the sum is too small, pairing the current smallest with any value no larger t
 
 For palindrome-like comparisons, define normalization. Skipping punctuation/case on demand can avoid building another string, but increases boundary complexity.
 
+#### Java sorted-pair implementation
+
+Require ascending input; return zero-based indices or an empty array. Sorting beforehand changes original indices, so preserve them if the contract requires them.
+
+```java
+static int[] sortedPairIndices(int[] values, long target) {
+    int left = 0;
+    int right = values.length - 1;
+    while (left < right) {
+        long total = (long) values[left] + values[right];
+        if (total == target) {
+            return new int[] {left, right};
+        }
+        if (total < target) {
+            left++;
+        } else {
+            right--;
+        }
+    }
+    return new int[0];
+}
+```
+
+<a id="62-same-direction-and-parallel-pointers"></a>
 ### 6.2 Same-Direction and Parallel Pointers — 🔴 Tier 1 — Must Master
 
 #### Read/write compaction
@@ -1170,6 +1453,23 @@ For sorted sequences `a` and `b`, compare their current values, consume whicheve
 - **Recognition:** Two sorted inputs, intersection, union, merge, synchronized events, or compare sequences.
 - **Mistake:** Forgetting leftover elements or advancing both pointers when only one item has been consumed.
 
+#### Java read/write deduplication
+
+Require ascending input; the returned length identifies the valid prefix. The array length itself cannot change. Time `O(n)`, auxiliary space `O(1)`.
+
+```java
+static int deduplicateSorted(int[] values) {
+    int write = 0;
+    for (int read = 0; read < values.length; read++) {
+        if (write == 0 || values[read] != values[write - 1]) {
+            values[write++] = values[read];
+        }
+    }
+    return write;
+}
+```
+
+<a id="63-partitioning"></a>
 ### 6.3 Partitioning — 🟠 Tier 2 — Very Important
 
 Partitioning maintains regions with explicit meanings. In the Dutch-national-flag form:
@@ -1199,7 +1499,18 @@ Each action must shrink the unknown region. When swapping a high value from `cur
 | Three categories | Low/current/high | Three classified regions plus shrinking unknown region |
 | Cycle/middle of linked list | Slow/fast | Relative speeds encode structure, not array ordering |
 
-### Representative Problems
+### Selected practice ladder
+
+Start with 3–4 distinct problems for the selected pattern; reuse overlaps across chapters. Work left to right only when the previous invariant can be explained unaided. The bank below provides substitutions and targeted follow-ups, not additional quotas. For a Tier 3 row, one mechanics/canonical pair is enough unless later evidence justifies the harder columns.
+
+| Pattern | 1. Mechanics | 2. Canonical | 3. Variation | 4. Mixed pattern | 5. Cold revisit |
+|---|---|---|---|---|---|
+| Opposite ends | Valid Palindrome | Two Sum II | Container With Most Water | 3Sum | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+| Read/write / merge | Move Zeroes | Remove Duplicates from Sorted Array | Merge Sorted Array | Sort Colors | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+
+> ⭐ **Canonical Interview Problem:** Two Sum II; Remove Duplicates from Sorted Array. Explain the invariant before opening the implementation.
+
+### Representative problem bank — choose as needed
 
 #### Beginner
 
@@ -1273,7 +1584,7 @@ Each action must shrink the unknown region. When swapping a high value from `cur
 | Subtopic | Priority | Target depth |
 |---|---|---|
 | Last-seen-index window | 🟠 Tier 2 — Very Important | Jump the left boundary without moving backward |
-| Monotonic deque window extrema | 🟠 Tier 2 — Very Important | Remove expired and dominated indices; revisited in queues |
+| Monotonic deque window extrema | 🟡 Tier 3 — Nice to Know | Remove expired and dominated indices; revisited in queues |
 | Window + replacement budget | 🟠 Tier 2 — Very Important | Maintain a conservative maximum-frequency invariant |
 
 ### Optional / Specialized
@@ -1283,6 +1594,7 @@ Each action must shrink the unknown region. When swapping a high value from `cur
 | Multiple nested windows / exact-count transforms | 🟡 Tier 3 — Nice to Know | Learn “exactly `k` = at most `k` − at most `k-1`” after core mastery |
 | Non-monotonic window constraints | ⚪ Tier 4 — Low Priority / Specialized | Often need prefix sums, trees, or deques instead of a standard window |
 
+<a id="71-fixed-size-window"></a>
 ### 7.1 Fixed-Size Window — 🔴 Tier 1 — Must Master
 
 #### Intuition and implementation sketch
@@ -1306,6 +1618,30 @@ end for
 - **Edge cases:** `k = 0` if permitted, `k = 1`, `k = n`, `k > n`, and negative values when initializing a maximum.
 - **Mistake:** Recomputing the whole window or removing `a[right-k+1]` instead of the actual outgoing index.
 
+#### Java fixed-window sum
+
+Require `1 <= k <= values.length`; invalid sizes throw an exception instead of inventing an empty maximum. Initialize from the first complete window so all-negative input works. Time `O(n)`, auxiliary space `O(1)`.
+
+```java
+static long maximumWindowSum(int[] values, int k) {
+    if (k <= 0 || k > values.length) {
+        throw new IllegalArgumentException("Window size must be in [1, n]");
+    }
+    long sum = 0L;
+    for (int i = 0; i < k; i++) {
+        sum += values[i];
+    }
+    long best = sum;
+    for (int right = k; right < values.length; right++) {
+        sum -= values[right - k];
+        sum += values[right];
+        best = Math.max(best, sum);
+    }
+    return best;
+}
+```
+
+<a id="72-variable-size-window"></a>
 ### 7.2 Variable-Size Window — 🔴 Tier 1 — Must Master
 
 #### The expand/shrink invariant
@@ -1339,6 +1675,7 @@ end while
 
 Every item enters once and leaves once, so the total is `O(n)` even though a `while` loop is nested inside a `for` loop.
 
+<a id="73-frequency-based-windows"></a>
 ### 7.3 Frequency-Based Windows — 🔴 Tier 1 — Must Master
 
 The hard part is not moving pointers; it is designing a constant-time validity test.
@@ -1383,6 +1720,36 @@ left = max(left, last_seen[character] + 1)
 
 The `max` prevents `left` from moving backward when the previous occurrence is already outside the current window.
 
+#### Java longest-window implementation
+
+This version counts distinct **UTF-16 code units**. It is suitable for ASCII/BMP-unit contracts; convert to code points first if the problem requires them. Zero-count keys are removed so `frequency.size()` means the number of distinct units in the current window. For `k <= 0`, the valid length is zero. Expected time `O(n)`; working space `O(min(n, k + 1, alphabet))`, including the transient entering key.
+
+```java
+static int longestAtMostKDistinct(String text, int k) {
+    if (k <= 0) {
+        return 0;
+    }
+    Map<Character, Integer> frequency = new HashMap<>();
+    int left = 0;
+    int best = 0;
+    for (int right = 0; right < text.length(); right++) {
+        char entering = text.charAt(right);
+        frequency.put(entering, frequency.getOrDefault(entering, 0) + 1);
+        while (frequency.size() > k) {
+            char leaving = text.charAt(left++);
+            int remaining = frequency.get(leaving) - 1;
+            if (remaining == 0) {
+                frequency.remove(leaving);
+            } else {
+                frequency.put(leaving, remaining);
+            }
+        }
+        best = Math.max(best, right - left + 1);
+    }
+    return best;
+}
+```
+
 ### When Sliding Window Does Not Apply
 
 - The range is not contiguous.
@@ -1394,7 +1761,18 @@ The `max` prevents `left` from moving backward when the previous occurrence is a
 
 Alternatives include prefix sums + hashing, binary search on answer, monotonic stacks/deques, DP, or sorting + two pointers.
 
-### Representative Problems
+### Selected practice ladder
+
+Start with 3–4 distinct problems for the selected pattern; reuse overlaps across chapters. Work left to right only when the previous invariant can be explained unaided. The bank below provides substitutions and targeted follow-ups, not additional quotas. For a Tier 3 row, one mechanics/canonical pair is enough unless later evidence justifies the harder columns.
+
+| Pattern | 1. Mechanics | 2. Canonical | 3. Variation | 4. Mixed pattern | 5. Cold revisit |
+|---|---|---|---|---|---|
+| Fixed / frequency | Maximum Average Subarray I | Permutation in String | Find All Anagrams in a String | Minimum Window Substring | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+| Variable bounds | Longest Substring Without Repeating Characters | Minimum Size Subarray Sum | Longest Substring with At Most K Distinct Characters | Longest Repeating Character Replacement | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+
+> ⭐ **Canonical Interview Problem:** Permutation in String; Minimum Size Subarray Sum. Explain the invariant before opening the implementation.
+
+### Representative problem bank — choose as needed
 
 #### Beginner
 
@@ -1447,17 +1825,17 @@ State the invariant aloud: “After the `while`, `[left, right]` is valid, and `
 
 ### Topic Overview
 
-- **What it is:** A linked list stores elements in nodes connected by pointers rather than at contiguous indices. Singly linked nodes point forward; doubly linked nodes point both forward and backward.
+- **What it is:** A linked list stores elements in nodes connected by object references rather than at contiguous indices. Singly linked nodes point forward; doubly linked nodes point both forward and backward.
 - **Why it exists:** Links permit local insertion/deletion without shifting later elements and let structures be assembled from independently allocated nodes.
-- **Why it matters in interviews:** Linked-list tasks test pointer safety, mutation, invariants, and reasoning without random access. Reversal, merge, cycle, and dummy-node patterns are frequent classics.
+- **Why it matters in interviews:** Linked-list tasks test reference safety, mutation, invariants, and reasoning without random access. Reversal, merge, cycle, and dummy-node patterns are frequent classics.
 - **Interview priority:** 🟠 Tier 2 — Very Important.
-- **Prerequisites:** C++ pointers, `nullptr` handling, loops/recursion, and pointer identity vs value equality.
+- **Prerequisites:** Java object references, `null` handling, loops/recursion, and object identity vs value equality.
 - **Common use cases:** Queues, adjacency chains, LRU-cache internals, ordered merging, and sequences with frequent node-level updates.
 - **Common problem patterns:** Reverse links, splice nodes, merge lists, dummy head, fast/slow pointers, and cycle detection.
 - **Recognition clues:** Input is a `ListNode`, random access is absent, nodes must be rearranged in place, or the task asks for cycle/middle/intersection.
 - **Required depth:** Confidently implement singly linked reversal, merge, middle, and cycle detection; understand doubly linked splicing for designs such as LRU cache.
 
-> **Why this priority?** Linked lists appear less often than arrays and hashing, but their core patterns are canonical interview material and expose pointer errors clearly. Advanced list tricks have much lower transfer value.
+> **Why this priority?** Linked lists appear less often than arrays and hashing, but their core patterns are canonical interview material and expose reference-rewiring errors clearly. Advanced list tricks have much lower transfer value.
 
 ### Focus First
 
@@ -1481,9 +1859,10 @@ State the invariant aloud: “After the `while`, `[left, right]` is valid, and `
 | Subtopic | Priority | Target depth |
 |---|---|---|
 | Exotic multilevel/XOR lists | ⚪ Tier 4 — Low Priority / Specialized | Not useful for standard interviews |
-| Implementing list allocators/intrusive lists | ⚪ Tier 4 — Low Priority / Specialized | Role-specific systems knowledge |
+| Custom concurrent linked structures | ⚪ Tier 4 — Low Priority / Specialized | Role-specific concurrency knowledge |
 
-### 8.1 Singly Linked Lists and Pointer Safety — 🟠 Tier 2 — Very Important
+<a id="81-singly-linked-lists-and-reference-safety"></a>
+### 8.1 Singly Linked Lists and Reference Safety — 🟠 Tier 2 — Very Important
 
 A node conceptually contains `value` and `next`. Access by position is `O(n)` because links must be followed; insertion or deletion is `O(1)` **only when the relevant node/predecessor is already known**.
 
@@ -1494,7 +1873,7 @@ A node conceptually contains `value` and `next`. Access by position is `O(n)` be
 | Insert/delete after known node | `O(1)` | Usually `O(n)` shift | Finding the node may be `O(n)` |
 | Append | `O(1)` with tail, else `O(n)` | Amortized `O(1)` | Keep tail consistent |
 
-Before changing `current->next`, save any node that still needs to be reached. Draw a three-node picture or label `previous`, `current`, and `next_node`; pointer manipulation becomes far less error-prone when the preserved path is explicit.
+Before changing `current.next`, save any node that still needs to be reached. Draw a three-node picture or label `previous`, `current`, and `next_node`; reference rewiring becomes far less error-prone when the preserved path is explicit.
 
 #### Dummy/sentinel nodes
 
@@ -1511,27 +1890,32 @@ return dummy.next as the new head
 - **Cost:** `O(1)` extra space.
 - **Trade-off:** One extra node greatly simplifies branching; remember not to return the dummy itself.
 
+<a id="82-reversal"></a>
 ### 8.2 Reversal — 🟠 Tier 2 — Very Important
 
 #### Core intuition
 
 At every step, the processed prefix is reversed and headed by `previous`; `current` begins the unreversed suffix.
 
-```cpp
-struct ListNode {
+```java
+static class ListNode {
     int value;
-    ListNode* next;
-};
+    ListNode next;
 
-ListNode* reverse_list(ListNode* head) {
-    ListNode* previous = nullptr;
-    ListNode* current = head;
+    ListNode(int value) {
+        this.value = value;
+    }
+}
 
-    while (current != nullptr) {
-        ListNode* next_node = current->next; // preserve the suffix
-        current->next = previous;            // reverse one edge
+// Require an acyclic list. The caller assigns head = reverseList(head).
+static ListNode reverseList(ListNode head) {
+    ListNode previous = null;
+    ListNode current = head;
+    while (current != null) {
+        ListNode nextNode = current.next; // preserve the suffix
+        current.next = previous;
         previous = current;
-        current = next_node;
+        current = nextNode;
     }
     return previous;
 }
@@ -1540,11 +1924,12 @@ ListNode* reverse_list(ListNode* head) {
 - **Time:** `O(n)`; each node is processed once.
 - **Space:** `O(1)` iterative; `O(n)` call stack for a recursive version on a length-`n` list.
 - **Recognition:** “Reverse,” reorder halves, palindrome list, or a larger problem needs temporary direction changes.
-- **Common mistake:** Reassigning `current->next` before saving the original next pointer, losing the remaining list.
+- **Common mistake:** Reassigning `current.next` before saving the original next reference, losing the remaining list.
 - **Edge cases:** Empty list, one node, two nodes, and whether the caller expects the input structure to be restored after a temporary reversal.
 
-For recursive reversal, define the return value: the new head of the reversed suffix. After recursion returns, set `head->next->next = head`, then set `head->next = nullptr` to prevent a cycle. Iteration is usually safer when list length is large or uncontrolled.
+For recursive reversal, define the return value: the new head of the reversed suffix. After recursion returns, set `head.next.next = head`, then set `head.next = null` to prevent a cycle. Iteration is usually safer when list length is large or uncontrolled.
 
+<a id="83-fast-and-slow-pointers"></a>
 ### 8.3 Fast and Slow Pointers — 🟠 Tier 2 — Very Important
 
 #### Finding a middle
@@ -1562,7 +1947,7 @@ For even length, this common initialization returns the second middle. If the ta
 
 #### Floyd cycle detection
 
-If a cycle exists, fast eventually laps slow inside it; if `fast` reaches `nullptr`, no cycle exists.
+If a cycle exists, fast eventually laps slow inside it; if `fast` reaches `null`, no cycle exists.
 
 - **Detection:** `O(n)` time and `O(1)` space.
 - **Cycle entry:** After a meeting, place one pointer at the head, move both one step at a time, and their next meeting is the cycle entry.
@@ -1572,13 +1957,43 @@ Compare **node identity**, not node values. Repeated values do not imply a cycle
 
 The technique also supports “kth from end”: place pointers `k` nodes apart, then move both until the lead reaches the end. Clarify whether `k` is one-based and what should happen when `k` exceeds the length.
 
+#### Java fast/slow implementations
+
+These use `ListNode` from [reversal](#82-reversal). `middleNode` requires an acyclic list and returns the second middle for even length, or null for empty input. `hasCycle` uses identity (`==`) deliberately. Both run in `O(n)` time and `O(1)` auxiliary space.
+
+```java
+static ListNode middleNode(ListNode head) {
+    ListNode slow = head;
+    ListNode fast = head;
+    while (fast != null && fast.next != null) {
+        slow = slow.next;
+        fast = fast.next.next;
+    }
+    return slow;
+}
+
+static boolean hasCycle(ListNode head) {
+    ListNode slow = head;
+    ListNode fast = head;
+    while (fast != null && fast.next != null) {
+        slow = slow.next;
+        fast = fast.next.next;
+        if (slow == fast) {
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+<a id="84-doubly-linked-lists"></a>
 ### 8.4 Doubly Linked Lists — 🟡 Tier 3 — Nice to Know
 
 A doubly linked node has `prev` and `next`. Given a node, it can be removed in `O(1)` by reconnecting both neighbors. With dummy head and tail sentinels, every real node has two neighbors, eliminating endpoint branches.
 
 This is important for an **LRU cache** design:
 
-- `unordered_map<Key, Node*>`: key → node pointer for expected `O(1)` lookup.
+- `HashMap<Key, Node>`: key → node reference for expected `O(1)` lookup.
 - Doubly linked list: recency order and `O(1)` detach/append.
 
 Every splice must update four logical connections consistently. When moving a node, detach it fully before attaching it elsewhere. Keep map membership, list membership, capacity, and tail/head meaning synchronized.
@@ -1587,7 +2002,17 @@ Every splice must update four logical connections consistently. When moving a no
 - **Space:** Two links per node plus any index.
 - **Trade-off:** Easier bidirectional removal than singly lists, but more memory and more invariants to maintain.
 
-### Representative Problems
+### Selected practice ladder
+
+Start with 3–4 distinct problems for the selected pattern; reuse overlaps across chapters. Work left to right only when the previous invariant can be explained unaided. The bank below provides substitutions and targeted follow-ups, not additional quotas. For a Tier 3 row, one mechanics/canonical pair is enough unless later evidence justifies the harder columns.
+
+| Pattern | 1. Mechanics | 2. Canonical | 3. Variation | 4. Mixed pattern | 5. Cold revisit |
+|---|---|---|---|---|---|
+| Rewire / identity | Middle of the Linked List | Reverse Linked List | Linked List Cycle | Reorder List | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+
+> ⭐ **Canonical Interview Problem:** Reverse Linked List. Explain the invariant before opening the implementation.
+
+### Representative problem bank — choose as needed
 
 #### Beginner
 
@@ -1613,14 +2038,14 @@ Every splice must update four logical connections consistently. When moving a no
 
 - Losing the rest of the list before saving `next`.
 - Returning the old head after reversal.
-- Dereferencing `fast->next` before confirming `fast != nullptr`.
+- Dereferencing `fast.next` before confirming `fast != null`.
 - Confusing equal node values with identical node objects.
 - Creating a cycle by failing to terminate a reversed or merged tail.
 - Forgetting that finding a predecessor can make deletion `O(n)`.
 - Mishandling head deletion instead of using a dummy.
 - Assuming the second half begins at the same place for odd and even lengths without tracing examples.
 
-In an interview, draw nodes and arrows, state what each pointer owns, and trace one rewiring operation. “`previous` heads the fully reversed prefix; `current` heads the untouched suffix” is a strong correctness explanation.
+In an interview, draw nodes and arrows, state which node each reference denotes, and trace one rewiring operation. “`previous` heads the fully reversed prefix; `current` heads the untouched suffix” is a strong correctness explanation.
 
 ### Linked Lists Mastery Checklist
 
@@ -1635,6 +2060,7 @@ In an interview, draw nodes and arrows, state what each pointer owns, and trace 
 
 ---
 
+<a id="9-stacks-queues-deques"></a>
 ## 9. Stacks, Queues & Deques
 
 **Priority:** 🟠 Tier 2 — Very Important
@@ -1660,7 +2086,7 @@ In an interview, draw nodes and arrows, state what each pointer owns, and trace 
 | Stack fundamentals | 🔴 Tier 1 — Must Master | LIFO state, push/pop/peek, iterative traversal |
 | Parentheses and delimiter matching | 🔴 Tier 1 — Must Master | Most-recent unmatched opener invariant |
 | Queue fundamentals and BFS usage | 🔴 Tier 1 — Must Master | FIFO frontier, mark-on-enqueue, level boundaries |
-| Correct C++ container adaptor | 🔴 Tier 1 — Must Master | Use `stack`, `queue`, or `deque`; avoid linear vector front erasure |
+| Correct Java collection | 🔴 Tier 1 — Must Master | Use `ArrayDeque` through `Deque`/`Queue`; avoid linear `ArrayList.remove(0)` |
 
 ### Learn Later
 
@@ -1678,9 +2104,10 @@ In an interview, draw nodes and arrows, state what each pointer owns, and trace 
 | Full parser construction | ⚪ Tier 4 — Low Priority / Specialized | Basic calculator patterns are enough for most roles |
 | Lock-free or concurrent queues | ⚪ Tier 4 — Low Priority / Specialized | Systems-specific, not ordinary DSA interview scope |
 
+<a id="91-stack-fundamentals-and-parentheses"></a>
 ### 9.1 Stack Fundamentals and Parentheses — 🔴 Tier 1 — Must Master
 
-`std::stack` supports `push`, `pop`, and `top` in `O(1)` with its standard underlying containers (a `deque` by default). It is ideal when the newest unresolved item must be handled first.
+`Deque<Integer> stack = new ArrayDeque<>();` supports `push`, `pop`, and `peek`; end insertion is amortized `O(1)`, and end read/removal is `O(1)`. It is ideal when the newest unresolved item must be handled first.
 
 #### Delimiter invariant
 
@@ -1705,8 +2132,40 @@ return valid exactly when the stack is empty
 - **Edge cases:** Empty input, a closing token first, mismatched types, leftover openers, and non-bracket tokens if present.
 - **Alternative:** A counter works for one bracket type only when nesting types do not need distinction; it cannot validate arbitrary mixed delimiters.
 
-Stacks also replace recursion explicitly. An iterative DFS stack gives control over order and avoids exhausting C++'s finite native call stack, but may require storing extra per-frame state for postorder processing.
+Stacks also replace recursion explicitly. An iterative DFS stack gives control over order and avoids exhausting Java's finite call stack, but may require storing extra per-frame state for postorder processing.
 
+#### Java delimiter validation
+
+The contract accepts only `()[]{}`; any other character returns false, and the empty string is valid.
+
+```java
+static boolean validParentheses(String text) {
+    Deque<Character> stack = new ArrayDeque<>();
+    for (int i = 0; i < text.length(); i++) {
+        char token = text.charAt(i);
+        if (token == '(' || token == '[' || token == '{') {
+            stack.push(token);
+        } else {
+            char expected;
+            if (token == ')') {
+                expected = '(';
+            } else if (token == ']') {
+                expected = '[';
+            } else if (token == '}') {
+                expected = '{';
+            } else {
+                return false;
+            }
+            if (stack.isEmpty() || stack.pop() != expected) {
+                return false;
+            }
+        }
+    }
+    return stack.isEmpty();
+}
+```
+
+<a id="92-expression-problems"></a>
 ### 9.2 Expression Problems — 🟠 Tier 2 — Very Important
 
 Common forms:
@@ -1723,8 +2182,9 @@ Important details:
 - Exponentiation is commonly right-associative; most binary arithmetic operators are left-associative.
 - Unary minus and whitespace require deliberate tokenization rather than accidental character assumptions.
 
-**Complexity:** A well-designed single pass is typically `O(n)` time and `O(n)` stack space. Repeated front insertion, middle erasure, or rebuilding temporary strings can raise the cost in C++.
+**Complexity:** A well-designed single pass is typically `O(n)` time and `O(n)` stack space. Repeated front insertion, middle erasure, or rebuilding temporary strings can raise the cost in Java; count decoded output length as well as encoded input length.
 
+<a id="93-monotonic-stack"></a>
 ### 9.3 Monotonic Stack — 🟠 Tier 2 — Very Important
 
 #### Core intuition
@@ -1766,9 +2226,30 @@ Each index is pushed once and popped at most once:
 
 For largest-rectangle problems, a sentinel height can force all remaining bars to pop. State whether boundaries are inclusive and why width is `right_boundary - left_boundary - 1`.
 
+#### Java next-greater indices
+
+Equal values do not resolve a strictly-greater query. A result of `-1` means no greater value occurs to the right. Empty input returns an empty result. The primitive stack avoids boxing; its size never exceeds `n`. Time `O(n)`, auxiliary space `O(n)`, plus `O(n)` output.
+
+```java
+static int[] nextGreaterIndices(int[] values) {
+    int[] answer = new int[values.length];
+    Arrays.fill(answer, -1);
+    int[] stack = new int[values.length];
+    int size = 0;
+    for (int i = 0; i < values.length; i++) {
+        while (size > 0 && values[i] > values[stack[size - 1]]) {
+            answer[stack[--size]] = i;
+        }
+        stack[size++] = i;
+    }
+    return answer;
+}
+```
+
+<a id="94-queue-fundamentals-and-bfs-usage"></a>
 ### 9.4 Queue Fundamentals and BFS Usage — 🔴 Tier 1 — Must Master
 
-A queue processes items in discovery order. In C++17, use `queue<T>` or `deque<T>` for `O(1)` end operations; repeatedly calling `vector::erase(vector.begin())` shifts the remaining elements and costs `O(n)`.
+A queue processes items in discovery order. Use `Queue<T> queue = new ArrayDeque<>();`: `offer` at the tail is amortized `O(1)` and `poll` at the head is `O(1)`. Repeated `ArrayList.remove(0)` shifts remaining elements and costs `O(n)` per removal.
 
 #### BFS queue invariant
 
@@ -1783,8 +2264,9 @@ DFS may find a path but not necessarily the shortest unweighted path. Weighted e
 
 #### Deque — 🟠 Tier 2 — Very Important
 
-A deque offers `O(1)` insertion/removal at both ends. Use it for ordinary queues, palindrome-style processing when mutation is acceptable, 0–1 BFS awareness, and monotonic candidate queues.
+`ArrayDeque` offers amortized `O(1)` insertion and `O(1)` removal at both ends. Use it for ordinary queues, palindrome-style processing when mutation is acceptable, 0–1 BFS awareness, and monotonic candidate queues.
 
+<a id="95-monotonic-deque"></a>
 ### 9.5 Monotonic Deque — 🟡 Tier 3 — Nice to Know
 
 For the maximum in each length-`k` window, keep indices in decreasing value order:
@@ -1799,6 +2281,33 @@ For the maximum in each length-`k` window, keep indices in decreasing value orde
 - **Alternative:** A heap is often simpler, typically `O(n log n)` with lazy stale entries or `O(n log k)` with deletions managed appropriately.
 - **Mistakes:** Storing values when expiration needs indices, removing dominated elements from the wrong end, emitting before the window is full, and mixing expiration with domination rules.
 
+#### Java window maxima
+
+Require `1 <= k <= n`. Equal older candidates can be removed because the newer equal value expires later. Expiration happens before appending, so the deque has at most `k` indices. Output takes `O(n-k+1)` space in addition to the `O(k)` deque.
+
+```java
+static int[] slidingWindowMaximum(int[] values, int k) {
+    if (k <= 0 || k > values.length) {
+        throw new IllegalArgumentException("Window size must be in [1, n]");
+    }
+    int[] answer = new int[values.length - k + 1];
+    Deque<Integer> candidates = new ArrayDeque<>();
+    for (int right = 0; right < values.length; right++) {
+        while (!candidates.isEmpty() && candidates.peekFirst() <= right - k) {
+            candidates.pollFirst();
+        }
+        while (!candidates.isEmpty() && values[candidates.peekLast()] <= values[right]) {
+            candidates.pollLast();
+        }
+        candidates.addLast(right);
+        if (right >= k - 1) {
+            answer[right - k + 1] = values[candidates.peekFirst()];
+        }
+    }
+    return answer;
+}
+```
+
 ### Stack vs Queue vs Deque
 
 | Need | Choose | Why |
@@ -1810,7 +2319,19 @@ For the maximum in each length-`k` window, keep indices in decreasing value orde
 | Max/min in every window | Monotonic deque | Keeps only unexpired, undominated candidates |
 | Highest numeric priority | Heap, not queue | Extraction follows priority rather than arrival time |
 
-### Representative Problems
+### Selected practice ladder
+
+Start with 3–4 distinct problems for the selected pattern; reuse overlaps across chapters. Work left to right only when the previous invariant can be explained unaided. The bank below provides substitutions and targeted follow-ups, not additional quotas. For a Tier 3 row, one mechanics/canonical pair is enough unless later evidence justifies the harder columns.
+
+| Pattern | 1. Mechanics | 2. Canonical | 3. Variation | 4. Mixed pattern | 5. Cold revisit |
+|---|---|---|---|---|---|
+| LIFO / monotonic | Valid Parentheses | Daily Temperatures | Min Stack | Largest Rectangle in Histogram (later) | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+| FIFO / levels | Number of Recent Calls | Binary Tree Level Order Traversal | Implement Queue Using Stacks | Rotting Oranges (after graphs) | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+| Deque (Tier 3; select later) | Trace expiry on a length-3 window | Sliding Window Maximum | Sliding Window Minimum archetype | Shortest Subarray with Sum at Least K (optional hard) | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+
+> ⭐ **Canonical Interview Problem:** Daily Temperatures; Binary Tree Level Order Traversal; Sliding Window Maximum. Explain the invariant before opening the implementation.
+
+### Representative problem bank — choose as needed
 
 #### Beginner
 
@@ -1837,7 +2358,7 @@ For the maximum in each length-`k` window, keep indices in decreasing value orde
 - Popping or peeking without checking emptiness.
 - Failing to validate that a delimiter stack is empty at the end.
 - Reversing operands for subtraction/division.
-- Using `vector::erase(begin())` as a queue and paying `O(n)` per removal.
+- Using `ArrayList.remove(0)` as a queue and paying `O(n)` per removal.
 - Marking BFS nodes only when dequeued and inserting duplicates.
 - Mixing level count with a queue size that grows during the level.
 - Choosing the wrong monotonic direction or wrong strict/non-strict comparison for duplicates.
@@ -1850,7 +2371,7 @@ Before coding a monotonic stack/deque, narrate one pop: “This old index can ne
 - [ ] I choose LIFO, FIFO, double-ended, or priority order deliberately.
 - [ ] I validate mixed parentheses and explain why the stack is necessary.
 - [ ] I evaluate postfix expressions with correct operand order.
-- [ ] I use `queue`/`deque` for `O(1)` FIFO operations instead of erasing the front of a `vector`.
+- [ ] I use `ArrayDeque` for amortized `O(1)` FIFO operations instead of removing index zero from an `ArrayList`.
 - [ ] I perform BFS with mark-on-enqueue and correct level boundaries.
 - [ ] I derive a monotonic stack's direction, pop condition, stored information, and default result.
 - [ ] I prove monotonic stack/deque total work through per-element accounting.
@@ -1901,6 +2422,7 @@ Before coding a monotonic stack/deque, narrate one pop: “This old index can ne
 | Floating-point answer search | 🟡 Tier 3 — Nice to Know | Fixed iterations/tolerance and precision caveats |
 | Parallel binary search and parametric-search theory | ⚪ Tier 4 — Low Priority / Specialized | Competitive-programming or highly algorithmic roles |
 
+<a id="101-exact-binary-search"></a>
 ### 10.1 Exact Binary Search — 🔴 Tier 1 — Must Master
 
 #### Core intuition
@@ -1934,8 +2456,32 @@ return NOT_FOUND
 - **When to use:** Random-access sequence sorted under the same comparison relation used by the search.
 - **Alternative:** A hash map offers expected `O(1)` repeated exact lookup but needs extra space and loses order operations; a linear scan works on unsorted input in `O(n)`.
 
-In C++17, use `left + (right - left) / 2`; with nonnegative indices, integer division supplies the needed floor while avoiding the overflow risk of `(left + right) / 2`. More importantly, each update must remove `mid` or otherwise strictly shrink the range; `left = mid` in the wrong convention can loop forever.
+In Java, use `left + (right - left) / 2`; with nonnegative indices, integer division supplies the needed floor while avoiding the overflow risk of `(left + right) / 2`. More importantly, each update must remove `mid` or otherwise strictly shrink the range; `left = mid` in the wrong convention can loop forever.
 
+#### Java exact search
+
+Require ascending input. Return any matching zero-based index, or `-1` when absent; empty input is naturally handled.
+
+```java
+static int binarySearch(int[] values, int target) {
+    int left = 0;
+    int right = values.length - 1;
+    while (left <= right) {
+        int middle = left + (right - left) / 2;
+        if (values[middle] == target) {
+            return middle;
+        }
+        if (values[middle] < target) {
+            left = middle + 1;
+        } else {
+            right = middle - 1;
+        }
+    }
+    return -1;
+}
+```
+
+<a id="102-lower-bound-and-upper-bound"></a>
 ### 10.2 Lower Bound and Upper Bound — 🔴 Tier 1 — Must Master
 
 #### First-true model
@@ -1964,7 +2510,7 @@ The result is in `[0, n]`; `n` means no element satisfies the predicate.
 - **Upper bound:** First index with value `> target`; insertion point after equal values.
 - **First occurrence:** Lower bound, then verify the result is in range and equals target.
 - **Last occurrence:** Upper bound minus one, then verify.
-- **Count in sorted array:** `upper_bound(target) - lower_bound(target)`.
+- **Count in sorted array:** `upperBound(values, target) - lowerBound(values, target)`.
 
 The invariant for the half-open first-true search is:
 
@@ -1974,6 +2520,41 @@ The invariant for the half-open first-true search is:
 
 This boundary search is safer than finding one occurrence and scanning outward, which can degrade to `O(n)` with many duplicates.
 
+#### Java lower and upper bounds
+
+Require ascending input. Both return a boundary in `[0, n]`, including zero on empty input. Never index the returned `n`. Derive upper bound by changing the predicate, without computing `target + 1`, which could overflow.
+
+```java
+static int lowerBound(int[] values, int target) {
+    int left = 0;
+    int right = values.length;
+    while (left < right) {
+        int middle = left + (right - left) / 2;
+        if (values[middle] >= target) {
+            right = middle;
+        } else {
+            left = middle + 1;
+        }
+    }
+    return left;
+}
+
+static int upperBound(int[] values, int target) {
+    int left = 0;
+    int right = values.length;
+    while (left < right) {
+        int middle = left + (right - left) / 2;
+        if (values[middle] > target) {
+            right = middle;
+        } else {
+            left = middle + 1;
+        }
+    }
+    return left;
+}
+```
+
+<a id="103-binary-search-on-answer"></a>
 ### 10.3 Binary Search on Answer — 🟠 Tier 2 — Very Important
 
 #### Recognition and systematic process
@@ -2012,6 +2593,25 @@ return low
 
 Binary search is invalid if feasibility can alternate true/false as `x` changes. Test the logic verbally: “If capacity `x` works, why must capacity `x+1` work?” Also ensure the greedy feasibility check is itself correct; binary search cannot repair a flawed predicate.
 
+#### Java first-true search
+
+Require `0 <= low <= high`, a monotone false-then-true predicate, and a guaranteed feasible `high`. This closed answer range returns the first feasible value, including `high`; if no feasible value may exist, test the upper endpoint first and define absence explicitly. The parameter uses `java.util.function.LongPredicate`; concrete interviews can call a named feasibility helper instead. The stated nonnegative range makes `high - low` safe.
+
+```java
+static long firstTrue(long low, long high, java.util.function.LongPredicate feasible) {
+    while (low < high) {
+        long middle = low + (high - low) / 2;
+        if (feasible.test(middle)) {
+            high = middle;
+        } else {
+            low = middle + 1;
+        }
+    }
+    return low;
+}
+```
+
+<a id="104-rotated-peak-and-matrix-variants"></a>
 ### 10.4 Rotated, Peak, and Matrix Variants — 🟠 Tier 2 — Very Important
 
 #### Rotated sorted array
@@ -2024,7 +2624,7 @@ Comparing `a[mid]` with `a[mid+1]` reveals whether a peak lies to the right or a
 
 #### Matrix search
 
-- If each row's last element is less than the next row's first, treat the matrix as a flat sorted array: in C++ with nonnegative indices, `row = mid / cols` and `col = mid % cols`.
+- If each row's last element is less than the next row's first, treat the matrix as a flat sorted array: in Java with nonnegative indices, `row = mid / cols` and `col = mid % cols`.
 - If rows and columns are independently sorted, staircase search from a corner may be `O(rows + cols)`; a flattened binary search would be invalid without global row-to-row ordering.
 
 Always identify exactly what ordering guarantee the prompt provides.
@@ -2041,7 +2641,18 @@ Always identify exactly what ordering guarantee the prompt provides.
 | Are duplicates allowed? | Changes rotated/first-last reasoning |
 | What does the predicate cost? | Gives total `O(C log R)` complexity |
 
-### Representative Problems
+### Selected practice ladder
+
+Start with 3–4 distinct problems for the selected pattern; reuse overlaps across chapters. Work left to right only when the previous invariant can be explained unaided. The bank below provides substitutions and targeted follow-ups, not additional quotas. For a Tier 3 row, one mechanics/canonical pair is enough unless later evidence justifies the harder columns.
+
+| Pattern | 1. Mechanics | 2. Canonical | 3. Variation | 4. Mixed pattern | 5. Cold revisit |
+|---|---|---|---|---|---|
+| Bounds | Binary Search | Search Insert Position | Find First and Last Position in Sorted Array | Search in Rotated Sorted Array | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+| Answer search | First Bad Version | Koko Eating Bananas | Capacity to Ship Packages Within D Days | Split Array Largest Sum | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+
+> ⭐ **Canonical Interview Problem:** Search Insert Position; Koko Eating Bananas. Explain the invariant before opening the implementation.
+
+### Representative problem bank — choose as needed
 
 #### Beginner
 
@@ -2114,7 +2725,7 @@ During the interview, state the invariant before code: “I am finding the first
 | Sorting as preprocessing | 🔴 Tier 1 — Must Master | Explain what adjacency/monotonicity/order unlocks |
 | Comparator/key-based sorting | 🔴 Tier 1 — Must Master | Lexicographic keys, tie-breaking, valid comparator rules |
 | Sort + scan / two pointers / greedy | 🔴 Tier 1 — Must Master | Include sort cost and input-order trade-offs |
-| C++17 sorting behavior | 🔴 Tier 1 — Must Master | Know `sort`/`stable_sort`, iterator ranges, complexity, and stability |
+| Java sorting behavior | 🔴 Tier 1 — Must Master | Know `Arrays.sort`/`List.sort`, comparator signs, half-open ranges, mutation, and stability |
 
 ### Learn Later
 
@@ -2132,8 +2743,9 @@ During the interview, state the invariant before code: “I am finding the first
 |---|---|---|
 | Bubble and selection sort implementation | ⚪ Tier 4 — Low Priority / Specialized | Awareness only; poor default choices |
 | Radix sort internals, sorting networks, external sort | ⚪ Tier 4 — Low Priority / Specialized | Role/company-specific |
-| Library-sort internals (often introsort) | ⚪ Tier 4 — Low Priority / Specialized | Know the C++ standard's guarantees, not a particular library implementation |
+| Library-sort internals | ⚪ Tier 4 — Low Priority / Specialized | Know relevant API guarantees and document implementation-dependent space |
 
+<a id="111-sorting-as-an-interview-strategy"></a>
 ### 11.1 Sorting as an Interview Strategy — 🔴 Tier 1 — Must Master
 
 Sorting spends `O(n log n)` to create useful structure:
@@ -2150,31 +2762,26 @@ Always ask what information sorting destroys:
 - Stable relative order among equal keys, if the sort is unstable.
 - The untouched input, if sorting in place.
 
-If indices are required, sort records such as `pair<Value, int>{value, original_index}` or a named struct, or use hashing instead. If the input must not be mutated, copy it deliberately (`auto ordered = input;`) and include `O(n)` extra time/space for that copy.
+If indices are required, sort records such as `record IndexedValue(int value, int index) {}` or a small class, or use hashing instead. If the input must not be mutated, copy it deliberately (`int[] ordered = input.clone();`) and include `O(n)` extra time/space for that copy.
 
 #### Typical complexity
 
 - Comparison sorting has a general `Ω(n log n)` lower bound in the comparison model.
-- C++17 `std::sort` guarantees `O(n log n)` comparisons in the worst case and does not preserve equal-element order.
-- A C++ comparator may be invoked `O(n log n)` times. If deriving a key is expensive, precompute/decorate records rather than recomputing an `O(L)` key on every comparison.
+- Object-array `Arrays.sort` and `List.sort` are stable; primitive-array overloads use different implementations. See the [Java sorting reference](#java-for-dsa-interviews-essential-reference) for API and memory distinctions.
+- A Java comparator may be invoked `O(n log n)` times. If deriving a key is expensive, precompute/decorate records rather than recomputing an `O(L)` key on every comparison.
 - A subsequent linear scan leaves total time `O(n log n + n) = O(n log n)`.
 
+<a id="112-comparator-and-key-based-sorting"></a>
 ### 11.2 Comparator and Key-Based Sorting — 🔴 Tier 1 — Must Master
 
-In C++17, sorting custom records normally uses a lambda comparator. Keep it short, use explicit tie-breaks, and rely on `pair`/`tuple` lexicographic order only when that order exactly matches the problem.
+Sort custom records with `Comparator` key extractors or a short lambda. Records do not automatically implement natural ordering; specify the comparison and tie-breaks that the algorithm needs.
 
-```cpp
-struct Record {
-    int start;
-    int end;
-};
+```java
+record IntervalKey(int start, int end) {}
 
-void order_records(vector<Record>& records) {
-    sort(records.begin(), records.end(),
-         [](const Record& a, const Record& b) {
-             if (a.start != b.start) return a.start < b.start;
-             return a.end > b.end; // tie: descending end
-         });
+static void orderRecords(List<IntervalKey> records) {
+    records.sort(Comparator.comparingInt(IntervalKey::start)
+            .thenComparing(Comparator.comparingInt(IntervalKey::end).reversed()));
 }
 ```
 
@@ -2182,13 +2789,14 @@ Tie-breaking is algorithmic, not cosmetic. For example, sorting intervals by end
 
 A comparator must define a consistent ordering:
 
-- Return `true` exactly when the first argument must precede the second.
-- Define a strict weak ordering: equal elements compare false in both directions, and the ordering is transitive. Use `<`, never `<=`.
-- Do not subtract integers in a C++ comparator: signed overflow is undefined behavior, and `<` expresses the order directly.
+- Return a negative integer when the first argument precedes the second, zero for an ordering tie, and a positive integer when it follows.
+- Keep comparison transitive, sign-symmetric, and consistent for values that compare as zero.
+- Use `Integer.compare` or `Long.compare`; subtraction can silently overflow and violate ordering.
 - Handle equal keys deliberately.
 
 For “largest concatenated number,” compare `a+b` with `b+a`; numeric or ordinary lexicographic order alone is insufficient. After sorting, normalize an all-zero result.
 
+<a id="113-stability-and-in-place-behavior"></a>
 ### 11.3 Stability and In-Place Behavior — 🟡 Tier 3 — Nice to Know
 
 A **stable** sort preserves the input relative order of records whose keys compare equal. Stability matters when:
@@ -2199,18 +2807,19 @@ A **stable** sort preserves the input relative order of records whose keys compa
 
 It does not matter when all keys are unique or an explicit full tie-break key determines the desired order.
 
-“In place” and “stable” are independent properties. Both `sort` and `stable_sort` mutate the iterator range; `sort` is not stable, while `stable_sort` may allocate a linear buffer and has weaker comparison complexity when sufficient extra memory is unavailable. State only guarantees relevant to the interview.
+“In place” and “stable” are independent properties. `Arrays.sort` mutates its array or specified half-open range; object-array sorting and `List.sort` preserve ties. They may allocate linear auxiliary buffers; primitive-array sorting has implementation-dependent scratch space. State only guarantees relevant to the interview.
 
 ### 11.4 Which Sorting Algorithms to Understand
 
 | Algorithm | Priority | Time | Extra space | Stable? | Interview depth |
 |---|---|---:|---:|---|---|
-| C++17 `std::sort` | 🔴 Tier 1 — Must Master | `O(n log n)` worst case | Implementation-dependent; commonly `O(log n)` stack | No | Use confidently; know iterator range, comparator, and mutation |
+| Java object `Arrays.sort` / `List.sort` | 🔴 Tier 1 — Must Master | `O(n log n)` with constant-time comparison | `O(n)` worst-case buffer | Yes | Use confidently; know comparator, range, and mutation |
+| Java primitive `Arrays.sort(int[])` | 🔴 Tier 1 — Must Master | `O(n log n)` documented JDK implementation | Implementation-dependent; budget `O(n)` conservatively | No record ties to preserve | Ascending primitive values; no comparator overload |
 | Merge sort | 🟠 Tier 2 — Very Important | `O(n log n)` worst case | `O(n)` for arrays; list merge can use link rewiring | Yes in standard form | Explain split/merge; implement if asked |
 | Quicksort | 🟠 Tier 2 — Very Important | Average `O(n log n)`, worst `O(n²)` | Average `O(log n)` stack, worst `O(n)` | Usually no | Explain pivot/partition and randomization; basic implementation |
 | Insertion sort | 🟡 Tier 3 — Nice to Know | Worst `O(n²)`, best `O(n)` on already sorted with standard form | `O(1)` | Yes | Understand small/nearly sorted use |
 | Heap sort | 🟡 Tier 3 — Nice to Know | `O(n log n)` worst case | `O(1)` auxiliary in array form | No | Conceptual; prioritize heap operations |
-| Counting/bucket sort | 🟡 Tier 3 — Nice to Know | `O(n + R)` for range `R` | `O(R)` | Depends on form | Recognize bounded key range/frequencies |
+| Counting sort / frequency array | 🟡 Tier 3 — Nice to Know | `O(n + R)` for range `R` | `O(R)` for counts; stable record output also needs `O(n)` | Depends on form | Recognize bounded key range/frequencies |
 | Selection sort | ⚪ Tier 4 — Low Priority / Specialized | `O(n²)` | `O(1)` | Usually no | Awareness only |
 | Bubble sort | ⚪ Tier 4 — Low Priority / Specialized | `O(n²)` | `O(1)` | Yes in standard form | Awareness only |
 | Radix sort | ⚪ Tier 4 — Low Priority / Specialized | Digit/radix-dependent | Radix-dependent | Can be | Conceptual only for normal SWE interviews |
@@ -2225,6 +2834,7 @@ Choose a pivot, partition values around it, then recursively sort partitions. Ba
 
 Do not memorize partition code without defining regions and the pivot's final meaning. Different Lomuto/Hoare schemes have different return values and recursive boundaries.
 
+<a id="115-non-comparison-sorting"></a>
 ### 11.5 Non-Comparison Sorting — 🟡 Tier 3 — Nice to Know
 
 The `Ω(n log n)` comparison lower bound does not apply when keys have exploitable structure. If integer values lie in a small range, frequency counting can sort in `O(n + R)` time with `O(R)` extra space. This is worse than comparison sorting when `R` is enormous relative to `n`.
@@ -2243,7 +2853,18 @@ Buckets can also organize values by frequency or a bounded measure. Define bucke
 | Small bounded integers | Counting sort/frequency array | Comparison sort avoids `O(R)` memory for large sparse range |
 | Need original order | Sort decorated records or copy | Avoid sorting if order itself is part of correctness |
 
-### Representative Problems
+### Selected practice ladder
+
+Start with 3–4 distinct problems for the selected pattern; reuse overlaps across chapters. Work left to right only when the previous invariant can be explained unaided. The bank below provides substitutions and targeted follow-ups, not additional quotas. For a Tier 3 row, one mechanics/canonical pair is enough unless later evidence justifies the harder columns.
+
+| Pattern | 1. Mechanics | 2. Canonical | 3. Variation | 4. Mixed pattern | 5. Cold revisit |
+|---|---|---|---|---|---|
+| Ordering as a tool | Valid Anagram (sort version) | Merge Intervals | Largest Number | 3Sum | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+| Sort mechanics (Tier 2; select later) | Merge two sorted arrays | Sort an Array (merge sort) | Sort List | Count Inversions archetype | Canonical after 2–3 days; variation after 1–2 weeks without hints |
+
+> ⭐ **Canonical Interview Problem:** Merge Intervals; Sort an Array (merge sort). Explain the invariant before opening the implementation.
+
+### Representative problem bank — choose as needed
 
 #### Beginner
 
@@ -2289,11 +2910,13 @@ In an interview, say: “Sorting by end time makes the earliest-finishing compat
 - [ ] I recognize bounded-range opportunities for counting/bucket methods without ignoring `R`.
 - [ ] I compare full sorting with hashing, heaps, binary search, and selection appropriately.
 
+---
+
 ## 12. Trees
 
 **Priority:** 🔴 Tier 1 — Must Master
 
-**Why this priority:** Tree questions combine recursion, traversal, state design, and pointer reasoning in a form that appears constantly in general Software Engineering interviews. A candidate should be able to traverse a binary tree, choose DFS or BFS, state an invariant, and analyze `O(n)` time without prompting. Specialized balanced-tree internals are far less important.
+**Why this priority:** Tree questions combine recursion, traversal, state design, and object-reference reasoning in a form that appears constantly in general Software Engineering interviews. A candidate should be able to traverse a binary tree, choose DFS or BFS, state an invariant, and analyze `O(n)` time without prompting. Specialized balanced-tree internals are far less important.
 
 ### Topic Overview
 
@@ -2301,7 +2924,7 @@ In an interview, say: “Sorting by end time makes the earliest-finishing compat
 - **Why it exists:** Trees represent hierarchy and support divide-and-conquer reasoning: solve the same smaller problem for each child, then combine the results.
 - **Why it matters in interviews:** Trees test recursion, queues, stacks, careful base cases, and the ability to define what a function returns. Many seemingly different questions are one of a few traversal patterns.
 - **Interview priority:** 🔴 Tier 1 — Must Master.
-- **Prerequisites:** Big-O, recursion and call stacks, stack/queue operations, references or pointers, and basic hashing.
+- **Prerequisites:** Big-O, recursion and call stacks, stack/queue operations, Java object references, and basic hashing.
 - **Common use cases:** File systems, syntax trees, organization hierarchies, search indexes, decision trees, and nested UI data.
 - **Common problem patterns:** Root-to-leaf aggregation, subtree summaries, level-order processing, path constraints, BST ordering, ancestor queries, tree construction, and encode/decode.
 - **How to recognize problems that require it:** The input contains nodes with child links, parent-child relationships, hierarchy, ancestry, levels, subtrees, or a connected graph with `n - 1` edges.
@@ -2318,7 +2941,7 @@ In an interview, say: “Sorting by end time makes the earliest-finishing compat
 ### Learn Later
 
 - Iterative traversal details, lowest common ancestor, reconstruction from traversals, and serialization.
-- Morris traversal, threaded traversal, and parent-pointer variations after ordinary traversals are automatic.
+- Morris traversal, threaded traversal, and parent-reference variations after ordinary traversals are automatic.
 
 ### Optional / Specialized
 
@@ -2326,23 +2949,35 @@ In an interview, say: “Sorting by end time makes the earliest-finishing compat
 - **B-trees/B+ trees — ⚪ Tier 4 — Low Priority / Specialized.** Important for databases and storage-system interviews, but not normal coding rounds.
 - **Morris traversal — 🟡 Tier 3 — Nice to Know.** It achieves `O(1)` auxiliary space by temporarily threading the tree, but mutates links and is rarely the clearest interview solution.
 
+**Study target:** Reconstruct DFS/BFS and BST validation from memory; understand subtree contracts rather than memorizing solutions. Complete the core practice ladder below, then choose construction/LCA/codec variations. Balanced-tree internals are reference knowledge. Recursion foundations in [Section 3](#3-complexity-analysis-and-foundations) come before this topic.
+
 ### 12.1 Binary-Tree Fundamentals
 
 **Priority:** 🔴 Tier 1 — Must Master
 
 **Why this priority:** Nearly every tree problem depends on precise vocabulary and a correct null-safe node representation.
 
-```cpp
-struct TreeNode {
+```java
+static class TreeNode {
     int val;
-    TreeNode* left;
-    TreeNode* right;
+    TreeNode left;
+    TreeNode right;
 
-    explicit TreeNode(int value, TreeNode* left_child = nullptr,
-                      TreeNode* right_child = nullptr)
-        : val(value), left(left_child), right(right_child) {}
-};
+    TreeNode(int val) {
+        this.val = val;
+    }
+
+    TreeNode(int val, TreeNode left, TreeNode right) {
+        this.val = val;
+        this.left = left;
+        this.right = right;
+    }
+}
 ```
+
+**Java convention:** Tree snippets share this `TreeNode` class and use object references. A platform may supply its own equivalent node class. All inputs are non-null unless the contract explicitly uses `null` for an absent tree/node. Member snippets can be placed inside a solution class with `import java.util.*;`; `static` is a convenience for local practice.
+
+> 🌐 **Java Backend Relevance — HIGH:** Java is always pass-by-value: passing a node copies its reference. Mutating `node.left` changes the shared object; assigning a different object to the parameter only changes that local variable. Use identity comparisons when two references must denote the same node.
 
 Key distinctions:
 
@@ -2372,44 +3007,44 @@ At each node there are three moments: **before** visiting children, **between** 
 | Inorder | left, node, right | Process node between subtrees | Sorted values in a BST |
 | Postorder | left, right, node | Children report before parent | Height, balance, diameter, delete/evaluate tree |
 
-```cpp
-void preorderDfs(const TreeNode* node, std::vector<int>& result) {
-    if (node == nullptr) return;
-    result.push_back(node->val);
-    preorderDfs(node->left, result);
-    preorderDfs(node->right, result);
-}
-
-std::vector<int> preorder(const TreeNode* root) {
-    std::vector<int> result;
+```java
+static List<Integer> preorder(TreeNode root) {
+    List<Integer> result = new ArrayList<>();
     preorderDfs(root, result);
     return result;
 }
 
-void inorderDfs(const TreeNode* node, std::vector<int>& result) {
-    if (node == nullptr) return;
-    inorderDfs(node->left, result);
-    result.push_back(node->val);
-    inorderDfs(node->right, result);
+static void preorderDfs(TreeNode node, List<Integer> result) {
+    if (node == null) return;
+    result.add(node.val);
+    preorderDfs(node.left, result);
+    preorderDfs(node.right, result);
 }
 
-std::vector<int> inorder(const TreeNode* root) {
-    std::vector<int> result;
+static List<Integer> inorder(TreeNode root) {
+    List<Integer> result = new ArrayList<>();
     inorderDfs(root, result);
     return result;
 }
 
-void postorderDfs(const TreeNode* node, std::vector<int>& result) {
-    if (node == nullptr) return;
-    postorderDfs(node->left, result);
-    postorderDfs(node->right, result);
-    result.push_back(node->val);
+static void inorderDfs(TreeNode node, List<Integer> result) {
+    if (node == null) return;
+    inorderDfs(node.left, result);
+    result.add(node.val);
+    inorderDfs(node.right, result);
 }
 
-std::vector<int> postorder(const TreeNode* root) {
-    std::vector<int> result;
+static List<Integer> postorder(TreeNode root) {
+    List<Integer> result = new ArrayList<>();
     postorderDfs(root, result);
     return result;
+}
+
+static void postorderDfs(TreeNode node, List<Integer> result) {
+    if (node == null) return;
+    postorderDfs(node.left, result);
+    postorderDfs(node.right, result);
+    result.add(node.val);
 }
 ```
 
@@ -2421,31 +3056,28 @@ std::vector<int> postorder(const TreeNode* root) {
 
 Before coding, finish this sentence: **`dfs(node)` returns ...** For example, in a balance check it returns the subtree height, or a sentinel saying the subtree is already unbalanced.
 
-```cpp
-bool isBalanced(const TreeNode* root) {
-    std::function<int(const TreeNode*)> heightOrFail =
-        [&](const TreeNode* node) -> int {
-        if (node == nullptr) return 0;
-
-        const int left = heightOrFail(node->left);
-        if (left == -1) return -1;
-        const int right = heightOrFail(node->right);
-        if (right == -1 || std::abs(left - right) > 1) return -1;
-
-        return 1 + std::max(left, right);
-    };
-
+```java
+static boolean isBalanced(TreeNode root) {
     return heightOrFail(root) != -1;
+}
+
+static int heightOrFail(TreeNode node) {
+    if (node == null) return 0;
+    int left = heightOrFail(node.left);
+    if (left == -1) return -1;
+    int right = heightOrFail(node.right);
+    if (right == -1 || Math.abs(left - right) > 1) return -1;
+    return 1 + Math.max(left, right);
 }
 ```
 
 This single postorder traversal is `O(n)`. Recomputing height separately at every node can degrade to `O(n^2)` on a skewed tree.
 
-**Common mistakes:** Writing recursion before defining its return meaning; forgetting the `nullptr` case; mixing node-count and edge-count height; using shared global state unnecessarily; recomputing a subtree; and forgetting that a skewed tree makes recursion depth `O(n)`.
+**Common mistakes:** Writing recursion before defining its return meaning; forgetting the `null` case; mixing node-count and edge-count height; using shared global state unnecessarily; recomputing a subtree; and forgetting that a skewed tree makes recursion depth `O(n)`.
 
 **Edge cases:** Empty tree, one node, one-sided tree, duplicate values, negative values, and a path where the optimal answer does not include the root.
 
-**Alternatives and trade-offs:** Recursive DFS is compact and mirrors the structure. Iterative DFS avoids exhausting the finite native call stack but makes postorder and carried state more explicit. Both have the same asymptotic worst-case auxiliary space.
+**Alternatives and trade-offs:** Recursive DFS is compact and mirrors the structure. Iterative DFS avoids exhausting the finite Java call stack (a deep traversal can throw `StackOverflowError`) but makes postorder and carried state more explicit. Both have the same asymptotic worst-case auxiliary space.
 
 ### 12.3 Iterative DFS Traversals
 
@@ -2453,58 +3085,54 @@ This single postorder traversal is `O(n)`. Recomputing height separately at ever
 
 **Why this priority:** Interviewers often request an iterative variant or use input deep enough to make recursion unsafe. Preorder and inorder should be comfortable; iterative postorder is useful but less frequently required.
 
-```cpp
-std::vector<int> preorderIterative(const TreeNode* root) {
-    if (root == nullptr) return {};
-    std::vector<int> result;
-    std::stack<const TreeNode*> pending;
+```java
+static List<Integer> preorderIterative(TreeNode root) {
+    List<Integer> result = new ArrayList<>();
+    if (root == null) return result;
+    Deque<TreeNode> pending = new ArrayDeque<>();
     pending.push(root);
-
-    while (!pending.empty()) {
-        const TreeNode* node = pending.top();
-        pending.pop();
-        result.push_back(node->val);
+    while (!pending.isEmpty()) {
+        TreeNode node = pending.pop();
+        result.add(node.val);
         // Push right first so left is processed first.
-        if (node->right != nullptr) pending.push(node->right);
-        if (node->left != nullptr) pending.push(node->left);
+        if (node.right != null) pending.push(node.right);
+        if (node.left != null) pending.push(node.left);
     }
     return result;
 }
 
-std::vector<int> inorderIterative(const TreeNode* root) {
-    std::vector<int> result;
-    std::stack<const TreeNode*> pending;
-    const TreeNode* current = root;
-
-    while (current != nullptr || !pending.empty()) {
-        while (current != nullptr) {
+static List<Integer> inorderIterative(TreeNode root) {
+    List<Integer> result = new ArrayList<>();
+    Deque<TreeNode> pending = new ArrayDeque<>();
+    TreeNode current = root;
+    while (current != null || !pending.isEmpty()) {
+        while (current != null) {
             pending.push(current);
-            current = current->left;
+            current = current.left;
         }
-        current = pending.top();
-        pending.pop();
-        result.push_back(current->val);
-        current = current->right;
+        current = pending.pop();
+        result.add(current.val);
+        current = current.right;
     }
     return result;
 }
 
-std::vector<int> postorderIterative(const TreeNode* root) {
-    if (root == nullptr) return {};
-    std::vector<int> result;
-    std::stack<std::pair<const TreeNode*, bool>> pending;
-    pending.push({root, false});
+record TreeFrame(TreeNode node, boolean expanded) {}
 
-    while (!pending.empty()) {
-        auto [node, expanded] = pending.top();
-        pending.pop();
-        if (node == nullptr) continue;
-        if (expanded) {
-            result.push_back(node->val);
+static List<Integer> postorderIterative(TreeNode root) {
+    List<Integer> result = new ArrayList<>();
+    if (root == null) return result;
+    Deque<TreeFrame> pending = new ArrayDeque<>();
+    pending.push(new TreeFrame(root, false));
+    while (!pending.isEmpty()) {
+        TreeFrame frame = pending.pop();
+        TreeNode node = frame.node();
+        if (frame.expanded()) {
+            result.add(node.val);
         } else {
-            pending.push({node, true});
-            pending.push({node->right, false});
-            pending.push({node->left, false});
+            pending.push(new TreeFrame(node, true));
+            if (node.right != null) pending.push(new TreeFrame(node.right, false));
+            if (node.left != null) pending.push(new TreeFrame(node.left, false));
         }
     }
     return result;
@@ -2513,36 +3141,33 @@ std::vector<int> postorderIterative(const TreeNode* root) {
 
 **How it works:** The stack stores unfinished work. A `(node, expanded)` marker preserves the return-to-parent moment that recursion normally supplies.
 
-**Complexity:** `O(n)` time and `O(h)` stack for inorder on a typical tree; the explicit preorder/postorder stack can be `O(n)` in the worst shape.
+**Complexity:** `O(n)` time and `O(h)` live auxiliary stack for each binary-tree traversal shown, excluding `O(n)` output. A skewed tree has `h = O(n)`. Postorder creates `O(n)` short-lived frame objects overall, even though only `O(h)` frames are live at once.
 
-**Mistakes:** Pushing preorder children in the wrong order, losing the current pointer in inorder, processing postorder before its children, and forgetting the `root == nullptr` case.
+**Mistakes:** Pushing preorder children in the wrong order, losing the current node reference in inorder, processing postorder before its children, and forgetting the `root == null` case.
 
+<a id="124-tree-bfs-level-order-traversal"></a>
 ### 12.4 Tree BFS / Level-Order Traversal
 
 **Priority:** 🔴 Tier 1 — Must Master
 
 **Why this priority:** BFS is the direct solution for levels, nearest depth, right/left views, and minimum edge distance in an unweighted tree.
 
-```cpp
-std::vector<std::vector<int>> levelOrder(const TreeNode* root) {
-    if (root == nullptr) return {};
-
-    std::vector<std::vector<int>> levels;
-    std::queue<const TreeNode*> pending;
-    pending.push(root);
-
-    while (!pending.empty()) {
-        const int level_size = static_cast<int>(pending.size());
-        std::vector<int> level;
-        level.reserve(level_size);
-        for (int i = 0; i < level_size; ++i) {
-            const TreeNode* node = pending.front();
-            pending.pop();
-            level.push_back(node->val);
-            if (node->left != nullptr) pending.push(node->left);
-            if (node->right != nullptr) pending.push(node->right);
+```java
+static List<List<Integer>> levelOrder(TreeNode root) {
+    List<List<Integer>> levels = new ArrayList<>();
+    if (root == null) return levels;
+    Queue<TreeNode> pending = new ArrayDeque<>();
+    pending.offer(root);
+    while (!pending.isEmpty()) {
+        int levelSize = pending.size();
+        List<Integer> level = new ArrayList<>(levelSize);
+        for (int i = 0; i < levelSize; i++) {
+            TreeNode node = pending.poll();
+            level.add(node.val);
+            if (node.left != null) pending.offer(node.left);
+            if (node.right != null) pending.offer(node.right);
         }
-        levels.push_back(std::move(level));
+        levels.add(level);
     }
     return levels;
 }
@@ -2554,7 +3179,7 @@ std::vector<std::vector<int>> levelOrder(const TreeNode* root) {
 
 **Trade-off:** BFS exposes levels naturally but can hold a very wide level. DFS is often smaller on a wide balanced tree and is better when the result is a subtree summary.
 
-**Common mistakes and edge cases:** Using a `vector` and erasing its first element instead of `std::queue`, not snapshotting the queue length before a level, enqueuing null pointers unnecessarily, or returning one empty level for an empty tree.
+**Common mistakes and edge cases:** Using `ArrayList.remove(0)` instead of an `ArrayDeque` queue, not snapshotting the queue length before a level, trying to enqueue `null` (`ArrayDeque` rejects it), or returning one empty level for an empty tree.
 
 ### 12.5 Height, Depth, Balance, Diameter, and Paths
 
@@ -2562,29 +3187,28 @@ std::vector<std::vector<int>> levelOrder(const TreeNode* root) {
 
 **Why this priority:** These are canonical examples of subtree-summary recursion and are among the highest-transfer tree patterns.
 
-```cpp
-int maxDepth(const TreeNode* root) {
-    if (root == nullptr) return 0;
-    return 1 + std::max(maxDepth(root->left), maxDepth(root->right));
+```java
+static int maxDepth(TreeNode root) {
+    if (root == null) return 0;
+    return 1 + Math.max(maxDepth(root.left), maxDepth(root.right));
 }
 ```
 
 For diameter, each child returns a height. At a node, the best path *through* the node is `left_height + right_height`; the recursion returns only one extendable branch upward.
 
-```cpp
-int diameterOfBinaryTree(const TreeNode* root) {
-    int best = 0;
-    std::function<int(const TreeNode*)> height =
-        [&](const TreeNode* node) -> int {
-        if (node == nullptr) return 0;
-        const int left = height(node->left);
-        const int right = height(node->right);
-        best = std::max(best, left + right);
-        return 1 + std::max(left, right);
-    };
+```java
+static int diameterOfBinaryTree(TreeNode root) {
+    int[] best = {0}; // Per-call mutable holder; no state leaks between calls.
+    diameterHeight(root, best);
+    return best[0]; // Number of edges.
+}
 
-    height(root);
-    return best;  // Number of edges.
+static int diameterHeight(TreeNode node, int[] best) {
+    if (node == null) return 0;
+    int left = diameterHeight(node.left, best);
+    int right = diameterHeight(node.right, best);
+    best[0] = Math.max(best[0], left + right);
+    return 1 + Math.max(left, right);
 }
 ```
 
@@ -2606,41 +3230,39 @@ int diameterOfBinaryTree(const TreeNode* root) {
 
 For every node, **all** values in its left subtree must lie on the permitted lower side and **all** values in its right subtree on the permitted upper side. It is not enough to compare a node only with its immediate children.
 
-```cpp
-bool isValidBst(const TreeNode* root) {
-    std::function<bool(const TreeNode*, long long, long long)> valid =
-        [&](const TreeNode* node, long long low, long long high) {
-        if (node == nullptr) return true;
-        if (!(low < node->val && node->val < high)) return false;
-        return valid(node->left, low, node->val) &&
-               valid(node->right, node->val, high);
-    };
+```java
+static boolean isValidBst(TreeNode root) {
+    return validBst(root, Long.MIN_VALUE, Long.MAX_VALUE);
+}
 
-    return valid(root, std::numeric_limits<long long>::lowest(),
-                 std::numeric_limits<long long>::max());
+static boolean validBst(TreeNode node, long low, long high) {
+    if (node == null) return true;
+    if (node.val <= low || node.val >= high) return false;
+    return validBst(node.left, low, node.val)
+            && validBst(node.right, node.val, high);
 }
 ```
 
 An inorder traversal of a strict BST is strictly increasing. Bounds validation is usually more explicit about the invariant; inorder validation is convenient for kth-smallest and sorted iteration.
 
-```cpp
-const TreeNode* searchBst(const TreeNode* root, int target) {
-    const TreeNode* current = root;
-    while (current != nullptr) {
-        if (target == current->val) return current;
-        current = target < current->val ? current->left : current->right;
+```java
+static TreeNode searchBst(TreeNode root, int target) {
+    TreeNode current = root;
+    while (current != null) {
+        if (target == current.val) return current;
+        current = target < current.val ? current.left : current.right;
     }
-    return nullptr;
+    return null;
 }
 ```
 
 **When to use / recognition:** Ordered binary tree; searching by comparison; predecessor/successor; range query; kth smallest; or the input explicitly promises a BST.
 
-**Complexity:** Search/insert/delete take `O(h)`: average `O(log n)` if balanced, worst-case `O(n)` if skewed. Traversal is `O(n)`. Do not claim `O(log n)` without a balance guarantee.
+**Complexity:** Search/insert/delete take `O(h)`: `O(log n)` if balanced, worst-case `O(n)` if skewed. Traversal is `O(n)`. Do not claim `O(log n)` without a balance guarantee.
 
 **Duplicates:** The problem must define whether duplicates are forbidden, counted, or always placed on one side. Adjust `<`/`<=` and bounds deliberately.
 
-**Alternatives/trade-offs:** `unordered_map` has expected `O(1)` exact lookup but no sorted order. `map` gives `O(log n)` search and ordered operations. Sorting once can be simpler for static data.
+**Alternatives/trade-offs:** `HashMap` has expected `O(1)` exact lookup but no sorted order. `TreeMap` gives `O(log n)` search and ordered operations. Sorting once can be simpler for static data.
 
 **Common mistakes:** Local-only validation, assuming balance, using a stale previous-inorder value, mishandling numeric bounds, and mutating tree links during a read-only query.
 
@@ -2652,19 +3274,17 @@ const TreeNode* searchBst(const TreeNode* root, int target) {
 
 For a general binary tree, let `dfs(node)` return a target if found in the subtree. If left and right both return non-null, the current node is their lowest meeting point.
 
-```cpp
-TreeNode* lowestCommonAncestor(TreeNode* root, const TreeNode* p,
-                               const TreeNode* q) {
-    if (root == nullptr || root == p || root == q) return root;
-
-    TreeNode* left = lowestCommonAncestor(root->left, p, q);
-    TreeNode* right = lowestCommonAncestor(root->right, p, q);
-    if (left != nullptr && right != nullptr) return root;
-    return left != nullptr ? left : right;
+```java
+static TreeNode lowestCommonAncestor(TreeNode root, TreeNode p, TreeNode q) {
+    if (root == null || root == p || root == q) return root;
+    TreeNode left = lowestCommonAncestor(root.left, p, q);
+    TreeNode right = lowestCommonAncestor(root.right, p, q);
+    if (left != null && right != null) return root;
+    return left != null ? left : right;
 }
 ```
 
-**Assumption:** This common template assumes both target nodes exist. If existence is not guaranteed, also count matches and return an answer only after finding two.
+**Assumption:** Both non-null target references belong to the tree; `p == q` is allowed. If existence is not guaranteed, verify each distinct target exists before accepting the result, or return match information with the subtree result. Here `==` intentionally checks node identity, not equal values.
 
 For a BST, ordering avoids searching both sides: if both values are smaller go left, if both are larger go right, otherwise the current node is the split point. Time is `O(h)` instead of a general `O(n)` traversal.
 
@@ -2678,48 +3298,44 @@ For a BST, ordering avoids searching both sides: if both values are smaller go l
 
 Preorder reveals the root first. Inorder tells how many nodes belong to the left and right subtrees. A value-to-inorder-index map prevents a linear scan in each recursive call.
 
-```cpp
-TreeNode* buildTree(const std::vector<int>& preorder,
-                    const std::vector<int>& inorder) {
-    if (preorder.size() != inorder.size()) {
-        throw std::invalid_argument("traversal lengths must match");
+```java
+static TreeNode buildTree(int[] preorder, int[] inorder) {
+    if (preorder.length != inorder.length) {
+        throw new IllegalArgumentException("traversal lengths must match");
     }
-
-    std::unordered_map<int, int> inorder_index;
-    for (int i = 0; i < static_cast<int>(inorder.size()); ++i) {
-        inorder_index[inorder[i]] = i;
+    Map<Integer, Integer> inorderIndex = new HashMap<>();
+    for (int i = 0; i < inorder.length; i++) {
+        if (inorderIndex.put(inorder[i], i) != null) {
+            throw new IllegalArgumentException("values must be unique");
+        }
     }
+    int[] next = {0};
+    return buildSubtree(preorder, inorderIndex, next, 0, inorder.length - 1);
+}
 
-    int preorder_index = 0;
-    std::function<TreeNode*(int, int)> build = [&](int left, int right) {
-        if (left > right) return static_cast<TreeNode*>(nullptr);
-        if (preorder_index >= static_cast<int>(preorder.size())) {
-            throw std::invalid_argument("inconsistent traversals");
-        }
-
-        const int root_value = preorder[preorder_index++];
-        const auto found = inorder_index.find(root_value);
-        if (found == inorder_index.end() || found->second < left ||
-            found->second > right) {
-            throw std::invalid_argument("inconsistent or duplicate traversals");
-        }
-
-        TreeNode* root = new TreeNode(root_value);
-        const int split = found->second;
-        root->left = build(left, split - 1);
-        root->right = build(split + 1, right);
-        return root;
-    };
-
-    return build(0, static_cast<int>(inorder.size()) - 1);
+static TreeNode buildSubtree(int[] preorder, Map<Integer, Integer> inorderIndex,
+                             int[] next, int left, int right) {
+    if (left > right) return null;
+    if (next[0] >= preorder.length) {
+        throw new IllegalArgumentException("inconsistent traversals");
+    }
+    int value = preorder[next[0]++];
+    Integer split = inorderIndex.get(value);
+    if (split == null || split < left || split > right) {
+        throw new IllegalArgumentException("inconsistent traversals");
+    }
+    TreeNode root = new TreeNode(value);
+    root.left = buildSubtree(preorder, inorderIndex, next, left, split - 1);
+    root.right = buildSubtree(preorder, inorderIndex, next, split + 1, right);
+    return root;
 }
 ```
 
-**Complexity:** `O(n)` time and `O(n)` map plus `O(h)` recursion stack. Without the map, worst-case time is `O(n^2)`.
+**Complexity:** Expected `O(n)` time using `HashMap`, with `O(n)` map and `O(h)` recursion stack, excluding the `O(n)` returned tree. Without the map, worst-case time is `O(n^2)`.
 
 **Recognition:** Two traversals, unique values, reconstruct original hierarchy, or sorted array to height-balanced BST.
 
-**Edge cases/mistakes:** Empty inputs, inconsistent traversal lengths, duplicates that make a single index map insufficient, off-by-one subrange boundaries, building right before left when consuming preorder, and copying vector subranges instead of passing indices.
+**Edge cases/mistakes:** Empty inputs, inconsistent traversal lengths, duplicates that make a single index map insufficient, off-by-one subrange boundaries, building right before left when consuming preorder, and copying array subranges instead of passing indices.
 
 **Alternative:** Postorder + inorder also uniquely reconstructs a tree with unique values; consume postorder from the end and build right before left.
 
@@ -2731,43 +3347,53 @@ TreeNode* buildTree(const std::vector<int>& preorder,
 
 Preorder plus an explicit null marker uniquely represents a binary tree.
 
-```cpp
-std::string serialize(const TreeNode* root) {
-    std::ostringstream out;
-    std::function<void(const TreeNode*)> dfs = [&](const TreeNode* node) {
-        if (node == nullptr) {
-            out << "#,";
-            return;
-        }
-        out << node->val << ',';
-        dfs(node->left);
-        dfs(node->right);
-    };
-    dfs(root);
-    return out.str();
+```java
+static String serialize(TreeNode root) {
+    StringBuilder output = new StringBuilder();
+    serializeDfs(root, output);
+    return output.toString();
 }
 
-TreeNode* deserialize(const std::string& data) {
-    std::istringstream in(data);
-    std::function<TreeNode*()> build = [&]() -> TreeNode* {
-        std::string token;
-        if (!std::getline(in, token, ',')) {
-            throw std::invalid_argument("truncated tree encoding");
-        }
-        if (token == "#") return nullptr;
+static void serializeDfs(TreeNode node, StringBuilder output) {
+    if (node == null) {
+        output.append("#,");
+        return;
+    }
+    output.append(node.val).append(',');
+    serializeDfs(node.left, output);
+    serializeDfs(node.right, output);
+}
 
-        TreeNode* node = new TreeNode(std::stoi(token));
-        node->left = build();
-        node->right = build();
-        return node;
-    };
-    return build();
+static TreeNode deserialize(String data) {
+    // Keep empty tokens so malformed delimiters are rejected.
+    String[] tokens = data.split(",", -1);
+    if (!tokens[tokens.length - 1].isEmpty()) {
+        throw new IllegalArgumentException("encoding must end with a comma");
+    }
+    int[] next = {0};
+    TreeNode root = deserializeNode(tokens, next);
+    if (next[0] != tokens.length - 1) {
+        throw new IllegalArgumentException("extra tree tokens");
+    }
+    return root;
+}
+
+static TreeNode deserializeNode(String[] tokens, int[] next) {
+    if (next[0] >= tokens.length - 1) {
+        throw new IllegalArgumentException("truncated tree encoding");
+    }
+    String token = tokens[next[0]++];
+    if (token.equals("#")) return null;
+    TreeNode node = new TreeNode(Integer.parseInt(token));
+    node.left = deserializeNode(tokens, next);
+    node.right = deserializeNode(tokens, next);
+    return node;
 }
 ```
 
-**Complexity:** `O(n)` time and `O(n)` output; `O(h)` recursion stack. The serialized representation uses one token per node/null child, still `O(n)`.
+**Complexity:** `O(n)` time and `O(n)` encoded output for fixed-width `int` values. Encoding uses a `StringBuilder` plus `O(h)` recursion; decoding uses `O(n)` extra token/string storage from `split`, plus `O(h)` recursion and the returned tree. An index-based streaming parser can avoid the token array but is a later refinement.
 
-**Trade-offs:** Preorder streaming is compact and easy to parse recursively. BFS serialization is also valid and visually corresponds to level order, but may need trailing-null normalization. A BST can sometimes be encoded without null markers using ordering constraints, at the cost of a more specialized decoder.
+**Trade-offs:** The preorder format is compact and easy to parse recursively; the decoder above splits tokens for simplicity. BFS serialization is also valid and visually corresponds to level order, but may need trailing-null normalization. A BST can sometimes be encoded without null markers using ordering constraints, at the cost of a more specialized decoder.
 
 **Mistakes/edge cases:** Omitting null markers, unsafe delimiter parsing, negative/multi-digit values, empty tree, recursive depth limits, and requiring globally unique node values when the format should not.
 
@@ -2786,30 +3412,13 @@ TreeNode* deserialize(const std::string& data) {
 
 ### Representative Tree Problems
 
-#### Beginner
+| Family | Mechanics | Canonical | Variation | Mixed pattern | Cold revisit |
+|---|---|---|---|---|---|
+| Subtree summaries | Maximum Depth of Binary Tree | ⭐ **Canonical Interview Problem:** Diameter of Binary Tree | Balanced Binary Tree | Binary Tree Maximum Path Sum (later) | Diameter: distinguish returned branch from full path |
+| Traversal/frontiers | Inorder Traversal, recursive then iterative | ⭐ **Canonical Interview Problem:** Binary Tree Level Order Traversal | Right Side View (standard, not advanced) | All Nodes Distance K (after graphs) | Level Order without a queue-size bug |
+| Ordering/structure | Search in a BST | ⭐ **Canonical Interview Problem:** Validate Binary Search Tree | Kth Smallest in a BST | LCA / Construct from Preorder and Inorder | Validate a tree that violates an ancestor bound |
 
-- **Maximum Depth of Binary Tree:** Teaches the base `nullptr -> 0` case and returning a subtree summary. Learn to state `depth(node) = 1 + max(...)`.
-- **Invert Binary Tree:** Teaches visit-and-transform recursion and makes mutation order explicit.
-- **Binary Tree Inorder Traversal:** Teaches recursive and iterative stack mechanics; for a BST, connect traversal order to sorted output.
-- **Same Tree:** Teaches synchronized traversal and structural base cases, not just comparing value lists.
-
-#### Core Interview
-
-- **Binary Tree Level Order Traversal:** Teaches queue frontiers and level-size snapshots.
-- **Validate Binary Search Tree:** Teaches ancestor bounds and why parent-only comparisons fail.
-- **Lowest Common Ancestor of a Binary Tree:** Teaches a recursive result with three meanings: neither, one target, or both.
-- **Diameter of Binary Tree:** Teaches the difference between an extendable child result and a complete global result.
-- **Binary Tree Maximum Path Sum:** Extends diameter reasoning to weights and negative branches; learn to clamp an unusable branch at zero.
-- **Construct Binary Tree from Preorder and Inorder:** Teaches traversal roles, index boundaries, and eliminating repeated scans.
-- **Serialize and Deserialize Binary Tree:** Teaches preservation of structure using null markers.
-- **Kth Smallest Element in a BST:** Teaches exploiting inorder ordering instead of sorting all values blindly.
-
-#### Advanced
-
-- **Binary Tree Right Side View (DFS and BFS):** Teaches that the same level invariant can be expressed through either traversal.
-- **Recover Binary Search Tree:** Teaches detecting inversions in inorder order; useful after BST validation is solid.
-- **All Nodes Distance K in Binary Tree:** Teaches converting parent-child hierarchy into an undirected graph and avoiding revisits.
-- **Vertical Order Traversal:** Teaches coordinate state, grouping, and precise tie-breaking; read the specification carefully.
+Choose one row at a time; the cold revisit repeats a selected problem without notes after 2–7 days, then again after several weeks. Additional focused drills: **Same Tree** for structural null cases, **Invert Binary Tree** for mutation, **Serialize and Deserialize Binary Tree** for structure preservation (1–2 attempts). **Recover BST** and **Vertical Order Traversal** are later extensions, not gates before graph study.
 
 ### Common Tree Mistakes and Interview Tips
 
@@ -2818,7 +3427,7 @@ TreeNode* deserialize(const std::string& data) {
 - Say what `dfs(node)` returns and what side effects it has.
 - Do not claim recursive space is `O(1)`; the call stack counts.
 - Confirm whether values are unique and whether target nodes are guaranteed to exist.
-- For path state stored in a `vector`, `push_back` before recursion and `pop_back` after it; copying the vector is simpler but more expensive.
+- For an `ArrayList<Integer>` path, use `add(value)` before recursion and `remove(path.size() - 1)` after it. Store answers with `new ArrayList<>(path)` so later mutation cannot change earlier answers.
 - Test a skewed tree. It exposes false `O(log n)` claims and recursion-depth risks.
 
 ### Tree Mastery Checklist
@@ -2838,6 +3447,7 @@ I have mastered interview trees when I can:
 
 ---
 
+<a id="13-heaps-priority-queues"></a>
 ## 13. Heaps / Priority Queues
 
 **Priority:** 🟠 Tier 2 — Very Important
@@ -2854,14 +3464,14 @@ I have mastered interview trees when I can:
 - **Common use cases:** Task scheduling, event simulation, top-K queries, streaming statistics, Dijkstra, and merging sorted sequences.
 - **Common problem patterns:** Keep the best `k`; repeatedly choose a current minimum; process jobs by priority; maintain two halves of a stream.
 - **How to recognize problems that require it:** The input changes while you repeatedly need the smallest/largest, the `k` best, or the next item across sorted sources. Words such as *top K*, *kth*, *priority*, *closest*, *next available*, and *stream* are clues.
-- **How deeply to understand it:** Fluently use `std::priority_queue`, choose its default max-heap versus a `std::greater` min-heap, design `std::pair`/`std::tuple` ordering or a custom comparator, and analyze heap size. Know array indexing and heapify conceptually; implement sift operations only if explicitly requested.
+- **How deeply to understand it:** Fluently use `PriorityQueue`, choose its default min-heap versus `Comparator.reverseOrder()` for a max-heap, design records/classes and comparators for entries, and analyze heap size. Know array indexing and heapify conceptually; implement sift operations only if explicitly requested.
 
 ### Focus First
 
-- Min-heap versus max-heap and how to choose the corresponding `std::priority_queue` comparator.
-- `push`, `top`, and `pop` complexity.
+- Min-heap versus max-heap and how to choose the corresponding `PriorityQueue` comparator.
+- `offer`, `peek`, and `poll` complexity.
 - Fixed-size heap for top-K and kth-element questions.
-- K-way merge and priority-entry design with `std::pair` or `std::tuple`.
+- K-way merge and named priority-entry records with explicit comparators.
 
 ### Learn Later
 
@@ -2870,8 +3480,8 @@ I have mastered interview trees when I can:
 
 ### Optional / Specialized
 
-- **Indexed heaps / decrease-key implementation — 🟡 Tier 3 — Nice to Know.** Useful conceptually for graph algorithms; most interview code pushes a fresh pair and skips stale entries.
-- **Binomial/Fibonacci/pairing heaps — ⚪ Tier 4 — Low Priority / Specialized.** Theoretical or specialized; not useful enough for normal interview preparation.
+- **Indexed heaps / decrease-key implementation — 🟡 Tier 3 — Nice to Know.** Useful conceptually for graph algorithms; most interview code inserts a fresh immutable entry and skips stale entries.
+- **Binomial/Fibonacci/other meldable heaps — ⚪ Tier 4 — Low Priority / Specialized.** Theoretical or specialized; not useful enough for normal interview preparation.
 
 ### 13.1 Heap Fundamentals and Operations
 
@@ -2879,9 +3489,11 @@ I have mastered interview trees when I can:
 
 **Why this priority:** All heap patterns depend on correctly understanding what is—and is not—ordered.
 
+**Study target:** Reproduce min/max declarations and top-K from memory; understand the root invariant and derive k-way merge. Practice 4–6 selected problems plus cold revisits. Two-heaps/lazy-deletion implementations can wait; heap internals are lookup material unless requested.
+
 For a zero-indexed array:
 
-- Parent of index `i`: `(i - 1) / 2` with integer division
+- Parent of index `i > 0`: `(i - 1) / 2` with integer division; the root has no parent
 - Left child: `2 * i + 1`
 - Right child: `2 * i + 2`
 
@@ -2889,68 +3501,62 @@ A min-heap guarantees only that each parent is `<=` its children, so the root is
 
 | Operation | Binary heap time | Notes |
 |---|---:|---|
-| `top()` min/max | `O(1)` | Read the root |
+| `peek()` min/max | `O(1)` | Read the root |
 | Insert | `O(log n)` | Append, then sift up |
 | Remove root | `O(log n)` | Move last item to root, then sift down |
 | Heapify `n` existing items | `O(n)` | Bottom-up construction |
 | Search arbitrary value | `O(n)` | Heap order does not support general search |
 
-```cpp
-std::vector<int> values{7, 2, 5};
+```java
+static void heapOperationsExample() {
+    // Collection construction uses bottom-up heap construction in OpenJDK.
+    PriorityQueue<Integer> minHeap = new PriorityQueue<>(List.of(7, 2, 5));
+    minHeap.offer(3);                 // O(log n)
+    int smallest = minHeap.peek();    // O(1); nonempty before unboxing
+    int removed = minHeap.poll();     // O(log n); returns the removed element
 
-// Range construction performs bottom-up heap construction.
-std::priority_queue<int, std::vector<int>, std::greater<int>> min_heap(
-    values.begin(), values.end());
-min_heap.push(3);                 // O(log n)
-int smallest = min_heap.top();    // O(1)
-min_heap.pop();                   // O(log n); pop() returns void
-
-// std::priority_queue is a max-heap by default.
-std::priority_queue<int> max_heap;
-max_heap.push(7);
-int largest = max_heap.top();
-max_heap.pop();
+    PriorityQueue<Integer> maxHeap = new PriorityQueue<>(Comparator.reverseOrder());
+    maxHeap.offer(7);
+    int largest = maxHeap.peek();
+    maxHeap.poll();
+}
 ```
+
+> 🌐 **Java Backend Relevance — HIGH:** Comparator correctness also matters in application sorting and scheduling. Keep priority fields immutable while entries are stored. `PriorityQueue` is not thread-safe; sharing it across worker threads needs a separate concurrency design.
 
 **How it works:** Sift-up repairs the one possibly broken path from a new leaf to the root. Sift-down repairs the path from a replaced root to a leaf. Only one root-to-leaf path changes, hence `O(log n)`.
 
-**Common mistakes:** Treating the underlying container as sorted; reversing `std::pair`/`std::tuple` fields; using the default max-heap when a min-heap is required; forgetting that `pop()` returns `void`; mutating an item already inside the heap; and assuming arbitrary deletion is `O(log n)` without an index map/lazy-deletion plan.
+**Common mistakes:** Reading heap iteration as sorted order; comparing the wrong entry field; forgetting Java defaults to a min-heap; unboxing a `null` returned by `peek()`/`poll()` on an empty heap; changing an entry's priority while it is stored; and assuming `remove(Object)` or `contains` is logarithmic (both are `O(n)`). Use a safe comparator such as `Comparator.comparingLong`, not subtraction.
 
-**Edge cases:** Empty heap before `top()`/`pop()`, equal priorities, payload types that lack an ordering after tied `std::tuple` fields, `k = 0`, and `k > n`.
+**Edge cases:** Empty heap before unboxing `peek()`/`poll()`, equal priorities, `null` entries (forbidden), `k = 0`, and `k > n`. Comparator ties are allowed; add tie-breakers only when output order requires them. Records do not automatically implement `Comparable`.
 
-**Trade-offs:** A heap gives only the next extreme, not full order. `std::set`/`std::map` support predecessor and range operations. Sorting gives all items in order but makes repeated dynamic insertions costly.
+**Trade-offs:** A heap gives only the next extreme, not full order. `TreeSet`/`TreeMap` support predecessor and range operations. Sorting gives all items in order but makes repeated dynamic insertions costly.
 
 ### 13.2 Top-K and Kth-Element Pattern
 
-**Priority:** 🔴 Tier 1 — Must Master
+**Priority:** 🟠 Tier 2 — Very Important
 
 **Why this priority:** Top-K is one of the most common direct heap signals and transfers to frequency, distance, score, and streaming problems.
 
 To keep the `k` largest values, maintain a **min-heap of size at most `k`**. The root is the weakest member of the current winners.
 
-```cpp
-std::vector<int> kLargest(const std::vector<int>& values, int k) {
-    if (k <= 0) return {};
-
-    std::priority_queue<int, std::vector<int>, std::greater<int>> winners;
+```java
+static List<Integer> kLargest(int[] values, int k) {
+    List<Integer> result = new ArrayList<>();
+    if (k <= 0) return result;
+    PriorityQueue<Integer> winners = new PriorityQueue<>();
     for (int value : values) {
-        winners.push(value);
-        if (static_cast<int>(winners.size()) > k) winners.pop();
+        winners.offer(value);
+        if (winners.size() > k) winners.poll();
     }
-
-    std::vector<int> result;
-    result.reserve(winners.size());
-    while (!winners.empty()) {
-        result.push_back(winners.top());
-        winners.pop();
-    }
-    return result;  // Contains the k largest in ascending pop order.
+    while (!winners.isEmpty()) result.add(winners.poll());
+    return result; // Largest min(k, n) values in ascending removal order.
 }
 ```
 
 **Invariant:** After processing any prefix, the heap contains the largest `min(k, prefix_length)` items in that prefix.
 
-**Complexity:** `O(n log k)` time and `O(k)` extra space. Sorting all values costs `O(n log n)` time, often simpler if ordered output is also needed. Quickselect has expected `O(n)` time for a single kth statistic but is harder to implement robustly and does not naturally support a stream.
+**Complexity:** `O(n log(k + 1))` time and `O(min(n, k))` heap/output space for positive `k`; conventionally written `O(n log k)` for `k >= 2`. The `k <= 0` branch is constant time. Sorting all values costs `O(n log n)` time, often simpler if ordered output is also needed. Quickselect has expected `O(n)` time for a single kth statistic but is harder to implement robustly and does not naturally support a stream.
 
 **Direction rule:**
 
@@ -2967,40 +3573,37 @@ For **Top K Frequent**, first build a frequency map. Heap entries can be `(frequ
 
 Keep only the next unconsumed candidate from each of `k` sorted sources. Pop the smallest candidate, output it, then push its successor from the same source.
 
-```cpp
-std::vector<int> mergeSortedArrays(
-    const std::vector<std::vector<int>>& arrays) {
-    using Entry = std::tuple<int, int, int>;  // value, array index, element index
-    std::priority_queue<Entry, std::vector<Entry>, std::greater<Entry>> frontier;
+```java
+record MergeEntry(int value, int source, int index) {}
 
-    for (int array_index = 0;
-         array_index < static_cast<int>(arrays.size()); ++array_index) {
-        if (!arrays[array_index].empty()) {
-            frontier.push({arrays[array_index][0], array_index, 0});
+static List<Integer> mergeSortedArrays(int[][] arrays) {
+    PriorityQueue<MergeEntry> frontier = new PriorityQueue<>(
+            Comparator.comparingInt(MergeEntry::value)
+                    .thenComparingInt(MergeEntry::source)
+                    .thenComparingInt(MergeEntry::index));
+    for (int source = 0; source < arrays.length; source++) {
+        if (arrays[source].length > 0) {
+            frontier.offer(new MergeEntry(arrays[source][0], source, 0));
         }
     }
-
-    std::vector<int> merged;
-    while (!frontier.empty()) {
-        auto [value, array_index, element_index] = frontier.top();
-        frontier.pop();
-        merged.push_back(value);
-
-        const int next_index = element_index + 1;
-        if (next_index < static_cast<int>(arrays[array_index].size())) {
-            frontier.push(
-                {arrays[array_index][next_index], array_index, next_index});
+    List<Integer> merged = new ArrayList<>();
+    while (!frontier.isEmpty()) {
+        MergeEntry entry = frontier.poll();
+        merged.add(entry.value());
+        int next = entry.index() + 1;
+        if (next < arrays[entry.source()].length) {
+            frontier.offer(new MergeEntry(arrays[entry.source()][next], entry.source(), next));
         }
     }
     return merged;
 }
 ```
 
-**Complexity:** If there are `N` total items and at most `k` sources, time is `O(N log k)` and heap space is `O(k)`, excluding output.
+**Complexity:** For `N` total items across `k` source arrays, time is `O(k + N log(k + 1))`, including inspecting empty sources; heap space is `O(k)`, excluding `O(N)` output. With nonempty sources and `k >= 2`, the usual shorthand is `O(N log k)`.
 
 **Recognition:** Multiple individually sorted inputs; need global sorted order or the kth global item; cannot concatenate and sort due to scale or streaming.
 
-**Mistakes:** Inserting every item rather than one frontier per source, losing source identity, failing on empty sources, or omitting a deterministic tie-breaker when payload objects are not comparable.
+**Mistakes:** Inserting every item rather than one frontier per source, losing source identity, failing on empty sources, or forgetting to provide a comparator for record entries, or omitting a tie-breaker when a deterministic output order is required.
 
 ### 13.4 Two Heaps / Running Median
 
@@ -3014,38 +3617,31 @@ Maintain:
 - `upper`: a min-heap for the larger half;
 - size difference at most one; and every `lower` value `<=` every `upper` value.
 
-```cpp
-class MedianFinder {
-    std::priority_queue<int> lower_;  // Max-heap: smaller half.
-    std::priority_queue<int, std::vector<int>, std::greater<int>> upper_;
+```java
+static class MedianFinder {
+    private final PriorityQueue<Integer> lower = new PriorityQueue<>(Comparator.reverseOrder());
+    private final PriorityQueue<Integer> upper = new PriorityQueue<>();
 
-public:
     void add(int value) {
-        lower_.push(value);
-        upper_.push(lower_.top());
-        lower_.pop();
-
-        if (upper_.size() > lower_.size()) {
-            lower_.push(upper_.top());
-            upper_.pop();
-        }
+        lower.offer(value);
+        upper.offer(lower.poll());
+        if (upper.size() > lower.size()) lower.offer(upper.poll());
     }
 
-    double median() const {
-        if (lower_.empty()) throw std::logic_error("median of empty stream");
-        if (lower_.size() > upper_.size()) return lower_.top();
-
-        const long long sum = static_cast<long long>(lower_.top()) + upper_.top();
+    double median() {
+        if (lower.isEmpty()) throw new IllegalStateException("median of empty stream");
+        if (lower.size() > upper.size()) return lower.peek();
+        long sum = (long) lower.peek() + upper.peek();
         return sum / 2.0;
     }
-};
+}
 ```
 
 **Complexity:** `O(log n)` per insertion, `O(1)` median query, and `O(n)` storage.
 
 **Edge cases/mistakes:** Querying before insertion, overflow while averaging two integers in fixed-width languages, forgetting a rebalance step, or maintaining sizes without maintaining cross-half order.
 
-**Alternative:** `std::multiset` supports insertion and median maintenance but needs careful iterator management because it has no direct rank lookup. Sorting after every insertion is too slow; sorting once is best when all data arrives before queries.
+**Alternative:** Java has no standard multiset with rank queries. A `TreeMap<Integer, Integer>` can track counts, but maintaining the median requires extra bookkeeping. Two heaps are the clearer standard interview approach; sorting once is best when all data arrives before queries.
 
 ### Heap Pattern Map
 
@@ -3061,32 +3657,22 @@ public:
 
 ### Representative Heap Problems
 
-#### Beginner
+| Stage | Selected problem | Transfer target |
+|---|---|---|
+| Mechanics | Last Stone Weight | Max-heap direction and repeated extraction |
+| Canonical | ⭐ **Canonical Interview Problem:** Kth Largest Element in an Array | A size-`k` min-heap retains the winners |
+| Variation | Top K Frequent Elements; optionally K Closest Points | Hashing/priority-key design; compare buckets or sorting |
+| Mixed pattern | Merge K Sorted Lists, then Meeting Rooms II | One frontier per source; release resources by earliest end |
+| Cold revisit | Kth Largest with duplicate/extreme values, then K-Way Merge | Explain the root invariant before writing the comparator |
 
-- **Kth Largest Element in an Array:** Teaches a size-`k` min-heap and comparison with sorting/quickselect.
-- **Last Stone Weight:** Teaches max-heap simulation and repeated extraction.
-- **K Closest Points to Origin:** Teaches priority keys and keeping only `k` candidates.
-
-#### Core Interview
-
-- **Top K Frequent Elements:** Teaches combining a hash-frequency table with a heap or frequency buckets.
-- **Merge K Sorted Lists:** Teaches one frontier per source, tie-breaking, and `O(N log k)` analysis.
-- **Find Median from Data Stream:** Teaches two balanced heaps and explicit invariants.
-- **Task Scheduler / Meeting Rooms II:** Teaches heap-based resource release; also compare with counting or sweep-line alternatives.
-- **Kth Smallest Element in a Sorted Matrix:** Teaches either k-way row merge or binary search on value, depending on constraints.
-
-#### Advanced
-
-- **Sliding Window Median:** Teaches lazy deletion because heaps do not support arbitrary removal efficiently.
-- **Smallest Range Covering Elements from K Lists:** Extends k-way merge while tracking the current maximum.
-- **IPO / maximize capital:** Teaches two heaps or sort + heap to expose currently feasible choices.
+Later choices: **Find Median from Data Stream** (Tier 3), **Kth Smallest in a Sorted Matrix** (heap versus answer search), **Smallest Range Covering Elements from K Lists** (maintain current maximum). **Sliding Window Median** and **IPO** are optional advanced mixed practice; do not block core progress on them.
 
 ### Common Heap Mistakes and Interview Tips
 
 - Say what the root means and what the heap invariant preserves.
 - Include heap size in the complexity: `O(n log k)`, not simply `O(n log n)`.
 - Clarify whether output itself must be sorted; a heap's internal array is not sorted.
-- Prefer `tuple` entries with stable primitive tie-breakers, such as `(priority, unique_id, payload)`.
+- Prefer immutable record/class entries and explicit comparator fields. Add a stable integer ID as a tie-breaker if ties must have deterministic order.
 - When graph code pushes duplicate entries instead of decreasing keys, skip a popped entry if it is stale.
 - If `k` is close to `n` and ordered output is needed, sorting may be clearer with similar practical cost.
 
@@ -3095,12 +3681,12 @@ public:
 I have mastered interview heaps when I can:
 
 - [ ] Explain the heap invariant and why the entire array is not sorted.
-- [ ] Use C++ min-heap and max-heap `priority_queue` declarations correctly from memory.
-- [ ] State `top`, `push`, `pop`, and heap-construction complexities.
+- [ ] Declare Java min-heaps and max-heaps correctly from memory.
+- [ ] State `peek`, `offer`, `poll`, arbitrary-removal, and heap-construction complexities.
 - [ ] Choose the correct heap direction for top-K.
 - [ ] Derive and implement `O(n log k)` top-K and `O(N log k)` k-way merge.
-- [ ] Design safe tuple/comparator keys and tie-breakers.
-- [ ] Implement and explain the two-heaps median invariant.
+- [ ] Design safe record/class comparator keys and tie-breakers.
+- [ ] **Later (Tier 3):** Implement and explain the two-heaps median invariant.
 - [ ] Compare heap, full sorting, bucket sorting, and quickselect trade-offs.
 
 ---
@@ -3127,7 +3713,7 @@ I have mastered interview heaps when I can:
 
 - Model the nodes, edges, direction, weights, and state identity correctly.
 - Adjacency-list representation.
-- DFS/BFS with a `vector<bool>` or `unordered_set` for visited state and correct visited timing.
+- DFS/BFS with a `boolean[]` or `HashSet` for visited state and correct visited timing.
 - Connected components and grid-as-graph traversal.
 - BFS for shortest paths in unweighted graphs.
 
@@ -3148,28 +3734,36 @@ I have mastered interview heaps when I can:
 
 **Why this priority:** A correct algorithm on the wrong representation can exceed the constraints or silently model edge direction incorrectly.
 
+**Java contracts:** Graph snippets use a nonnegative vertex count and IDs `0..V-1`; each listed neighbor, source, and target must be valid. A source-based query therefore requires a nonempty graph. Whole-graph operations support zero vertices. Adjacency outer lists use `ArrayList`, giving constant-time `get(node)`; arbitrary labels can be mapped to integer IDs.
+
+**Study target:** Reconstruct DFS/BFS and component loops first (4–6 problems); then add topological order, DSU, and Dijkstra (3–5 problems). Understand modeling and visited state; look up advanced graph algorithms when needed.
+
 #### Adjacency list
 
-```cpp
-using Graph = std::vector<std::vector<int>>;
-using WeightedGraph =
-    std::vector<std::vector<std::pair<int, long long>>>;  // neighbor, weight
+```java
+record WeightedEdge(int to, long weight) {}
+record WeightedArc(int from, int to, long weight) {}
 
-Graph buildUndirectedGraph(int n,
-                           const std::vector<std::pair<int, int>>& edges) {
-    Graph graph(n);
-    for (const auto& [a, b] : edges) {
-        graph[a].push_back(b);
-        graph[b].push_back(a);
+static List<List<Integer>> emptyGraph(int n) {
+    List<List<Integer>> graph = new ArrayList<>(n);
+    for (int node = 0; node < n; node++) graph.add(new ArrayList<>());
+    return graph;
+}
+
+static List<List<Integer>> buildUndirectedGraph(int n, int[][] edges) {
+    List<List<Integer>> graph = emptyGraph(n);
+    for (int[] edge : edges) {
+        graph.get(edge[0]).add(edge[1]);
+        graph.get(edge[1]).add(edge[0]);
     }
     return graph;
 }
 
-WeightedGraph buildDirectedWeightedGraph(
-    int n, const std::vector<std::tuple<int, int, long long>>& edges) {
-    WeightedGraph graph(n);
-    for (const auto& [source, target, weight] : edges) {
-        graph[source].push_back({target, weight});
+static List<List<WeightedEdge>> buildDirectedWeightedGraph(int n, List<WeightedArc> edges) {
+    List<List<WeightedEdge>> graph = new ArrayList<>(n);
+    for (int node = 0; node < n; node++) graph.add(new ArrayList<>());
+    for (WeightedArc edge : edges) {
+        graph.get(edge.from()).add(new WeightedEdge(edge.to(), edge.weight()));
     }
     return graph;
 }
@@ -3190,7 +3784,7 @@ An `V x V` matrix stores whether or what edge connects each pair.
 
 #### Edge list
 
-A `vector` of `(u, v)` or `(u, v, w)` edges is compact and ideal for algorithms that process edges globally, such as Kruskal and Bellman-Ford. It is poor for repeatedly asking for one vertex's neighbors unless converted.
+An `int[][]` of unweighted endpoints or a `List` of weighted-edge records is compact and ideal for algorithms that process edges globally, such as Kruskal and Bellman-Ford. It is poor for repeatedly asking for one vertex's neighbors unless converted.
 
 **Recognition and modeling questions:**
 
@@ -3211,38 +3805,41 @@ A `vector` of `(u, v)` or `(u, v, w)` edges is compact and ideal for algorithms 
 
 #### Intuition and how it works
 
-DFS follows one path as far as possible, then backtracks. A visited array (or an `unordered_set` for non-contiguous labels) means each graph state is processed at most once and prevents infinite loops in cyclic graphs.
+DFS follows one path as far as possible, then backtracks. A visited array (or a `HashSet` for non-contiguous labels) means each graph state is processed at most once and prevents infinite loops in cyclic graphs.
 
-```cpp
-std::vector<bool> dfsRecursive(const Graph& graph, int start) {
-    std::vector<bool> visited(graph.size(), false);
-    std::function<void(int)> dfs = [&](int node) {
-        visited[node] = true;
-        for (int neighbor : graph[node]) {
-            if (!visited[neighbor]) dfs(neighbor);
-        }
-    };
-    dfs(start);
+```java
+static boolean[] dfsRecursive(List<List<Integer>> graph, int start) {
+    boolean[] visited = new boolean[graph.size()];
+    visitRecursive(graph, start, visited);
     return visited;
 }
 
-std::vector<bool> dfsIterative(const Graph& graph, int start) {
-    std::vector<bool> visited(graph.size(), false);
-    std::stack<int> pending;
+static void visitRecursive(List<List<Integer>> graph, int node, boolean[] visited) {
+    visited[node] = true;
+    for (int neighbor : graph.get(node)) {
+        if (!visited[neighbor]) visitRecursive(graph, neighbor, visited);
+    }
+}
+
+static boolean[] dfsIterative(List<List<Integer>> graph, int start) {
+    boolean[] visited = new boolean[graph.size()];
+    visitIterative(graph, start, visited);
+    return visited;
+}
+
+static void visitIterative(List<List<Integer>> graph, int start, boolean[] visited) {
+    Deque<Integer> pending = new ArrayDeque<>();
     visited[start] = true;
     pending.push(start);
-
-    while (!pending.empty()) {
-        const int node = pending.top();
-        pending.pop();
-        for (int neighbor : graph[node]) {
+    while (!pending.isEmpty()) {
+        int node = pending.pop();
+        for (int neighbor : graph.get(node)) {
             if (!visited[neighbor]) {
                 visited[neighbor] = true;
                 pending.push(neighbor);
             }
         }
     }
-    return visited;
 }
 ```
 
@@ -3266,36 +3863,36 @@ std::vector<bool> dfsIterative(const Graph& graph, int start) {
 
 BFS explores a frontier in nondecreasing distance from the source. When a node is first discovered in an unweighted graph, no later path can reach it with fewer edges.
 
-```cpp
-std::pair<int, std::vector<int>> shortestUnweightedPath(
-    const Graph& graph, int start, int target) {
-    std::vector<int> distance(graph.size(), -1);
-    std::vector<int> parent(graph.size(), -1);
-    std::queue<int> pending;
+```java
+record PathResult(int distance, List<Integer> path) {}
+
+static PathResult shortestUnweightedPath(List<List<Integer>> graph, int start, int target) {
+    int[] distance = new int[graph.size()];
+    int[] parent = new int[graph.size()];
+    Arrays.fill(distance, -1);
+    Arrays.fill(parent, -1);
+    Queue<Integer> pending = new ArrayDeque<>();
     distance[start] = 0;
-    pending.push(start);
-
-    while (!pending.empty()) {
-        const int node = pending.front();
-        pending.pop();
+    pending.offer(start);
+    while (!pending.isEmpty()) {
+        int node = pending.poll();
         if (node == target) {
-            std::vector<int> path;
+            List<Integer> path = new ArrayList<>();
             for (int current = target; current != -1; current = parent[current]) {
-                path.push_back(current);
+                path.add(current);
             }
-            std::reverse(path.begin(), path.end());
-            return {distance[target], path};
+            Collections.reverse(path);
+            return new PathResult(distance[target], path);
         }
-
-        for (int neighbor : graph[node]) {
-            if (distance[neighbor] == -1) {  // Also acts as visited.
+        for (int neighbor : graph.get(node)) {
+            if (distance[neighbor] == -1) {
                 distance[neighbor] = distance[node] + 1;
                 parent[neighbor] = node;
-                pending.push(neighbor);
+                pending.offer(neighbor);
             }
         }
     }
-    return {-1, {}};
+    return new PathResult(-1, List.of());
 }
 ```
 
@@ -3317,25 +3914,23 @@ std::pair<int, std::vector<int>> shortestUnweightedPath(
 
 Initialize the queue with every source simultaneously. Conceptually, add a virtual super-source connected by zero setup cost to all sources. BFS then computes distance to the nearest source.
 
-```cpp
-std::vector<int> nearestSourceDistance(const Graph& graph,
-                                       const std::vector<int>& sources) {
-    std::vector<int> distance(graph.size(), -1);
-    std::queue<int> pending;
+```java
+static int[] nearestSourceDistance(List<List<Integer>> graph, int[] sources) {
+    int[] distance = new int[graph.size()];
+    Arrays.fill(distance, -1);
+    Queue<Integer> pending = new ArrayDeque<>();
     for (int source : sources) {
         if (distance[source] == -1) {
             distance[source] = 0;
-            pending.push(source);
+            pending.offer(source);
         }
     }
-
-    while (!pending.empty()) {
-        const int node = pending.front();
-        pending.pop();
-        for (int neighbor : graph[node]) {
+    while (!pending.isEmpty()) {
+        int node = pending.poll();
+        for (int neighbor : graph.get(node)) {
             if (distance[neighbor] == -1) {
                 distance[neighbor] = distance[node] + 1;
-                pending.push(neighbor);
+                pending.offer(neighbor);
             }
         }
     }
@@ -3345,7 +3940,7 @@ std::vector<int> nearestSourceDistance(const Graph& graph,
 
 **Recognition:** “Distance to nearest gate/zero/hospital,” simultaneous spread/infection/fire, or minimum time until every reachable cell changes.
 
-**Complexity:** Still `O(V + E)`, not multiplied by the number of sources.
+**Complexity:** `O(V + E + S)` for a source list of length `S`, including duplicate entries. With distinct sources, `S <= V`, giving the usual `O(V + E)` bound. Traversal is not multiplied by the number of sources; auxiliary distance/queue space is `O(V)`.
 
 **Mistakes:** Running a separate BFS from every cell/source, failing to enqueue all initial sources before traversal, and confusing simultaneous time steps with sequential source processing.
 
@@ -3355,28 +3950,15 @@ std::vector<int> nearestSourceDistance(const Graph& graph,
 
 **Why this priority:** Component counting is a core reuse of traversal and appears in graphs, grids, accounts, and connectivity stories.
 
-```cpp
-int countComponents(int n, const std::vector<std::pair<int, int>>& edges) {
-    const Graph graph = buildUndirectedGraph(n, edges);
-    std::vector<bool> visited(n, false);
+```java
+static int countComponents(int n, int[][] edges) {
+    List<List<Integer>> graph = buildUndirectedGraph(n, edges);
+    boolean[] visited = new boolean[n];
     int components = 0;
-
-    for (int node = 0; node < n; ++node) {
-        if (visited[node]) continue;
-        ++components;
-        std::stack<int> pending;
-        pending.push(node);
-        visited[node] = true;
-
-        while (!pending.empty()) {
-            const int current = pending.top();
-            pending.pop();
-            for (int neighbor : graph[current]) {
-                if (!visited[neighbor]) {
-                    visited[neighbor] = true;
-                    pending.push(neighbor);
-                }
-            }
+    for (int node = 0; node < n; node++) {
+        if (!visited[node]) {
+            components++;
+            visitIterative(graph, node, visited); // Helper from 14.2.
         }
     }
     return components;
@@ -3399,42 +3981,31 @@ int countComponents(int n, const std::vector<std::pair<int, int>>& edges) {
 
 Each traversable cell is a node. Legal moves define edges—usually four directions, sometimes eight or problem-specific moves.
 
-```cpp
-int countIslands(std::vector<std::vector<char>>& grid) {
-    if (grid.empty() || grid.front().empty()) return 0;
-    const int rows = static_cast<int>(grid.size());
-    const int cols = static_cast<int>(grid.front().size());
-    const std::array<std::pair<int, int>, 4> directions{{
-        {1, 0}, {-1, 0}, {0, 1}, {0, -1}
-    }};
-
-    auto flood_fill = [&](int start_row, int start_col) {
-        std::stack<std::pair<int, int>> pending;
-        pending.push({start_row, start_col});
-        grid[start_row][start_col] = '0';  // Explicitly mutates the input.
-
-        while (!pending.empty()) {
-            auto [row, col] = pending.top();
-            pending.pop();
-            for (const auto& [dr, dc] : directions) {
-                const int next_row = row + dr;
-                const int next_col = col + dc;
-                if (0 <= next_row && next_row < rows &&
-                    0 <= next_col && next_col < cols &&
-                    grid[next_row][next_col] == '1') {
-                    grid[next_row][next_col] = '0';
-                    pending.push({next_row, next_col});
-                }
-            }
-        }
-    };
-
+```java
+static int countIslands(char[][] grid) {
+    if (grid.length == 0 || grid[0].length == 0) return 0;
+    int rows = grid.length;
+    int cols = grid[0].length;
+    int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    Deque<int[]> pending = new ArrayDeque<>();
     int islands = 0;
-    for (int row = 0; row < rows; ++row) {
-        for (int col = 0; col < cols; ++col) {
-            if (grid[row][col] == '1') {
-                ++islands;
-                flood_fill(row, col);
+    for (int row = 0; row < rows; row++) {
+        for (int col = 0; col < cols; col++) {
+            if (grid[row][col] != '1') continue;
+            islands++;
+            grid[row][col] = '0'; // Explicitly mutates the caller's grid.
+            pending.push(new int[] {row, col});
+            while (!pending.isEmpty()) {
+                int[] cell = pending.pop();
+                for (int[] direction : directions) {
+                    int nextRow = cell[0] + direction[0];
+                    int nextCol = cell[1] + direction[1];
+                    if (nextRow >= 0 && nextRow < rows && nextCol >= 0 && nextCol < cols
+                            && grid[nextRow][nextCol] == '1') {
+                        grid[nextRow][nextCol] = '0';
+                        pending.push(new int[] {nextRow, nextCol});
+                    }
+                }
             }
         }
     }
@@ -3446,9 +4017,11 @@ int countIslands(std::vector<std::vector<char>>& grid) {
 
 **Recognition:** Regions, islands, connected pixels, spreading, nearest cell, shortest moves, maze, or board-state transitions.
 
+> 🌐 **Java Backend Relevance — MEDIUM:** `int[] {row, col}` is compact interview state; a `record Coordinate(int row, int col)` names fields clearly in an application API. Arrays use identity equality, so a record is also a safer value key in a `HashSet` when state needs content equality.
+
 **State modeling:** Sometimes `(r, c)` is insufficient. If future moves depend on collected keys, remaining obstacle eliminations, direction, or time parity, those fields belong in the visited state.
 
-**Mutation trade-off:** Marking the grid itself saves separate storage but destroys input. Ask whether mutation is permitted. A separate `vector<vector<bool>> visited` preserves input at `O(RC)` extra space.
+**Mutation trade-off:** Marking the grid itself saves separate storage but destroys input. Ask whether mutation is permitted. A separate `boolean[][] visited` preserves input at `O(RC)` extra space.
 
 **Common mistakes/edge cases:** Swapping rows and columns; assuming rectangular input without checking the contract; wrong four-versus-eight-direction rule; marking on pop; revisiting start; empty grid; and treating a changed resource count as the same state.
 
@@ -3462,29 +4035,32 @@ int countIslands(std::vector<std::vector<char>>& grid) {
 
 During DFS, encountering an already visited neighbor indicates a cycle **unless that neighbor is the node we just came from**.
 
-```cpp
-bool hasUndirectedCycle(const Graph& graph) {
-    std::vector<bool> visited(graph.size(), false);
-    std::function<bool(int, int)> dfs = [&](int node, int parent) {
-        visited[node] = true;
-        for (int neighbor : graph[node]) {
-            if (!visited[neighbor]) {
-                if (dfs(neighbor, node)) return true;
-            } else if (neighbor != parent) {
-                return true;
-            }
-        }
-        return false;
-    };
+```java
+static boolean hasUndirectedCycle(List<List<Integer>> graph) {
+    boolean[] visited = new boolean[graph.size()];
+    for (int node = 0; node < graph.size(); node++) {
+        if (!visited[node] && undirectedCycleDfs(graph, node, -1, visited)) return true;
+    }
+    return false;
+}
 
-    for (int node = 0; node < static_cast<int>(graph.size()); ++node) {
-        if (!visited[node] && dfs(node, -1)) return true;
+static boolean undirectedCycleDfs(List<List<Integer>> graph, int node, int parent,
+                                  boolean[] visited) {
+    visited[node] = true;
+    for (int neighbor : graph.get(node)) {
+        if (!visited[neighbor]) {
+            if (undirectedCycleDfs(graph, neighbor, node, visited)) return true;
+        } else if (neighbor != parent) {
+            return true;
+        }
     }
     return false;
 }
 ```
 
 **Complexity:** `O(V + E)` time and `O(V)` traversal space.
+
+**Contract:** The parent-based DFS shown assumes a simple undirected graph. If parallel edges must count as a two-edge cycle, track edge IDs so only the exact reverse parent edge is skipped, or process the edge list with DSU.
 
 **Alternative:** DSU detects whether an undirected edge connects vertices already in the same set. DFS is better if adjacency and the actual cycle/path matter.
 
@@ -3498,24 +4074,23 @@ bool hasUndirectedCycle(const Graph& graph) {
 
 A visited node is not automatically a cycle. A cycle exists when DFS reaches a node that is still in the **current recursion path**. Use three states: `0 = unvisited`, `1 = visiting`, `2 = finished`.
 
-```cpp
-bool hasDirectedCycle(const Graph& graph) {
-    std::vector<int> state(graph.size(), 0);
-    std::function<bool(int)> dfs = [&](int node) {
-        if (state[node] == 1) return true;
-        if (state[node] == 2) return false;
-
-        state[node] = 1;
-        for (int neighbor : graph[node]) {
-            if (dfs(neighbor)) return true;
-        }
-        state[node] = 2;
-        return false;
-    };
-
-    for (int node = 0; node < static_cast<int>(graph.size()); ++node) {
-        if (state[node] == 0 && dfs(node)) return true;
+```java
+static boolean hasDirectedCycle(List<List<Integer>> graph) {
+    int[] state = new int[graph.size()];
+    for (int node = 0; node < graph.size(); node++) {
+        if (state[node] == 0 && directedCycleDfs(graph, node, state)) return true;
     }
+    return false;
+}
+
+static boolean directedCycleDfs(List<List<Integer>> graph, int node, int[] state) {
+    if (state[node] == 1) return true;
+    if (state[node] == 2) return false;
+    state[node] = 1;
+    for (int neighbor : graph.get(node)) {
+        if (directedCycleDfs(graph, neighbor, state)) return true;
+    }
+    state[node] = 2;
     return false;
 }
 ```
@@ -3524,7 +4099,7 @@ bool hasDirectedCycle(const Graph& graph) {
 
 **Alternative:** Kahn's topological-sort algorithm detects a directed cycle if fewer than `V` nodes can be processed.
 
-**Mistakes:** Using only one visited boolean; forgetting to mark a node finished; carrying a recursion-path `unordered_set` between independent completed paths; and reversing prerequisite edge direction accidentally.
+**Mistakes:** Using only one visited boolean; forgetting to mark a node finished; carrying a recursion-path `HashSet` between independent completed paths; and reversing prerequisite edge direction accidentally.
 
 ### 14.8 Topological Sorting
 
@@ -3536,31 +4111,29 @@ bool hasDirectedCycle(const Graph& graph) {
 
 `indegree[v]` counts unresolved prerequisites entering `v`. Start with every zero-indegree node, remove it, and decrement the indegree of its dependents.
 
-```cpp
-std::vector<int> topologicalOrder(
-    int n, const std::vector<std::pair<int, int>>& edges) {
-    Graph graph(n);
-    std::vector<int> indegree(n, 0);
-    for (const auto& [prerequisite, course] : edges) {
-        graph[prerequisite].push_back(course);
-        ++indegree[course];
+```java
+static List<Integer> topologicalOrder(int n, int[][] edges) {
+    List<List<Integer>> graph = emptyGraph(n); // Helper from 14.1.
+    int[] indegree = new int[n];
+    for (int[] edge : edges) {
+        int prerequisite = edge[0];
+        int course = edge[1];
+        graph.get(prerequisite).add(course);
+        indegree[course]++;
     }
-
-    std::queue<int> ready;
-    for (int node = 0; node < n; ++node) {
-        if (indegree[node] == 0) ready.push(node);
+    Queue<Integer> ready = new ArrayDeque<>();
+    for (int node = 0; node < n; node++) {
+        if (indegree[node] == 0) ready.offer(node);
     }
-
-    std::vector<int> order;
-    while (!ready.empty()) {
-        const int node = ready.front();
-        ready.pop();
-        order.push_back(node);
-        for (int neighbor : graph[node]) {
-            if (--indegree[neighbor] == 0) ready.push(neighbor);
+    List<Integer> order = new ArrayList<>();
+    while (!ready.isEmpty()) {
+        int node = ready.poll();
+        order.add(node);
+        for (int neighbor : graph.get(node)) {
+            if (--indegree[neighbor] == 0) ready.offer(neighbor);
         }
     }
-    return static_cast<int>(order.size()) == n ? order : std::vector<int>{};
+    return order.size() == n ? order : List.of();
 }
 ```
 
@@ -3576,6 +4149,7 @@ std::vector<int> topologicalOrder(
 
 **Common mistakes/edge cases:** Reversing edge direction; omitting nodes with no edges; not verifying `order.size() == V`; decrementing indegree more than once; assuming uniqueness; self-loop; and duplicate constraints that inflate indegrees unless consistently represented.
 
+<a id="149-union-find-disjoint-set-union-dsu"></a>
 ### 14.9 Union-Find / Disjoint Set Union (DSU)
 
 **Priority:** 🟠 Tier 2 — Very Important
@@ -3586,38 +4160,50 @@ std::vector<int> topologicalOrder(
 
 Each component has a representative root. `find(x)` returns it. `unite(a, b)` merges two components. Path compression flattens find paths; union by size/rank attaches the smaller tree below the larger.
 
-```cpp
-class DSU {
-    std::vector<int> parent_;
-    std::vector<int> size_;
-    int components_;
+```java
+static class DSU {
+    private final int[] parent;
+    private final int[] size;
+    private int components;
 
-public:
-    explicit DSU(int n) : parent_(n), size_(n, 1), components_(n) {
-        std::iota(parent_.begin(), parent_.end(), 0);
+    DSU(int n) {
+        parent = new int[n];
+        size = new int[n];
+        Arrays.fill(size, 1);
+        for (int node = 0; node < n; node++) parent[node] = node;
+        components = n;
     }
 
-    int find(int x) {
-        if (parent_[x] != x) parent_[x] = find(parent_[x]);
-        return parent_[x];
+    int find(int node) {
+        while (parent[node] != node) {
+            parent[node] = parent[parent[node]]; // Path halving.
+            node = parent[node];
+        }
+        return node;
     }
 
-    bool unite(int a, int b) {
-        int root_a = find(a);
-        int root_b = find(b);
-        if (root_a == root_b) return false;
-        if (size_[root_a] < size_[root_b]) std::swap(root_a, root_b);
-        parent_[root_b] = root_a;
-        size_[root_a] += size_[root_b];
-        --components_;
+    boolean unite(int a, int b) {
+        int rootA = find(a);
+        int rootB = find(b);
+        if (rootA == rootB) return false;
+        if (size[rootA] < size[rootB]) {
+            int temporary = rootA;
+            rootA = rootB;
+            rootB = temporary;
+        }
+        parent[rootB] = rootA;
+        size[rootA] += size[rootB];
+        components--;
         return true;
     }
 
-    int components() const { return components_; }
-};
+    int components() {
+        return components;
+    }
+}
 ```
 
-**Complexity:** With both optimizations, a sequence of operations takes nearly constant amortized time: `O(alpha(V))` per operation, where inverse Ackermann `alpha` grows so slowly it is below `5` for practical inputs. Space is `O(V)`.
+**Complexity:** Construction takes `O(V)` time and space. With both optimizations, subsequent operations take `O(alpha(V))` amortized time each, where inverse Ackermann `alpha` grows so slowly it is below `5` for practical inputs.
 
 **Recognition:** Repeatedly add undirected connections; ask whether two items belong to the same group; count groups; detect a redundant edge; merge accounts sharing identifiers; or choose non-cycling edges for an MST.
 
@@ -3635,22 +4221,21 @@ public:
 
 A graph is bipartite if its vertices can be colored with two colors so every edge connects opposite colors. Equivalently, an undirected graph is bipartite iff it has no odd-length cycle.
 
-```cpp
-bool isBipartite(const Graph& graph) {
-    std::vector<int> color(graph.size(), -1);
-    for (int start = 0; start < static_cast<int>(graph.size()); ++start) {
+```java
+static boolean isBipartite(List<List<Integer>> graph) {
+    int[] color = new int[graph.size()];
+    Arrays.fill(color, -1);
+    Queue<Integer> pending = new ArrayDeque<>();
+    for (int start = 0; start < graph.size(); start++) {
         if (color[start] != -1) continue;
         color[start] = 0;
-        std::queue<int> pending;
-        pending.push(start);
-
-        while (!pending.empty()) {
-            const int node = pending.front();
-            pending.pop();
-            for (int neighbor : graph[node]) {
+        pending.offer(start);
+        while (!pending.isEmpty()) {
+            int node = pending.poll();
+            for (int neighbor : graph.get(node)) {
                 if (color[neighbor] == -1) {
                     color[neighbor] = 1 - color[node];
-                    pending.push(neighbor);
+                    pending.offer(neighbor);
                 } else if (color[neighbor] == color[node]) {
                     return false;
                 }
@@ -3676,8 +4261,8 @@ bool isBipartite(const Graph& graph) {
 | Edge costs / graph property | First algorithm | Typical time |
 |---|---|---:|
 | All edges equal / unweighted | BFS | `O(V + E)` |
-| Weights are only `0` or `1` | 0-1 BFS with `std::deque` | `O(V + E)` |
-| Nonnegative weights | Dijkstra | Duplicate-entry heap: `O((V + E) log E)` general, commonly `O((V + E) log V)` for simple graphs |
+| Weights are only `0` or `1` | 0-1 BFS with `ArrayDeque` | `O(V + E)` |
+| Nonnegative weights | Dijkstra | `O(V + E log(E + 1))` with duplicate heap entries; commonly `O((V + E) log V)` for simple graphs |
 | Negative edges, no reachable negative cycle | Bellman-Ford | `O(VE)` |
 | All-pairs, small/dense graph | Floyd-Warshall | `O(V^3)` |
 | DAG with any edge weights | Topological relaxation | `O(V + E)` |
@@ -3694,29 +4279,35 @@ Do not choose from the word *shortest* alone. Inspect the edge-cost model first.
 
 Maintain the best tentative distance known for every node. Repeatedly pop the smallest distance from a min-heap. With nonnegative edges, that popped non-stale distance cannot later be improved by traveling through a farther node.
 
-```cpp
-std::vector<long long> dijkstra(const WeightedGraph& graph, int source) {
-    const long long INF = std::numeric_limits<long long>::max() / 4;
-    std::vector<long long> distance(graph.size(), INF);
-    using State = std::pair<long long, int>;  // distance, node
-    std::priority_queue<State, std::vector<State>, std::greater<State>> frontier;
-    distance[source] = 0;
-    frontier.push({0, source});
+```java
+record DistanceState(long distance, int node) {}
 
-    while (!frontier.empty()) {
-        const auto [dist, node] = frontier.top();
-        frontier.pop();
-        if (dist != distance[node]) continue;  // Stale entry.
-
-        for (const auto& [neighbor, weight] : graph[node]) {
-            if (weight < 0) {
-                throw std::invalid_argument("Dijkstra requires nonnegative weights");
+static long[] dijkstra(List<List<WeightedEdge>> graph, int source) {
+    final long infinity = Long.MAX_VALUE;
+    for (List<WeightedEdge> edges : graph) {
+        for (WeightedEdge edge : edges) {
+            if (edge.weight() < 0) {
+                throw new IllegalArgumentException("Dijkstra requires nonnegative weights");
             }
-            if (dist > INF - weight) continue;  // Guard addition overflow.
-            const long long candidate = dist + weight;
-            if (candidate < distance[neighbor]) {
-                distance[neighbor] = candidate;
-                frontier.push({candidate, neighbor});
+        }
+    }
+    long[] distance = new long[graph.size()];
+    Arrays.fill(distance, infinity);
+    PriorityQueue<DistanceState> frontier = new PriorityQueue<>(
+            Comparator.comparingLong(DistanceState::distance));
+    distance[source] = 0;
+    frontier.offer(new DistanceState(0, source));
+    while (!frontier.isEmpty()) {
+        DistanceState current = frontier.poll();
+        long dist = current.distance();
+        int node = current.node();
+        if (dist != distance[node]) continue; // Stale entry.
+        for (WeightedEdge edge : graph.get(node)) {
+            if (dist > infinity - edge.weight()) continue;
+            long candidate = dist + edge.weight();
+            if (candidate < distance[edge.to()]) {
+                distance[edge.to()] = candidate;
+                frontier.offer(new DistanceState(candidate, edge.to()));
             }
         }
     }
@@ -3726,7 +4317,9 @@ std::vector<long long> dijkstra(const WeightedGraph& graph, int source) {
 
 **Relaxation:** For edge `u -> v` with weight `w`, if `dist[u] + w < dist[v]`, update `dist[v]` and record `u` as parent if a path must be reconstructed.
 
-**Complexity:** With an adjacency list and duplicate-entry binary heap, the fully general bound is `O((V + E) log E)` time because the heap can hold `O(E)` entries, plus `O(V + E)` graph/distance storage. For a simple graph, `E ≤ V²`, so `log E = O(log V)` and the familiar bound is `O((V + E) log V)` (often summarized as `O(E log V)` for connected graphs).
+**Complexity:** `O(V + E log(E + 1))` time including distance initialization and input-edge validation. There are at most `O(E)` successful relaxations/heap entries, so auxiliary space is `O(V + E)` for distances and heap, excluding the graph. On simple graphs the familiar looser bound is `O((V + E) log V)`.
+
+**Numeric contract:** All weights are nonnegative, and every finite shortest distance must be less than `Long.MAX_VALUE`, reserved for unreachable nodes. The guarded addition skips overflowing candidates. If the problem permits larger answers, this representation needs to change; `int` is not an acceptable shortcut.
 
 **Recognition:** Minimum total travel time/cost/risk where every transition cost is nonnegative and costs differ.
 
@@ -3750,37 +4343,31 @@ An MST connects all vertices in a connected, weighted, undirected graph with min
 
 Sort edges by weight. Add an edge if DSU says it connects two different components.
 
-```cpp
-struct Edge {
-    long long weight;
-    int u;
-    int v;
-};
+```java
+record MstEdge(long weight, int u, int v) {}
 
-std::optional<long long> kruskalMst(int n, std::vector<Edge> edges) {
-    if (n == 0) return 0LL;
-    std::sort(edges.begin(), edges.end(),
-              [](const Edge& a, const Edge& b) { return a.weight < b.weight; });
-
-    DSU dsu(n);
-    long long total = 0;
+static OptionalLong kruskalMst(int n, List<MstEdge> edges) {
+    if (n <= 1) return OptionalLong.of(0);
+    List<MstEdge> sorted = new ArrayList<>(edges);
+    sorted.sort(Comparator.comparingLong(MstEdge::weight));
+    DSU dsu = new DSU(n); // Definition in 14.9.
+    long total = 0;
     int used = 0;
-    for (const Edge& edge : edges) {
-        if (dsu.unite(edge.u, edge.v)) {
-            total += edge.weight;
+    for (MstEdge edge : sorted) {
+        if (dsu.unite(edge.u(), edge.v())) {
+            total = Math.addExact(total, edge.weight());
             if (++used == n - 1) break;
         }
     }
-    if (used != n - 1) return std::nullopt;
-    return total;
+    return used == n - 1 ? OptionalLong.of(total) : OptionalLong.empty();
 }
 ```
 
-**Complexity:** `O(E log E)` time dominated by sorting; DSU operations add nearly linear time. Space is `O(V)` excluding the edge list/sort implementation.
+**Complexity:** `O(V + E log(E + 1))` time including DSU initialization; `O(V + E)` auxiliary space for DSU, the copied list of references, and object-list sorting. Immutable `MstEdge` objects can be shared with the caller safely. Every running total of selected edge weights must fit `long`; `Math.addExact` reports intermediate overflow. With signed weights, a final total that fits does not guarantee that every partial total fits.
 
 #### Prim's algorithm
 
-Start from one node and repeatedly use a min-heap to choose the cheapest edge crossing from the built tree to an unvisited vertex. With an adjacency list and binary heap: `O(E log V)` time and `O(V + E)` space.
+Start from one node and repeatedly use a min-heap to choose the cheapest edge crossing from the built tree to an unvisited vertex. With an adjacency list and a lazy binary heap: `O(V + E log(E + 1))` time and `O(V + E)` space; for a connected simple graph, the common time shorthand is `O(E log V)`.
 
 **Recognition:** Connect all locations/devices with minimum total installation cost; allowed pairwise connection prices; output `V - 1` links.
 
@@ -3790,7 +4377,7 @@ Start from one node and repeatedly use a min-heap to choose the cheapest edge cr
 
 ### 14.14 Advanced Shortest Paths and Graph Algorithms
 
-- **0-1 BFS — 🟡 Tier 3 — Nice to Know.** For edge weights exactly `0` or `1`, push zero-cost transitions to the front and one-cost transitions to the back of a `std::deque`. It runs in `O(V + E)` and is worth recognizing.
+- **0-1 BFS — 🟡 Tier 3 — Nice to Know.** For edge weights exactly `0` or `1`, push zero-cost transitions to the front and one-cost transitions to the back of a `ArrayDeque`. It runs in `O(V + E)` and is worth recognizing.
 - **Bellman-Ford — 🟡 Tier 3 — Nice to Know.** Repeatedly relax every edge `V - 1` times; one more improvement reveals a reachable negative cycle. `O(VE)` time, `O(V)` space. Know when Dijkstra is invalid.
 - **Floyd-Warshall — 🟡 Tier 3 — Nice to Know.** Dynamic programming over allowed intermediate vertices for all-pairs paths. `O(V^3)` time and `O(V^2)` space; practical only for small graphs.
 - **Strongly connected components — ⚪ Tier 4 — Low Priority / Specialized.** Kosaraju/Tarjan condense a directed graph into mutually reachable groups; uncommon in standard SWE interviews.
@@ -3815,32 +4402,14 @@ Start from one node and repeatedly use a min-heap to choose the cheapest edge cr
 
 ### Representative Graph Problems
 
-#### Beginner
+| Family | Mechanics | Canonical | Variation | Mixed pattern | Cold revisit |
+|---|---|---|---|---|---|
+| Reachability/components | Find if Path Exists; Flood Fill | ⭐ **Canonical Interview Problem:** Number of Islands | Connected Components; Graph Valid Tree | Clone Graph (identity map); Pacific Atlantic (reverse search) | Islands using the other traversal and a clear mutation contract |
+| Shortest equal-cost moves | Shortest Path in Binary Matrix | ⭐ **Canonical Interview Problem:** Rotting Oranges | Walls and Gates / Word Ladder | Shortest Path to Get All Keys (later composite state) | Multi-source BFS with all sources enqueued first |
+| Dependencies/connectivity | Course Schedule | ⭐ **Canonical Interview Problem:** Course Schedule II | Is Graph Bipartite?; Redundant Connection (DSU) | Alien Dictionary (later invalid-prefix/duplicate-edge rules) | Reconstruct Kahn + DSU, then solve one unlabelled problem |
+| Nonnegative weighted paths | Trace a three-node weighted graph | ⭐ **Canonical Interview Problem:** Network Delay Time | Path With Minimum Effort | Cheapest Flights Within K Stops (state/algorithm changes) | Dijkstra with stale entries and one unreachable node |
 
-- **Find if Path Exists in Graph:** Teaches adjacency construction, visited state, and reachability.
-- **Flood Fill:** Teaches a grid as a graph, preserving the original color, and marking on discovery.
-- **Number of Islands:** Teaches an outer component loop and mutation-versus-visited choices.
-- **Clone Graph:** Teaches old-node-to-new-node mapping and cycles; the map simultaneously prevents repeated cloning.
-
-#### Core Interview
-
-- **Rotting Oranges / Walls and Gates:** Teaches multi-source BFS and simultaneous time layers.
-- **Word Ladder:** Teaches implicit graph modeling and BFS for minimum transformations; avoid quadratic neighbor construction where constraints demand pattern indexing.
-- **Course Schedule I/II:** Teaches directed cycle detection and topological order.
-- **Number of Connected Components:** Teaches DFS/BFS versus DSU selection.
-- **Redundant Connection:** Teaches failed union as an undirected cycle signal.
-- **Graph Valid Tree:** Teaches that a tree requires connectivity plus no cycle (equivalently, connected and `E = V - 1`).
-- **Is Graph Bipartite?:** Teaches two-coloring across disconnected components.
-- **Network Delay Time:** Teaches Dijkstra, relaxation, stale entries, and unreachable results.
-- **Pacific Atlantic Water Flow:** Teaches reversing edges/search direction and launching multi-source traversal from boundaries.
-
-#### Advanced
-
-- **Cheapest Flights Within K Stops:** Teaches that node alone may not define state; compare bounded Bellman-Ford, BFS-by-layers, and careful heap state.
-- **Path With Minimum Effort:** Teaches minimax path cost and either Dijkstra or binary-search-on-threshold plus reachability.
-- **Alien Dictionary:** Teaches deriving precedence edges, invalid prefix cases, duplicate-edge handling, and topological order.
-- **Min Cost to Connect All Points:** Teaches MST selection and dense-graph trade-offs.
-- **Shortest Path to Get All Keys:** Teaches BFS on composite state `(row, col, key_mask)`.
+Select one variation per family initially. **Min Cost to Connect All Points** is a later Tier 3 MST exercise. For Word Ladder, include neighbor-generation cost in complexity; avoid building every possible pairwise edge blindly.
 
 ### Common Graph Mistakes and Interview Tips
 
@@ -3869,11 +4438,12 @@ I have mastered interview graphs when I can:
 - [ ] Implement DSU with path compression and union by size/rank.
 - [ ] Check bipartiteness across every component.
 - [ ] Select BFS versus Dijkstra from edge costs and implement Dijkstra correctly.
-- [ ] Explain MST versus shortest path and implement basic Kruskal or Prim.
+- [ ] Recognize MST versus shortest path; **later (Tier 3)** implement basic Kruskal or Prim.
 - [ ] Identify when composite state is necessary.
 
 ---
 
+<a id="15-recursion-backtracking"></a>
 ## 15. Recursion & Backtracking
 
 **Priority:** 🟠 Tier 2 — Very Important
@@ -3910,6 +4480,8 @@ I have mastered interview graphs when I can:
 - **Exact cover / Dancing Links — ⚪ Tier 4 — Low Priority / Specialized.** Elegant for certain constraint systems but not useful enough for normal SWE interviews.
 - **Highly optimized branch-and-bound — ⚪ Tier 4 — Low Priority / Specialized.** Role- and problem-specific; first master clear pruning and state design.
 
+**Study target:** Remember choose–explore–unchoose and snapshot syntax; understand state, reuse, duplicate rules, and pruning proofs. Solve one mechanics exercise, subsets, combinations, permutations, and two chosen variations; revisit cold. Board-search optimizations and bitmask refinements are later reference material.
+
 ### 15.1 Recursion Fundamentals
 
 **Priority:** 🔴 Tier 1 — Must Master
@@ -3923,15 +4495,17 @@ Every correct recursive function needs:
 3. **Progress:** How does every call move toward a base case?
 4. **Combination:** How are subproblem results assembled?
 
-```cpp
-long long factorial(int n) {
-    if (n < 0) throw std::invalid_argument("factorial requires n >= 0");
-    if (n <= 1) return 1;                 // Base case.
-    return n * factorial(n - 1);          // Progress and combination.
+```java
+static long factorial(int n) {
+    if (n < 0 || n > 20) {
+        throw new IllegalArgumentException("long factorial requires 0 <= n <= 20");
+    }
+    if (n <= 1) return 1;         // Base case.
+    return n * factorial(n - 1); // Progress and combination.
 }
 ```
 
-This example takes `O(n)` time and `O(n)` call-stack space. C++ does not guarantee tail-call optimization, so even a tail-recursive formulation must not be analyzed as constant-space.
+The recurrence has `O(n)` time and `O(n)` call-stack space; this fixed-width demonstration accepts only `0..20` because `21!` overflows `long`. Java does not guarantee tail-call elimination. Deep recursive input may throw `StackOverflowError`; a tail-recursive formulation must not be analyzed as constant-space.
 
 #### Deriving recursive complexity
 
@@ -3973,28 +4547,19 @@ There are `2^n` leaves for binary choose/skip decisions. Copying each length-up-
 
 ### 15.3 General Backtracking Template
 
-**Priority:** 🔴 Tier 1 — Must Master
+**Priority:** 🟠 Tier 2 — Very Important
 
 **Why this priority:** Nearly every standard combination/permutation/constraint-search solution is a specialization of this control flow.
 
-```cpp
-template <class State, class Choices, class IsComplete, class Record,
-          class ValidChoices, class Apply, class Undo>
-void backtrack(State& state, const Choices& choices, IsComplete& is_complete,
-               Record& record, ValidChoices& valid_choices,
-               Apply& apply, Undo& undo) {
-    if (is_complete(state)) {
-        record(state);  // Record a snapshot, not a reference to mutable state.
-        return;
-    }
-
-    for (const auto& choice : valid_choices(state, choices)) {
-        apply(choice, state);  // Choose.
-        backtrack(state, choices, is_complete, record, valid_choices,
-                  apply, undo);  // Explore.
-        undo(choice, state);   // Unchoose.
-    }
-}
+```text
+backtrack(state):
+    if complete(state):
+        record an independent snapshot of state
+        return
+    for each valid choice from state:
+        apply choice
+        backtrack(updated state)
+        undo choice
 ```
 
 Before writing it, identify:
@@ -4005,7 +4570,9 @@ Before writing it, identify:
 - **Goal/base case:** when to record or return success.
 - **Restoration:** exactly what mutation each recursive call must undo.
 
-**Copy versus mutate:** Copying state for each call simplifies restoration but costs time/space. In-place mutation plus undo is efficient and common. In C++, `answers.push_back(path)` copies a `vector`; do not store a pointer or `reference_wrapper` to the one mutable path unless that lifetime and aliasing are intentional.
+**Copy versus mutate:** Copying state for each call simplifies restoration but costs time/space. In-place mutation plus undo is efficient and common. `result.add(path)` copies only a reference to the same mutable list, so later undo steps would corrupt every recorded answer. Use `result.add(new ArrayList<>(path))`. This copies the list structure; its `Integer` elements are safely shared because they are immutable.
+
+> 🌐 **Java Backend Relevance — HIGH:** `new ArrayList<>(source)` is a shallow structural copy, and `final List<?>` only prevents reassigning the reference. Neither makes mutable elements immutable. Distinguishing aliases, snapshots, and immutable values prevents shared-state bugs in application data transformations.
 
 **When to stop early:** If the problem asks only whether a solution exists, return `true` immediately on success instead of enumerating all answers.
 
@@ -4015,26 +4582,23 @@ Before writing it, identify:
 
 **Why this priority:** Subsets are the simplest decision tree and teach output-sensitive complexity, path snapshots, and index progress.
 
-```cpp
-std::vector<std::vector<int>> subsets(const std::vector<int>& nums) {
-    std::vector<std::vector<int>> result;
-    std::vector<int> path;
-
-    std::function<void(int)> dfs = [&](int index) {
-        if (index == static_cast<int>(nums.size())) {
-            result.push_back(path);  // Copies the current snapshot.
-            return;
-        }
-
-        path.push_back(nums[index]);  // Include.
-        dfs(index + 1);
-        path.pop_back();
-
-        dfs(index + 1);               // Exclude.
-    };
-
-    dfs(0);
+```java
+static List<List<Integer>> subsets(int[] nums) {
+    List<List<Integer>> result = new ArrayList<>();
+    subsetsDfs(nums, 0, new ArrayList<>(), result);
     return result;
+}
+
+static void subsetsDfs(int[] nums, int index, List<Integer> path,
+                        List<List<Integer>> result) {
+    if (index == nums.length) {
+        result.add(new ArrayList<>(path)); // Copy the current snapshot.
+        return;
+    }
+    path.add(nums[index]);
+    subsetsDfs(nums, index + 1, path, result);
+    path.remove(path.size() - 1); // Remove by int index, not Integer value.
+    subsetsDfs(nums, index + 1, path, result);
 }
 ```
 
@@ -4044,7 +4608,7 @@ An equally useful form records `path` at every node and loops choices from a `st
 
 **Complexity:** `2^n` subsets. `O(n * 2^n)` time including copying output; `O(n)` recursion/path auxiliary space, excluding `O(n * 2^n)` output.
 
-**Mistakes/edge cases:** Storing a pointer/reference to the mutable `path` instead of copying it; failing to advance the index; treating subsequences as substrings; and producing duplicates when input contains repeated values.
+**Mistakes/edge cases:** Storing the same mutable `path` reference instead of an independent list snapshot; failing to advance the index; treating subsequences as substrings; and producing duplicates when input contains repeated values.
 
 ### 15.5 Combinations: Start-Index Search
 
@@ -4052,35 +4616,33 @@ An equally useful form records `path` at every node and loops choices from a `st
 
 **Why this priority:** Many “choose `k`” and sum-construction questions depend on controlling which future candidates remain eligible.
 
-```cpp
-std::vector<std::vector<int>> combine(int n, int k) {
-    if (k < 0 || k > n) return {};
-    std::vector<std::vector<int>> result;
-    std::vector<int> path;
-
-    std::function<void(int)> dfs = [&](int start) {
-        if (static_cast<int>(path.size()) == k) {
-            result.push_back(path);
-            return;
-        }
-
-        const int needed = k - static_cast<int>(path.size());
-        const int last_start = n - needed + 1;
-        for (int value = start; value <= last_start; ++value) {
-            path.push_back(value);
-            dfs(value + 1);
-            path.pop_back();
-        }
-    };
-
-    dfs(1);
+```java
+static List<List<Integer>> combine(int n, int k) {
+    List<List<Integer>> result = new ArrayList<>();
+    if (n < 0 || k < 0 || k > n) return result;
+    combinationsDfs(n, k, 1, new ArrayList<>(), result);
     return result;
+}
+
+static void combinationsDfs(int n, int k, int start, List<Integer> path,
+                             List<List<Integer>> result) {
+    if (path.size() == k) {
+        result.add(new ArrayList<>(path));
+        return;
+    }
+    int needed = k - path.size();
+    int lastStart = n - needed + 1;
+    for (int value = start; value <= lastStart; value++) {
+        path.add(value);
+        combinationsDfs(n, k, value + 1, path, result);
+        path.remove(path.size() - 1);
+    }
 }
 ```
 
 **Invariant:** `start` prevents both reusing earlier items and generating the same combination in different orders. The upper bound prunes branches that cannot collect enough remaining elements.
 
-**Complexity:** There are `C(n, k)` outputs, each length `k`, so at least `O(k * C(n, k))` output work; auxiliary depth is `O(k)`.
+**Complexity:** `C(n, k)` outputs of length `k`; total time is `O((k + 1) * C(n, k))`, including the `k = 0` case returning one empty combination. Auxiliary path/stack space is `O(k)`, excluding output. As usual for enumeration, constraints must keep the output feasible.
 
 **Reuse variants:**
 
@@ -4096,30 +4658,27 @@ std::vector<std::vector<int>> combine(int n, int k) {
 
 **Why this priority:** Permutations test state restoration and the distinction between position choices and monotonic combinations.
 
-```cpp
-std::vector<std::vector<int>> permutations(const std::vector<int>& nums) {
-    std::vector<std::vector<int>> result;
-    std::vector<int> path;
-    std::vector<char> used(nums.size(), false);
-
-    std::function<void()> dfs = [&]() {
-        if (path.size() == nums.size()) {
-            result.push_back(path);
-            return;
-        }
-
-        for (int i = 0; i < static_cast<int>(nums.size()); ++i) {
-            if (used[i]) continue;
-            used[i] = true;
-            path.push_back(nums[i]);
-            dfs();
-            path.pop_back();
-            used[i] = false;
-        }
-    };
-
-    dfs();
+```java
+static List<List<Integer>> permutations(int[] nums) {
+    List<List<Integer>> result = new ArrayList<>();
+    permutationsDfs(nums, new boolean[nums.length], new ArrayList<>(), result);
     return result;
+}
+
+static void permutationsDfs(int[] nums, boolean[] used, List<Integer> path,
+                             List<List<Integer>> result) {
+    if (path.size() == nums.length) {
+        result.add(new ArrayList<>(path));
+        return;
+    }
+    for (int i = 0; i < nums.length; i++) {
+        if (used[i]) continue;
+        used[i] = true;
+        path.add(nums[i]);
+        permutationsDfs(nums, used, path, result);
+        path.remove(path.size() - 1);
+        used[i] = false;
+    }
 }
 ```
 
@@ -4139,32 +4698,34 @@ std::vector<std::vector<int>> permutations(const std::vector<int>& nums) {
 
 Sort first so equal choices are adjacent. For combinations/subsets, skip equal values at the **same recursion level**:
 
-```cpp
-std::vector<std::vector<int>> uniqueSubsets(std::vector<int> nums) {
-    std::sort(nums.begin(), nums.end());  // Sort the local copy.
-    std::vector<std::vector<int>> result;
-    std::vector<int> path;
-
-    std::function<void(int)> dfs = [&](int start) {
-        result.push_back(path);
-        for (int i = start; i < static_cast<int>(nums.size()); ++i) {
-            if (i > start && nums[i] == nums[i - 1]) continue;
-            path.push_back(nums[i]);
-            dfs(i + 1);
-            path.pop_back();
-        }
-    };
-
-    dfs(0);
+```java
+static List<List<Integer>> uniqueSubsets(int[] nums) {
+    int[] sorted = Arrays.copyOf(nums, nums.length);
+    Arrays.sort(sorted);
+    List<List<Integer>> result = new ArrayList<>();
+    uniqueSubsetsDfs(sorted, 0, new ArrayList<>(), result);
     return result;
+}
+
+static void uniqueSubsetsDfs(int[] nums, int start, List<Integer> path,
+                             List<List<Integer>> result) {
+    result.add(new ArrayList<>(path));
+    for (int i = start; i < nums.length; i++) {
+        if (i > start && nums[i] == nums[i - 1]) continue;
+        path.add(nums[i]);
+        uniqueSubsetsDfs(nums, i + 1, path, result);
+        path.remove(path.size() - 1);
+    }
 }
 ```
 
 Why `i > start` rather than `i > 0`? Equal values may both appear in one valid candidate at different depths; only repeated sibling choices produce duplicate branches.
 
+**Complexity:** Worst-case `O(n log n + n * 2^n)` time including sorting and answer snapshots; duplicates may reduce the output. The copied array, path, and recursion require `O(n)` auxiliary space, excluding output.
+
 For unique permutations after sorting, skip `nums[i]` when it equals `nums[i - 1]` **and the previous equal item has not been used in the current path**. This chooses a consistent order among equal siblings.
 
-**Alternative:** Put completed vectors into a `set<vector<int>>`; simpler but explores duplicate branches, adds logarithmic insertion work, and obscures the desired invariant.
+**Alternative:** Store completed snapshots in a `HashSet<List<Integer>>`. List equality and hashing compare elements, but hashing each path costs `O(path length)` and duplicate branches are still explored. Never mutate a list while it is a set key. A `HashSet<int[]>` would use array identity and would not deduplicate equal contents.
 
 ### 15.8 Constraint Search and Pruning
 
@@ -4182,32 +4743,36 @@ Common safe pruning rules:
 - **Best-case bound:** even an optimistic continuation cannot beat the current best.
 - **Memoized failure:** the same future-determining state was already proven unsolvable.
 
-```cpp
-std::vector<std::vector<int>> combinationSum(std::vector<int> candidates,
-                                             int target) {
-    std::sort(candidates.begin(), candidates.end());
-    std::vector<std::vector<int>> result;
-    std::vector<int> path;
-
-    std::function<void(int, int)> dfs = [&](int start, int remaining) {
-        if (remaining == 0) {
-            result.push_back(path);
-            return;
-        }
-
-        for (int i = start; i < static_cast<int>(candidates.size()); ++i) {
-            const int value = candidates[i];
-            if (value > remaining) break;  // Positive, sorted candidates.
-            path.push_back(value);
-            dfs(i, remaining - value);     // Reuse is allowed.
-            path.pop_back();
-        }
-    };
-
-    if (target >= 0) dfs(0, target);
+```java
+static List<List<Integer>> combinationSum(int[] candidates, int target) {
+    int[] sorted = Arrays.copyOf(candidates, candidates.length);
+    Arrays.sort(sorted);
+    for (int value : sorted) {
+        if (value <= 0) throw new IllegalArgumentException("candidates must be positive");
+    }
+    List<List<Integer>> result = new ArrayList<>();
+    if (target >= 0) combinationSumDfs(sorted, 0, target, new ArrayList<>(), result);
     return result;
 }
+
+static void combinationSumDfs(int[] candidates, int start, int remaining,
+                               List<Integer> path, List<List<Integer>> result) {
+    if (remaining == 0) {
+        result.add(new ArrayList<>(path));
+        return;
+    }
+    for (int i = start; i < candidates.length; i++) {
+        if (i > start && candidates[i] == candidates[i - 1]) continue;
+        int value = candidates[i];
+        if (value > remaining) break;
+        path.add(value);
+        combinationSumDfs(candidates, i, remaining - value, path, result);
+        path.remove(path.size() - 1);
+    }
+}
 ```
+
+**Termination contract:** Candidates must be positive; zero or negative reusable values invalidate the decreasing-remaining argument. This implementation validates that rule and skips equal sibling values. A negative target returns no answers; target zero returns one empty answer. If the minimum candidate is `m > 0`, recursion depth is at most `target / m`. Sorting/copying costs `O(n log n)` time and `O(n)` auxiliary space before the output-sensitive search.
 
 **Do not overclaim complexity:** Pruning can drastically improve real inputs but worst-case search may remain exponential.
 
@@ -4239,28 +4804,13 @@ For a word in a grid, `dfs(r, c, i)` asks whether the suffix starting at `word[i
 
 ### Representative Recursion & Backtracking Problems
 
-#### Beginner
+| Family | Mechanics | Canonical | Variation | Mixed pattern | Cold revisit |
+|---|---|---|---|---|---|
+| Choose/skip and combinations | Trace factorial; Combinations | ⭐ **Canonical Interview Problem:** Subsets | Subsets II / Combination Sum II | Palindrome Partitioning (cuts + validation) | Subsets II: explain same-level duplicate skipping |
+| Ordered choices | Letter Combinations of a Phone Number | ⭐ **Canonical Interview Problem:** Permutations | Permutations II | Generate Parentheses (constraint pruning) | Permutations: reconstruct used-state restoration |
+| Path-local constraints | Trace one grid word by hand | ⭐ **Canonical Interview Problem:** Word Search | Combination Sum (reuse and positive bounds) | N-Queens (later occupancy constraints) | Word Search, checking every early return restores the board |
 
-- **Fibonacci / factorial (for tracing only):** Teaches base cases and call-stack tracing; do not use naive Fibonacci as a production solution.
-- **Subsets:** Teaches a binary decision tree, snapshots, and output-sensitive complexity.
-- **Combinations:** Teaches `start` index and remaining-choice pruning.
-- **Permutations:** Teaches `used` state and restoration.
-
-#### Core Interview
-
-- **Combination Sum / Combination Sum II:** Teaches reuse rules, sorted pruning, and same-level duplicate skipping.
-- **Subsets II / Permutations II:** Teaches precise duplicate-branch control.
-- **Word Search:** Teaches path-local visited state and restoration in a grid.
-- **Palindrome Partitioning:** Teaches selecting cuts, validating a piece, and later optimizing repeated palindrome checks.
-- **Generate Parentheses:** Teaches pruning by an invariant: never close more groups than have been opened.
-- **Letter Combinations of a Phone Number:** Teaches one decision per input position and variable branching.
-
-#### Advanced
-
-- **N-Queens:** Teaches constant-time conflict sets for columns and diagonals instead of rescanning the board.
-- **Sudoku Solver:** Teaches choosing constrained variables, occupancy sets, and aggressive pruning.
-- **Restore IP Addresses:** Teaches segment-length/value constraints and remaining-length pruning.
-- **Partition to K Equal Sum Subsets:** Teaches symmetry pruning, bitmask/memoized state, and the boundary between backtracking and DP.
+Choose one variation per row first. **Restore IP Addresses** develops remaining-length pruning. **Sudoku Solver** and **Partition to K Equal Sum Subsets** are optional advanced search; learn symmetry/memoization only after ordinary restoration and pruning are reliable. Naive Fibonacci is a tracing/overlap example, not a recommended computation strategy.
 
 ### Common Backtracking Mistakes and Interview Tips
 
@@ -4283,7 +4833,7 @@ I have mastered this topic when I can:
 - [ ] Implement choose–explore–unchoose without shared-state bugs.
 - [ ] Generate subsets, combinations, and permutations from scratch.
 - [ ] Adjust index rules for single-use versus reusable choices.
-- [ ] Handle duplicate inputs without relying only on a `std::set` of completed results.
+- [ ] Handle duplicate inputs without relying only on a set of completed results.
 - [ ] Design and justify safe pruning conditions.
 - [ ] Solve standard grid/word-search and partition backtracking problems.
 - [ ] Explain when DP/memoization is preferable to pure enumeration.
@@ -4302,7 +4852,7 @@ I have mastered this topic when I can:
 - **Why it exists:** When a problem has the right structure, a safe local choice reduces the remaining problem and yields a globally optimal answer with less state than DP or search.
 - **Why it matters in interviews:** Greedy solutions are often the intended optimization after brute force or DP, and interviewers expect a concise correctness explanation.
 - **Interview priority:** 🟠 Tier 2 — Very Important.
-- **Prerequisites:** Sorting, comparison functions, loops/invariants, heaps, intervals, and basic DP awareness.
+- **Prerequisites:** Sorting, comparators, and loop invariants; heaps for heap-assisted variants. Learn the proof ideas here before interval scheduling in Section 17; DP awareness helps compare alternatives later.
 - **Common use cases:** Scheduling, selecting non-overlapping items, reachability frontiers, assigning resources, minimizing removals, partitioning, and repeatedly taking the best available choice.
 - **Common problem patterns:** Sort by finish time; maintain farthest reachable point; assign smallest sufficient resource; merge/use cheapest available option; delay commitment until necessary.
 - **How to recognize problems that require it:** The goal asks for a global minimum/maximum, choices can be ordered, and one choice seems to leave an equal-or-better remainder for every future decision. A clean exchange argument or dominance invariant is the real signal.
@@ -4325,9 +4875,11 @@ I have mastered this topic when I can:
 - **Matroid theory — ⚪ Tier 4 — Low Priority / Specialized.** It explains broad classes of correct greedy algorithms but is unnecessary for typical coding interviews.
 - **Approximation algorithms — ⚪ Tier 4 — Low Priority / Specialized.** Useful academically and for some systems/optimization roles, but rarely part of general SWE coding rounds.
 
+**Study target:** Reconstruct frontier scans and sort keys; understand and explain why a choice is safe. Solve 4–6 representative problems across frontier, matching, and scheduling, then mix with DP counterexamples. Formal matroid theory and specialized scheduling are lookup material.
+
 ### 16.1 Greedy Reasoning: Choice, Invariant, Proof
 
-**Priority:** 🔴 Tier 1 — Must Master
+**Priority:** 🟠 Tier 2 — Very Important
 
 **Why this priority:** A greedy implementation is often easy; deciding that the local choice is safe is the entire interview challenge.
 
@@ -4354,7 +4906,7 @@ Common in MST: the cheapest edge crossing a suitable partition can be chosen wit
 
 ### 16.2 Sorting + Greedy
 
-**Priority:** 🔴 Tier 1 — Must Master
+**Priority:** 🟠 Tier 2 — Very Important
 
 **Why this priority:** Sorting reveals an order in which a small amount of state is enough to make safe choices. This is the dominant interview greedy pattern.
 
@@ -4368,7 +4920,7 @@ Possible sort keys have very different meanings:
 
 Sorting generally makes total time `O(n log n)` even if the scan is `O(n)`. Space depends on whether sort is in-place and on language implementation.
 
-**Mistakes:** Sorting by the most obvious field rather than the field that makes the invariant safe; losing original indices when output requires them; comparator overflow in languages using subtraction; and claiming the scan's `O(n)` while omitting sort cost.
+**Mistakes:** Sorting by the most obvious field rather than the field that makes the invariant safe; losing original indices when output requires them; integer overflow from subtraction comparators; and claiming the scan's `O(n)` while omitting sort cost.
 
 ### 16.3 Interval Scheduling / Maximum Non-Overlapping Selection
 
@@ -4384,16 +4936,18 @@ The canonical implementation, earliest-finish invariant, endpoint semantics, com
 
 **Why this priority:** A single dominance value often replaces a quadratic search or DP in jump/reachability questions.
 
-```cpp
-bool canJump(const std::vector<int>& nums) {
-    long long farthest = 0;
-    for (int i = 0; i < static_cast<int>(nums.size()); ++i) {
+```java
+static boolean canJump(int[] nums) {
+    long farthest = 0;
+    for (int i = 0; i < nums.length; i++) {
         if (i > farthest) return false;
-        farthest = std::max(farthest, static_cast<long long>(i) + nums[i]);
+        farthest = Math.max(farthest, (long) i + nums[i]);
     }
-    return true;
+    return true; // Convention: empty input needs no moves.
 }
 ```
+
+**Contract:** Jump lengths are nonnegative. The empty-input convention is explicit in the code; some platforms guarantee at least one element.
 
 **Invariant:** Every index up to `farthest` is reachable through some processed choice. If the scan reaches an index beyond the frontier, no earlier choice can cross the gap.
 
@@ -4413,27 +4967,23 @@ For minimum jumps, process a current reachable layer similarly to BFS: track the
 
 Sort demands and resources. If the smallest resource cannot satisfy the smallest demand, it cannot satisfy any larger demand, so discard it. If it can, use it there; saving that small resource cannot enable more matches than consuming it now.
 
-```cpp
-int maxAssignments(std::vector<int> demands, std::vector<int> resources) {
-    std::sort(demands.begin(), demands.end());
-    std::sort(resources.begin(), resources.end());
-    std::size_t demand_index = 0;
-    std::size_t resource_index = 0;
-    int matches = 0;
-
-    while (demand_index < demands.size() &&
-           resource_index < resources.size()) {
-        if (resources[resource_index] >= demands[demand_index]) {
-            ++matches;
-            ++demand_index;
+```java
+static int maxAssignments(int[] demands, int[] resources) {
+    int[] sortedDemands = Arrays.copyOf(demands, demands.length);
+    int[] sortedResources = Arrays.copyOf(resources, resources.length);
+    Arrays.sort(sortedDemands);
+    Arrays.sort(sortedResources);
+    int demandIndex = 0;
+    for (int resource : sortedResources) {
+        if (demandIndex < sortedDemands.length && resource >= sortedDemands[demandIndex]) {
+            demandIndex++;
         }
-        ++resource_index;
     }
-    return matches;
+    return demandIndex;
 }
 ```
 
-**Complexity:** `O(n log n + m log m)` time and sorting-dependent space.
+**Complexity:** `O(n log n + m log m)` time and `O(n + m)` auxiliary space for the two explicit primitive-array copies, which preserve caller input. Sorting caller arrays directly can remove those copies if mutation is allowed.
 
 **Recognition:** Each resource can serve at most one demand, any sufficiently large resource works, and the goal is maximum number served rather than maximum weighted value.
 
@@ -4458,7 +5008,7 @@ Examples include choosing the most profitable affordable project, assigning meet
 
 ### 16.7 Greedy Versus Dynamic Programming
 
-**Priority:** 🔴 Tier 1 — Must Master
+**Priority:** 🟠 Tier 2 — Very Important
 
 **Why this priority:** Incorrectly forcing a greedy rule onto a DP problem is a major interview failure mode.
 
@@ -4488,28 +5038,15 @@ Coin change illustrates the danger: choosing the largest coin first works for so
 
 ### Representative Greedy Problems
 
-#### Beginner
+| Stage | Selected problem | Transfer target |
+|---|---|---|
+| Mechanics | Assign Cookies | Smallest sufficient resource and exchange proof |
+| Canonical | ⭐ **Canonical Interview Problem:** Jump Game | Farthest reachable prefix; never expand an unreachable index |
+| Variation | Jump Game II; Non-overlapping Intervals | Reachable layers; earliest-finish scheduling |
+| Mixed pattern | Partition Labels or Boats to Save People | Last-occurrence hashing or two-pointer dominance |
+| Cold revisit | Jump Game plus a weighted-interval/coin-change counterexample | Reconstruct the invariant and recognize when greedy fails |
 
-- **Assign Cookies:** Teaches sorted two-pointer resource matching and an exchange argument.
-- **Best Time to Buy and Sell Stock II:** Teaches decomposing every upward run into positive daily gains; distinguish from one-transaction stock.
-- **Lemonade Change:** Teaches maintaining the most flexible change inventory and choosing high-denomination change first.
-
-#### Core Interview
-
-- **Jump Game:** Teaches a farthest-reachable invariant.
-- **Jump Game II:** Teaches BFS-like greedy layers over reachable ranges.
-- **Non-overlapping Intervals:** Teaches earliest-finish scheduling and minimizing removals.
-- **Gas Station:** Teaches total feasibility plus resetting a failed candidate start; understand why a negative prefix invalidates every start within it.
-- **Partition Labels:** Teaches last-occurrence boundaries and closing a segment only when all included characters end within it.
-- **Task Scheduler:** Teaches frequency bottlenecks; compare closed-form/counting and heap simulation.
-- **Boats to Save People:** Teaches sorting and pairing the heaviest person with the lightest feasible partner.
-
-#### Advanced
-
-- **Minimum Number of Refueling Stops:** Teaches delayed decisions with a max-heap of previously passed stations.
-- **Course Schedule III:** Teaches sorting by deadline and replacing the longest selected duration when necessary.
-- **Candy:** Teaches satisfying directional local constraints with two passes.
-- **Remove Duplicate Letters:** Teaches greedy lexicographic choice with a monotonic stack, future occurrence knowledge, and membership state.
+Optional focused drills: **Stock II** for summing positive gains, **Lemonade Change** for flexible inventory, **Gas Station** for candidate elimination, **Task Scheduler** for counting versus simulation. Later: **Minimum Refueling Stops**, **Course Schedule III**, **Candy**, and **Remove Duplicate Letters** for heap replacement, directional constraints, and monotonic-stack greedy.
 
 ### Common Greedy Mistakes and Interview Tips
 
@@ -4549,7 +5086,7 @@ I have mastered interview greedy algorithms when I can:
 - **Why it exists:** Many scheduling, coverage, timeline, and resource-allocation problems concern ranges rather than individual points.
 - **Why it matters in interviews:** A small set of transferable patterns solves a large family of realistic problems, but correctness depends on sorting key and endpoint semantics.
 - **Interview priority:** 🔴 Tier 1 — Must Master.
-- **Prerequisites:** Sorting, comparators, arrays, greedy invariants, heaps, and basic prefix/difference ideas.
+- **Prerequisites:** Sorting, comparators, arrays, and basic prefix/difference ideas. Merge/insert come first; use the proof ideas from Section 16 for selection and heaps from Section 13 for room allocation.
 - **Common use cases:** Calendar conflicts, CPU/job scheduling, reservation systems, range coverage, employee availability, and event concurrency.
 - **Common problem patterns:** Merge ranges, insert one range, detect overlap, select compatible ranges, count concurrent intervals, allocate rooms, and cover a target range.
 - **How to recognize problems that require it:** The input consists of starts/ends, times, ranges, meetings, coverage, bookings, or “active at the same time” events.
@@ -4573,6 +5110,8 @@ I have mastered interview greedy algorithms when I can:
 - **Coordinate compression with difference/Fenwick/segment trees — 🟡 Tier 3 — Nice to Know.** Useful for many large-coordinate range updates/queries, but not needed for ordinary interval scans.
 - **Computational-geometry sweep line — ⚪ Tier 4 — Low Priority / Specialized.** Segment intersections and geometric event structures are rare in general SWE interviews.
 - **Interval trees — ⚪ Tier 4 — Low Priority / Specialized.** Useful for dynamic overlap queries, but library/data-system design knowledge is more relevant than implementing one in typical coding rounds.
+
+**Study target:** Reproduce merge/insert from memory and explain endpoint tests; then derive selection and concurrency from their invariants. Solve 5–7 problems across these families and revisit the canonical problems cold. Dynamic interval structures and geometry sweeps are reference knowledge.
 
 ### 17.1 Endpoint Semantics and Overlap
 
@@ -4609,31 +5148,37 @@ For arbitrary intervals `[a, b]` and `[c, d]`, closed intersection exists if `ma
 
 Sort by start. Once intervals are in start order, a new interval can overlap only the last merged interval; all earlier merged intervals end before it.
 
-```cpp
-using Interval = std::pair<long long, long long>;  // start, end
+```java
+record Interval(long start, long end) {
+    Interval {
+        if (start > end) throw new IllegalArgumentException("start must not exceed end");
+    }
+}
 
-std::vector<Interval> mergeIntervals(std::vector<Interval> intervals) {
-    if (intervals.empty()) return {};
-    std::sort(intervals.begin(), intervals.end());  // Sorts the local copy.
-
-    std::vector<Interval> merged;
-    merged.push_back(intervals.front());
-    for (std::size_t i = 1; i < intervals.size(); ++i) {
-        const auto [start, end] = intervals[i];
-        Interval& last = merged.back();
-        if (start <= last.second) {  // Closed-interval convention.
-            last.second = std::max(last.second, end);
+static List<Interval> mergeIntervals(List<Interval> intervals) {
+    List<Interval> sorted = new ArrayList<>(intervals);
+    sorted.sort(Comparator.comparingLong(Interval::start).thenComparingLong(Interval::end));
+    List<Interval> merged = new ArrayList<>();
+    for (Interval interval : sorted) {
+        if (merged.isEmpty() || interval.start() > merged.get(merged.size() - 1).end()) {
+            merged.add(interval);
         } else {
-            merged.push_back({start, end});
+            Interval last = merged.get(merged.size() - 1);
+            merged.set(merged.size() - 1,
+                    new Interval(last.start(), Math.max(last.end(), interval.end())));
         }
     }
     return merged;
 }
 ```
 
+**Java representation:** Interval snippets share the immutable `Interval(long start, long end)` record above. The constructor rejects reversed endpoints. Merge/insert/intersection use closed intervals; scheduling/removal/concurrency use half-open intervals and ignore empty `[s, s)` ranges. Inputs contain non-null records; index-based scans assume constant-time list access. An `int[][]` is also practical on coding platforms, but an outer-array copy still aliases every endpoint row.
+
+> 🌐 **Java Backend Relevance — HIGH:** Immutable records give range fields names and value equality. A copied list can safely share these interval objects; mutable `long[]` rows would need deliberate copying before endpoint mutation.
+
 **Invariant:** `merged` contains the fully merged union of all processed intervals, in sorted disjoint order.
 
-**Complexity:** `O(n log n)` time due to sorting and `O(n)` output. Auxiliary space is sorting/language dependent, excluding output.
+**Complexity:** `O(n log n)` time; `O(n)` auxiliary space for the copied list and object-list sort, excluding `O(n)` output. Copying a list copies its element references; immutable `Interval` records make this safe without deep copying.
 
 **When to use / recognition:** Combine bookings/ranges, compute union, remove redundant covered pieces, or normalize ranges.
 
@@ -4641,7 +5186,7 @@ std::vector<Interval> mergeIntervals(std::vector<Interval> intervals) {
 
 **Alternatives/trade-offs:** If intervals arrive already sorted, scan in `O(n)`. For small bounded integer coordinates, a difference array can represent coverage. For online insert/query, an ordered structure may be needed.
 
-**Common mistakes:** Forgetting to sort; sorting by end; using the wrong `<`/`<=`; shrinking on containment; mutating caller-owned intervals unexpectedly; and returning references into a local or later-mutated container. Passing the input by value above makes the sorting mutation explicit and local.
+**Common mistakes:** Forgetting to sort; sorting by end; using the wrong `<`/`<=`; shrinking on containment; mutating caller-owned intervals unexpectedly; and sharing mutable endpoint arrays unintentionally. Java passes a copied reference; this implementation explicitly creates a new list and replaces immutable records when merging, preserving the caller's data.
 
 ### 17.3 Insert an Interval
 
@@ -4655,35 +5200,31 @@ For sorted disjoint intervals:
 2. Merge all overlapping intervals into the new range.
 3. Append everything strictly after it.
 
-```cpp
-std::vector<Interval> insertInterval(const std::vector<Interval>& intervals,
-                                     Interval new_interval) {
-    std::vector<Interval> result;
-    result.reserve(intervals.size() + 1);
-    std::size_t i = 0;
-    auto [start, end] = new_interval;
-
-    while (i < intervals.size() && intervals[i].second < start) {
-        result.push_back(intervals[i++]);
+```java
+static List<Interval> insertInterval(List<Interval> intervals, Interval added) {
+    List<Interval> result = new ArrayList<>();
+    int index = 0;
+    long start = added.start();
+    long end = added.end();
+    while (index < intervals.size() && intervals.get(index).end() < start) {
+        result.add(intervals.get(index++));
     }
-
-    while (i < intervals.size() && intervals[i].first <= end) {
-        start = std::min(start, intervals[i].first);
-        end = std::max(end, intervals[i].second);
-        ++i;
+    while (index < intervals.size() && intervals.get(index).start() <= end) {
+        start = Math.min(start, intervals.get(index).start());
+        end = Math.max(end, intervals.get(index).end());
+        index++;
     }
-    result.push_back({start, end});
-
-    result.insert(result.end(), intervals.begin() + i, intervals.end());
+    result.add(new Interval(start, end));
+    while (index < intervals.size()) result.add(intervals.get(index++));
     return result;
 }
 ```
 
 This code uses closed-overlap semantics. Adjust strictness for half-open rules.
 
-**Complexity:** `O(n)` time and `O(n)` output space; no sort is needed because the precondition provides order.
+**Complexity:** `O(n)` time and `O(1)` auxiliary state excluding `O(n)` output, assuming an `ArrayList` or another list with constant-time indexed access. No sort is needed because the precondition provides order.
 
-**Mistakes/edge cases:** Ignoring the sorted/disjoint promise; dropping intervals before/after the merge block; mutating `new_interval`; empty input; new interval before/after all others; and using inconsistent endpoint tests in the three phases.
+**Mistakes/edge cases:** Ignoring the sorted/disjoint promise; dropping intervals before/after the merge block; mutating a shared endpoint array unexpectedly; empty input; new interval before/after all others; and using inconsistent endpoint tests in the three phases.
 
 **Alternative:** Append the new interval and call merge for `O(n log n)`. It is simpler but fails to exploit the useful precondition; mention it as brute force, then optimize.
 
@@ -4693,31 +5234,25 @@ This code uses closed-overlap semantics. Adjust strictness for half-open rules.
 
 **Why this priority:** It is a clean two-pointer range pattern and a common follow-up when both interval lists are already sorted/disjoint.
 
-```cpp
-std::vector<Interval> intervalIntersections(
-    const std::vector<Interval>& first,
-    const std::vector<Interval>& second) {
-    std::vector<Interval> result;
-    std::size_t i = 0;
-    std::size_t j = 0;
-
+```java
+static List<Interval> intervalIntersections(List<Interval> first, List<Interval> second) {
+    List<Interval> result = new ArrayList<>();
+    int i = 0;
+    int j = 0;
     while (i < first.size() && j < second.size()) {
-        const long long start = std::max(first[i].first, second[j].first);
-        const long long end = std::min(first[i].second, second[j].second);
-        if (start <= end) result.push_back({start, end});  // Closed intervals.
-
-        // The interval ending first cannot overlap any later part of the other.
-        if (first[i].second < second[j].second) {
-            ++i;
-        } else {
-            ++j;
-        }
+        Interval a = first.get(i);
+        Interval b = second.get(j);
+        long start = Math.max(a.start(), b.start());
+        long end = Math.min(a.end(), b.end());
+        if (start <= end) result.add(new Interval(start, end)); // Closed intervals.
+        if (a.end() < b.end()) i++;
+        else j++;
     }
     return result;
 }
 ```
 
-**Complexity:** `O(n + m)` time and `O(1)` auxiliary space excluding output.
+**Complexity:** `O(n + m)` time and `O(1)` auxiliary space excluding output, assuming constant-time indexed access for both lists.
 
 **Invariant:** Any future intersection must involve the interval whose end extends farther; discard the one ending first.
 
@@ -4725,35 +5260,33 @@ std::vector<Interval> intervalIntersections(
 
 ### 17.5 Non-Overlapping Selection and Minimum Removals
 
-**Priority:** 🔴 Tier 1 — Must Master
+**Priority:** 🟠 Tier 2 — Very Important
 
 **Why this priority:** This is the highest-value interval greedy pattern and contrasts directly with merging.
 
 To maximize the number of mutually compatible intervals, sort by **end** and repeatedly keep the next interval whose start is compatible. To minimize removals, return `n - kept`.
 
-```cpp
-int minRemovalsForNonOverlap(std::vector<Interval> intervals) {
-    if (intervals.empty()) return 0;
-    std::sort(intervals.begin(), intervals.end(),
-              [](const Interval& a, const Interval& b) {
-                  if (a.second != b.second) return a.second < b.second;
-                  return a.first < b.first;
-              });
-
-    int kept = 1;
-    long long previous_end = intervals.front().second;
-    for (std::size_t i = 1; i < intervals.size(); ++i) {
-        const auto [start, end] = intervals[i];
-        if (start >= previous_end) {  // Touching is allowed here.
-            ++kept;
-            previous_end = end;
+```java
+static int minRemovalsForNonOverlap(List<Interval> intervals) {
+    // Empty half-open intervals occupy no time and never need removal.
+    List<Interval> sorted = new ArrayList<>();
+    for (Interval interval : intervals) {
+        if (interval.start() < interval.end()) sorted.add(interval);
+    }
+    sorted.sort(Comparator.comparingLong(Interval::end).thenComparingLong(Interval::start));
+    long previousEnd = Long.MIN_VALUE;
+    int kept = 0;
+    for (Interval interval : sorted) {
+        if (interval.start() >= previousEnd) {
+            kept++;
+            previousEnd = interval.end();
         }
     }
-    return static_cast<int>(intervals.size()) - kept;
+    return sorted.size() - kept;
 }
 ```
 
-**Complexity:** `O(n log n)` time, sorting-dependent auxiliary space.
+**Complexity:** `O(n log n)` time and `O(n)` auxiliary space for the copied/filtered list and object-list sort.
 
 **Recognition:** Schedule the most jobs/meetings, remove fewest overlaps, choose maximum compatible subset.
 
@@ -4769,11 +5302,15 @@ int minRemovalsForNonOverlap(std::vector<Interval> intervals) {
 
 **Why this priority:** It is the simplest overlap-detection question and establishes the start-sorted neighbor property.
 
-```cpp
-bool canAttendAll(std::vector<Interval> meetings) {
-    std::sort(meetings.begin(), meetings.end());
-    for (std::size_t i = 1; i < meetings.size(); ++i) {
-        if (meetings[i].first < meetings[i - 1].second) return false;
+```java
+static boolean canAttendAll(List<Interval> meetings) {
+    List<Interval> sorted = new ArrayList<>(meetings);
+    sorted.sort(Comparator.comparingLong(Interval::start));
+    long previousEnd = Long.MIN_VALUE;
+    for (Interval meeting : sorted) {
+        if (meeting.start() == meeting.end()) continue; // Empty [s, s).
+        if (meeting.start() < previousEnd) return false;
+        previousEnd = meeting.end();
     }
     return true;
 }
@@ -4781,13 +5318,13 @@ bool canAttendAll(std::vector<Interval> meetings) {
 
 Assuming ending and starting at the same time is allowed, use `<`; otherwise use `<=`.
 
-**Complexity:** `O(n log n)` time and sorting-dependent space.
+**Complexity:** `O(n log n)` time and `O(n)` auxiliary space for the copied list and object-list sort.
 
-**Why adjacent comparison suffices:** With start order, if the current meeting does not overlap the previous meeting with the relevant ending frontier, it cannot overlap an even earlier interval whose effective occupied end is no later. For a pure conflict check against immediate previous, any nested earlier interval that extends farther would already have conflicted with the previous sequence; alternatively maintain `max_end` for a visibly direct invariant.
+**Why the scan suffices:** Before processing the next nonempty meeting, all previously accepted meetings are disjoint and `previousEnd` is their latest occupied end. A start before that end is a conflict; otherwise the invariant extends to the new meeting.
 
 ### 17.7 Meeting Rooms II: Minimum Concurrent Resources
 
-**Priority:** 🔴 Tier 1 — Must Master
+**Priority:** 🟠 Tier 2 — Very Important
 
 **Why this priority:** This common question connects intervals to both heaps and sweep lines and tests interpretation of maximum concurrency.
 
@@ -4795,27 +5332,19 @@ Assuming ending and starting at the same time is allowed, use `<`; otherwise use
 
 Sort meetings by start. The heap contains end times of rooms currently in use. Release all rooms that have ended before the next start, then allocate the meeting.
 
-```cpp
-int minMeetingRooms(std::vector<Interval> meetings) {
-    std::vector<Interval> valid;
-    valid.reserve(meetings.size());
-    for (const auto& [start, end] : meetings) {
-        if (start > end) {
-            throw std::invalid_argument("meeting start must not exceed end");
-        }
-        if (start < end) valid.push_back({start, end});  // Ignore empty [s, s).
-    }
-    std::sort(valid.begin(), valid.end());
-
-    std::priority_queue<long long, std::vector<long long>,
-                        std::greater<long long>> active_ends;
+```java
+static int minMeetingRooms(List<Interval> meetings) {
+    List<Interval> sorted = new ArrayList<>(meetings);
+    sorted.sort(Comparator.comparingLong(Interval::start));
+    PriorityQueue<Long> activeEnds = new PriorityQueue<>();
     int maximum = 0;
-    for (const auto& [start, end] : valid) {
-        while (!active_ends.empty() && active_ends.top() <= start) {
-            active_ends.pop();
+    for (Interval meeting : sorted) {
+        if (meeting.start() == meeting.end()) continue;
+        while (!activeEnds.isEmpty() && activeEnds.peek() <= meeting.start()) {
+            activeEnds.poll();
         }
-        active_ends.push(end);
-        maximum = std::max(maximum, static_cast<int>(active_ends.size()));
+        activeEnds.offer(meeting.end());
+        maximum = Math.max(maximum, activeEnds.size());
     }
     return maximum;
 }
@@ -4823,7 +5352,7 @@ int minMeetingRooms(std::vector<Interval> meetings) {
 
 **Invariant:** Before insertion, the heap holds exactly the meetings still active at `start`; after insertion, its size is current concurrency.
 
-**Complexity:** `O(n log n)` time and `O(n)` heap space.
+**Complexity:** `O(n log n)` time and `O(n)` auxiliary space for the copied/sorted list and active heap. The heap may be smaller when concurrency is low, but the input copy still has size `n`.
 
 If only the minimum room count is needed and each new meeting can reuse at most one just-freed room in a start-sorted scan, a common compact variant pops at most one then returns final heap size. Popping all ended meetings and tracking `maximum` makes the active-set invariant explicit and generalizes better.
 
@@ -4831,46 +5360,42 @@ If only the minimum room count is needed and each new meeting can reuse at most 
 
 Sort all starts and all ends separately. If next start is before the next end, one more room becomes active; otherwise a room frees first.
 
-```cpp
-int minMeetingRoomsTwoArrays(const std::vector<Interval>& meetings) {
-    std::vector<long long> starts;
-    std::vector<long long> ends;
-    starts.reserve(meetings.size());
-    ends.reserve(meetings.size());
-
-    for (const auto& [start, end] : meetings) {
-        if (start > end) {
-            throw std::invalid_argument("meeting start must not exceed end");
-        }
-        if (start < end) {  // Empty half-open intervals need no room.
-            starts.push_back(start);
-            ends.push_back(end);
+```java
+static int minMeetingRoomsTwoArrays(List<Interval> meetings) {
+    long[] starts = new long[meetings.size()];
+    long[] ends = new long[meetings.size()];
+    int count = 0;
+    for (Interval meeting : meetings) {
+        if (meeting.start() < meeting.end()) {
+            starts[count] = meeting.start();
+            ends[count++] = meeting.end();
         }
     }
-    std::sort(starts.begin(), starts.end());
-    std::sort(ends.begin(), ends.end());
-
-    std::size_t start_index = 0;
-    std::size_t end_index = 0;
+    Arrays.sort(starts, 0, count);
+    Arrays.sort(ends, 0, count);
+    int startIndex = 0;
+    int endIndex = 0;
     int active = 0;
     int maximum = 0;
-    while (start_index < starts.size()) {
-        if (starts[start_index] < ends[end_index]) {
-            ++active;
-            maximum = std::max(maximum, active);
-            ++start_index;
+    while (startIndex < count) {
+        if (starts[startIndex] < ends[endIndex]) {
+            active++;
+            maximum = Math.max(maximum, active);
+            startIndex++;
         } else {
-            --active;
-            ++end_index;
+            active--;
+            endIndex++;
         }
     }
     return maximum;
 }
 ```
 
+**Complexity of two arrays:** `O(n log n)` time and `O(n)` auxiliary space for the primitive endpoint arrays; empty half-open meetings are excluded from the sorted prefixes.
+
 **Trade-offs:** The heap can retain room end information and be extended to assign room IDs. Sorted endpoints/sweep line is often simpler when only maximum concurrency is needed.
 
-**Common mistakes/edge cases:** Wrong tie rule; returning final active count rather than maximum in a general sweep; assuming meetings are already sorted; an empty `vector`; zero-length meetings; and popping latest rather than earliest end.
+**Common mistakes/edge cases:** Wrong tie rule; returning final active count rather than maximum in a general sweep; assuming meetings are already sorted; an empty input list; zero-length meetings; and popping latest rather than earliest end.
 
 ### 17.8 Sweep Line / Event Counting
 
@@ -4885,27 +5410,23 @@ Convert each interval into events:
 
 Sort events, update a running count, and track the desired maximum or covered duration.
 
-```cpp
-int maximumOverlapHalfOpen(const std::vector<Interval>& intervals) {
-    std::vector<std::pair<long long, int>> events;  // coordinate, delta
-    events.reserve(2 * intervals.size());
-    for (const auto& [start, end] : intervals) {
-        if (start > end) {
-            throw std::invalid_argument("interval start must not exceed end");
-        }
-        if (start == end) continue;
-        events.push_back({start, +1});
-        events.push_back({end, -1});
-    }
+```java
+record IntervalEvent(long coordinate, int delta) {}
 
-    // Lexicographic pair ordering processes -1 before +1 at a tie.
-    std::sort(events.begin(), events.end());
+static int maximumOverlapHalfOpen(List<Interval> intervals) {
+    List<IntervalEvent> events = new ArrayList<>();
+    for (Interval interval : intervals) {
+        if (interval.start() == interval.end()) continue;
+        events.add(new IntervalEvent(interval.start(), 1));
+        events.add(new IntervalEvent(interval.end(), -1));
+    }
+    events.sort(Comparator.comparingLong(IntervalEvent::coordinate)
+            .thenComparingInt(IntervalEvent::delta)); // End (-1) before start (+1).
     int active = 0;
     int maximum = 0;
-    for (const auto& [coordinate, delta] : events) {
-        (void)coordinate;
-        active += delta;
-        maximum = std::max(maximum, active);
+    for (IntervalEvent event : events) {
+        active += event.delta();
+        maximum = Math.max(maximum, active);
     }
     return maximum;
 }
@@ -4916,7 +5437,7 @@ int maximumOverlapHalfOpen(const std::vector<Interval>& intervals) {
 - Half-open scheduling `[s, e)`: process end before start at the same time.
 - Closed overlap `[s, e]`: process start before end at the same coordinate if touching counts concurrently.
 
-For many events at the same coordinate, aggregating their deltas first can make the intended semantics clearer. For covered length, accumulate `(coordinate - previous_coordinate)` using the active count *before* applying events at the new coordinate.
+For half-open concurrency or covered duration, aggregating deltas at a coordinate is valid. For closed-interval peak overlap, do not combine starts and ends before measuring the point: apply starts, measure the peak, then apply ends. For covered length, accumulate `(coordinate - previous_coordinate)` using the active count *before* applying events at the new coordinate.
 
 **Complexity:** `O(n log n)` time for sorting `2n` events and `O(n)` event space. If coordinates are small bounded integers, a difference array plus prefix sum can reduce scanning to `O(n + U)` for universe size `U`.
 
@@ -4936,7 +5457,7 @@ To cover a target beginning at `0`, among all intervals whose start is at or bef
 
 **Invariant:** After each selection count, the greedy method reaches at least as far as any solution using the same number of intervals, because it considers every currently eligible interval and chooses maximum end.
 
-**Complexity:** With intervals sorted by start, `O(n log n)` time and sorting-dependent space; bounded integer starts sometimes allow a Jump-Game-style `O(n + U)` preprocessing/scan.
+**Complexity:** Sorting followed by the scan takes `O(n log n)` time; copying and sorting a Java list of records uses `O(n)` auxiliary space. Already sorted input needs only an `O(n)` scan with constant auxiliary state. Bounded integer starts sometimes allow a Jump-Game-style `O(n + U)` preprocessing/scan.
 
 **Mistakes:** Selecting merely the earliest-starting interval; committing before seeing all intervals that begin within current coverage; not detecting lack of progress; and confusing minimum number of intervals with maximum non-overlapping selection.
 
@@ -4957,27 +5478,13 @@ To cover a target beginning at `0`, among all intervals whose start is at or bef
 
 ### Representative Interval Problems
 
-#### Beginner
+| Family | Mechanics | Canonical | Variation | Mixed pattern | Cold revisit |
+|---|---|---|---|---|---|
+| Union/ordered ranges | Meeting Rooms (endpoint tests) | ⭐ **Canonical Interview Problem:** Merge Intervals | Insert Interval / Interval List Intersections | Employee Free Time (k-way merge) | Merge touching, nested, and chained intervals |
+| Selection | Hand-schedule three intervals | ⭐ **Canonical Interview Problem:** Non-overlapping Intervals | Minimum Arrows to Burst Balloons | Maximum Profit in Job Scheduling (later DP contrast) | Explain why sort by end differs from sort by start |
+| Concurrency | Draw start/end events | ⭐ **Canonical Interview Problem:** Meeting Rooms II | Solve once with heap, once with endpoints | My Calendar I (`TreeMap` dynamic neighbors) | Handle equal endpoints and empty half-open ranges |
 
-- **Merge Intervals:** Teaches start sorting, containment, and maintaining the last merged range.
-- **Meeting Rooms:** Teaches overlap semantics and adjacent checks after sorting.
-- **Interval List Intersections:** Teaches two pointers and advancing the interval with earlier end.
-
-#### Core Interview
-
-- **Insert Interval:** Teaches exploiting sorted/disjoint input for a three-phase `O(n)` scan.
-- **Non-overlapping Intervals:** Teaches earliest-finish greedy and minimum-removal conversion.
-- **Meeting Rooms II:** Teaches maximum concurrency through a heap or sweep line.
-- **Minimum Number of Arrows to Burst Balloons:** Teaches choosing a point at the earliest interval end to cover as many overlapping intervals as safely possible.
-- **Employee Free Time:** Teaches merging across multiple schedules, potentially via flatten-sort or k-way heap merge.
-- **My Calendar I:** Teaches dynamic conflict checks and raises the trade-off between a simple sorted `vector` and an ordered `map`/tree.
-
-#### Advanced
-
-- **Video Stitching / Minimum Taps to Water a Garden:** Teaches farthest-extension coverage greedy.
-- **Maximum Profit in Job Scheduling:** Teaches weighted interval scheduling with sort + binary search + DP; this is a deliberate non-greedy contrast.
-- **The Skyline Problem:** Teaches event sorting, active-height multiset/heap, lazy deletion, and careful ties.
-- **Range Module / dynamic interval union:** Teaches ordered interval maintenance; implementation details depend strongly on available ordered-map libraries.
+Select 5–7 problems across the rows, counting alternate implementations as variations rather than new submissions. **Video Stitching / Minimum Taps** add coverage-frontier greedy. **The Skyline Problem** and **Range Module** are optional advanced event/ordered-map work.
 
 ### Common Interval Mistakes and Interview Tips
 
@@ -5028,6 +5535,8 @@ I have mastered interview intervals when I can:
 
 DP questions are frequent, but the return on studying increasingly exotic variants drops quickly. Standard DP deserves serious practice; digit DP, profile DP, and highly dimensional state compression are specialized. Interview preparation should therefore go deep on a compact core rather than treat every recurrence as equally important.
 
+**Study contract:** Reconstruct dense-array memoization, tabulation, and the standard core recurrences from a blank editor; understand state sufficiency and dependency order. Look up uncommon state encodings and advanced DP. The concrete implementations live here; [Code Templates](#24-code-templates) is the retrieval index.
+
 ### DP Priority Map
 
 | Subtopic | Priority | Why this priority was assigned | Required depth |
@@ -5039,7 +5548,8 @@ DP questions are frequent, but the return on studying increasingly exotic varian
 | 0/1 knapsack-style DP | 🟠 Tier 2 — Very Important | Many selection, subset, and target problems reduce to it even when no “knapsack” is mentioned. | Medium–deep |
 | Subsequence DP | 🟠 Tier 2 — Very Important | LCS/LIS-style states recur in sequence and string interviews. | Medium–deep |
 | Space optimization | 🟠 Tier 2 — Very Important | A common follow-up and a test of whether dependencies are truly understood. | Standard 1D/2-row cases |
-| Unbounded knapsack | 🟡 Tier 3 — Nice to Know | Useful for coin and reuse-allowed problems, but less frequent than the 0/1 form. | Standard forms |
+| Minimum Coin Change | 🟠 Tier 2 — Very Important | A compact, transferable test of unlimited reuse and impossible-state handling. | Derive and implement from memory |
+| Unbounded counting variations | 🟡 Tier 3 — Nice to Know | Useful after minimum coins; loop nesting changes what is counted. | One variation, then reference |
 | Interval DP | 🟡 Tier 3 — Nice to Know | Appears in harder interviews; the gap/length ordering is worth recognizing. | Concept plus one or two problems |
 | DP on trees | 🟡 Tier 3 — Nice to Know | Useful in advanced tree interviews but ordinary DFS questions are much more common. | Basic two-state forms |
 | Bitmask, digit, profile, and high-dimensional DP | ⚪ Tier 4 — Low Priority / Specialized | Rare in general SWE interviews and expensive to master. | Awareness unless role-specific |
@@ -5050,14 +5560,14 @@ DP questions are frequent, but the return on studying increasingly exotic varian
 2. Derive transitions from the choices available at that state.
 3. Identify base cases and a valid evaluation order.
 4. Convert a small recursive solution into memoization and tabulation.
-5. Master 1D take/skip, grid, 0/1 subset, LCS, and LIS patterns.
+5. Master 1D take/skip, grid, 0/1 subset, minimum Coin Change, LCS, and LIS patterns.
 6. Compute complexity as **number of reachable states × work per state**.
 
 ### Learn Later
 
 - Reconstructing an actual optimal choice, not just its value.
 - Two-row and one-row space compression.
-- Unbounded knapsack and change-counting variations.
+- Unbounded change-counting variations after minimum Coin Change.
 - Interval DP and simple DP on trees.
 
 ### Optional / Specialized
@@ -5068,8 +5578,6 @@ DP questions are frequent, but the return on studying increasingly exotic varian
 ### 18.1 Core Intuition: Replace a Repeated Search with a State Graph
 
 **Priority:** 🟠 Tier 2 — Very Important
-
-**Why this priority level was assigned:** Seeing repeated decision states is the foundation of interview DP; without this model, memoization becomes mechanical caching.
 
 Suppose a recursive search asks, “What is the best answer starting at index `i`?” Different earlier choices may arrive at the same `i`. If everything relevant about the future is captured by `i`, then recomputing the suffix is wasteful.
 
@@ -5100,8 +5608,6 @@ For example, in 0/1 knapsack, `(item_index, remaining_capacity)` is sufficient. 
 ### 18.2 How to Recognize DP
 
 **Priority:** 🟠 Tier 2 — Very Important
-
-**Why this priority level was assigned:** Recognition determines whether a candidate reaches DP at all and avoids forcing it onto greedy, graph, or window problems.
 
 #### Strong clues
 
@@ -5145,8 +5651,6 @@ For example, in 0/1 knapsack, `(item_index, remaining_capacity)` is sufficient. 
 ### 18.3 The Six-Part DP Design Process
 
 **Priority:** 🟠 Tier 2 — Very Important
-
-**Why this priority level was assigned:** State, choices, transitions, bases, order, and answer location are the reusable reasoning process behind standard DP questions.
 
 Use this process before writing code.
 
@@ -5215,8 +5719,6 @@ Then give a short correctness argument: every legal first choice is considered, 
 
 **Priority:** 🟠 Tier 2 — Very Important
 
-**Why this priority level was assigned:** Interviewers expect a candidate to justify that the recurrence covers every legal choice, not merely present a familiar table.
-
 A concise interview proof often uses induction over the dependency order.
 
 1. **State meaning:** State exactly what `dp[s]` represents.
@@ -5232,50 +5734,29 @@ For a take/skip problem, every valid solution either takes the current item or s
 
 **Priority:** 🟠 Tier 2 — Very Important
 
-**Why this priority level was assigned:** These are the standard execution strategies and a frequent optimization follow-up.
-
 #### Memoization (top-down)
 
 **Priority:** 🟠 Tier 2 — Very Important
 
 Memoization preserves the recursive reasoning and caches each state on first evaluation.
 
-```cpp
-// Schematic C++17 template: State must have equality and a Hash function.
-template <class State, class Value, class Hash, class IsBase,
-          class BaseValue, class LegalChoices, class NextState,
-          class Contribution, class Combine>
-Value solveWithMemo(const State& initial_state, Hash hash,
-                    IsBase is_base, BaseValue base_value,
-                    LegalChoices legal_choices, NextState next_state,
-                    Contribution contribution, Combine combine) {
-    std::unordered_map<State, Value, Hash> memo(0, hash);
-
-    std::function<Value(const State&)> dp = [&](const State& state) -> Value {
-        if (is_base(state)) return base_value(state);
-        if (const auto found = memo.find(state); found != memo.end()) {
-            return found->second;
-        }
-
-        std::vector<Value> candidates;
-        for (const auto& choice : legal_choices(state)) {
-            candidates.push_back(contribution(choice) +
-                                 dp(next_state(state, choice)));
-        }
-        const Value answer = combine(candidates);
-        memo.emplace(state, answer);
-        return answer;
-    };
-
-    return dp(initial_state);
-}
+```text
+solve(state):
+    if state is a base case: return its base value
+    if state is cached: return cached value
+    answer = identity for this objective
+    for each legal choice:
+        combine its contribution and solve(next state) into answer
+    cache answer for state
+    return answer
 ```
 
 - **Use when:** The recurrence is easy to express recursively, only a subset of possible states is reachable, or iteration order is awkward.
 - **Time:** `O(number of reachable states × work per state)`.
 - **Space:** Cache plus recursion depth.
 - **Common mistakes:** Caching too late, mutating data that participates in a key/hash, omitting a state variable from the key, and forgetting that recursion stack counts as auxiliary space.
-- **Trade-off:** Clear and close to brute force, but native stack depth and function-call overhead can matter.
+- **Java choice:** Use a primitive array when states are dense integer indices. A `boolean[] computed` separates “uncomputed” from valid zero/negative answers; a safe sentinel is also fine. Use `HashMap<State, Value>` for sparse states, with immutable keys and correct equality/hashing.
+- **Trade-off:** Recursion can throw `StackOverflowError`; Java does not promise tail-call elimination. Prefer tabulation for a deep linear dependency chain. The concrete [House Robber evolution](#186-worked-evolution-from-brute-force-to-optimized-dp) shows both execution strategies.
 
 #### Tabulation (bottom-up)
 
@@ -5283,28 +5764,12 @@ Value solveWithMemo(const State& initial_state, Hash hash,
 
 Tabulation explicitly fills states in a dependency-safe order.
 
-```cpp
-// Generic bottom-up shape for integer-indexed states. The callables encode
-// the problem-specific base cases, order, choices, transition, and objective.
-template <class Data, class MakeTable, class StateOrder, class LegalChoices,
-          class NextState, class Contribution, class Combine>
-auto solveWithTable(const Data& data, MakeTable make_table,
-                    StateOrder state_order, LegalChoices legal_choices,
-                    NextState next_state, Contribution contribution,
-                    Combine combine) {
-    auto dp = make_table(data);
-    using Value = typename decltype(dp)::value_type;
-
-    for (int state : state_order(data)) {
-        std::vector<Value> candidates;
-        for (const auto& choice : legal_choices(data, state)) {
-            candidates.push_back(contribution(choice) +
-                                 dp[next_state(state, choice)]);
-        }
-        dp[state] = combine(candidates);
-    }
-    return dp;
-}
+```text
+initialize the table, including base and impossible states
+for state in dependency-safe order:
+    for each legal choice:
+        combine the contribution and solved dependency into table[state]
+return the state or aggregate requested by the problem
 ```
 
 - **Use when:** Most states are reachable, recursion depth is risky, or a compact iterative solution is straightforward.
@@ -5343,13 +5808,11 @@ Space optimization can destroy reconstruction information and makes loop-directi
 
 **Priority:** 🟠 Tier 2 — Very Important
 
-**Why this priority level was assigned:** Deriving each stage from the previous one builds transferable problem-solving ability instead of solution memorization.
-
 Use this systematic conversion path: **Brute Force → Recursion → Memoization → Tabulation → Optimization**.
 
 #### Problem: maximum sum with no adjacent choices
 
-Given non-negative values in `nums`, choose elements with no two adjacent and maximize their sum. The classic story is “House Robber,” but the transferable pattern is **take or skip under a local conflict**.
+Given nonnegative `int[] nums`, choose elements with no two adjacent and maximize their sum. Inputs are non-null; the empty input returns zero. Use `long` for the accumulated answer. The classic story is “House Robber,” but the transferable pattern is **take or skip under a local conflict**.
 
 Example:
 
@@ -5371,15 +5834,16 @@ Enumerate all `2^n` subsets, reject those containing adjacent indices, and retai
 
 Let `best(i)` mean “maximum sum obtainable from index `i` through the end.” At each index, every valid solution either skips `i` or takes it and skips `i + 1`.
 
-```cpp
-long long robRecursive(const std::vector<long long>& nums) {
-    std::function<long long(int)> best = [&](int index) -> long long {
-        if (index >= static_cast<int>(nums.size())) return 0;
-        const long long skip = best(index + 1);
-        const long long take = nums[index] + best(index + 2);
-        return std::max(skip, take);
-    };
-    return best(0);
+```java
+static long robRecursive(int[] nums) {
+    return robRecursiveFrom(nums, 0);
+}
+
+private static long robRecursiveFrom(int[] nums, int index) {
+    if (index >= nums.length) return 0;
+    long skip = robRecursiveFrom(nums, index + 1);
+    long take = nums[index] + robRecursiveFrom(nums, index + 2);
+    return Math.max(skip, take);
 }
 ```
 
@@ -5402,17 +5866,21 @@ best(0)
 
 #### Stage 3 — Memoize each index
 
-```cpp
-long long robMemo(const std::vector<long long>& nums) {
-    // -1 is safe here because the problem states that values are non-negative.
-    std::vector<long long> memo(nums.size(), -1);
-    std::function<long long(int)> best = [&](int index) -> long long {
-        if (index >= static_cast<int>(nums.size())) return 0;
-        if (memo[index] != -1) return memo[index];
-        return memo[index] = std::max(best(index + 1),
-                                      nums[index] + best(index + 2));
-    };
-    return best(0);
+```java
+static long robMemo(int[] nums) {
+    // -1 cannot be a valid answer when values are nonnegative.
+    long[] memo = new long[nums.length];
+    Arrays.fill(memo, -1);
+    return robMemoFrom(nums, 0, memo);
+}
+
+private static long robMemoFrom(int[] nums, int index, long[] memo) {
+    if (index >= nums.length) return 0;
+    if (memo[index] != -1) return memo[index];
+    long skip = robMemoFrom(nums, index + 1, memo);
+    long take = nums[index] + robMemoFrom(nums, index + 2, memo);
+    memo[index] = Math.max(skip, take);
+    return memo[index];
 }
 ```
 
@@ -5421,7 +5889,7 @@ long long robMemo(const std::vector<long long>& nums) {
 - **Time:** `O(n)`.
 - **Space:** `O(n)` cache plus `O(n)` recursion stack, still `O(n)` total.
 
-#### Stage 4 — Reverse the recurrence into tabulation
+#### Stage 4 — Re-express the recurrence as prefix tabulation
 
 Define `dp[i]` as the maximum sum using the first `i` elements. Then:
 
@@ -5432,14 +5900,13 @@ dp[i] = max(
 )
 ```
 
-```cpp
-long long robTable(const std::vector<long long>& nums) {
-    const int n = static_cast<int>(nums.size());
-    std::vector<long long> dp(n + 1, 0);
-    if (n >= 1) dp[1] = nums[0];
-
-    for (int i = 2; i <= n; ++i) {
-        dp[i] = std::max(dp[i - 1], dp[i - 2] + nums[i - 1]);
+```java
+static long robTable(int[] nums) {
+    int n = nums.length;
+    long[] dp = new long[n + 1];
+    if (n > 0) dp[1] = nums[0];
+    for (int i = 2; i <= n; i++) {
+        dp[i] = Math.max(dp[i - 1], dp[i - 2] + nums[i - 1]);
     }
     return dp[n];
 }
@@ -5459,16 +5926,16 @@ For `[2, 7, 9, 3, 1]`, the table is:
 
 Each update reads only `dp[i - 1]` and `dp[i - 2]`.
 
-```cpp
-long long rob(const std::vector<long long>& nums) {
-    long long two_back = 0;
-    long long one_back = 0;
-    for (long long value : nums) {
-        const long long current = std::max(one_back, two_back + value);
-        two_back = one_back;
-        one_back = current;
+```java
+static long rob(int[] nums) {
+    long twoBack = 0;
+    long oneBack = 0;
+    for (int value : nums) {
+        long current = Math.max(oneBack, twoBack + value);
+        twoBack = oneBack;
+        oneBack = current;
     }
-    return one_back;
+    return oneBack;
 }
 ```
 
@@ -5478,7 +5945,7 @@ long long rob(const std::vector<long long>& nums) {
 
 #### What should transfer to a new problem
 
-Do not memorize `two_back` and `one_back`. Retain this reasoning chain:
+Do not memorize the variable names `twoBack` and `oneBack`. Retain this reasoning chain:
 
 1. What choices partition all valid solutions?
 2. What smaller state follows each choice?
@@ -5489,8 +5956,6 @@ Do not memorize `two_back` and `one_back`. Retain this reasoning chain:
 ### 18.7 Complexity Analysis for DP
 
 **Priority:** 🟠 Tier 2 — Very Important
-
-**Why this priority level was assigned:** DP tables can hide large state spaces, so counting states and transition work is part of a complete interview solution.
 
 The safest formula is:
 
@@ -5517,8 +5982,6 @@ Examples:
 
 **Priority:** 🟠 Tier 2 — Very Important
 
-**Why this priority level was assigned:** Many interview DPs collapse to one index plus a small amount of state. They teach recurrence design without the bookkeeping of a matrix and are the best bridge from recursion to DP.
-
 #### Intuition and recognition
 
 Use 1D DP when a left-to-right or right-to-left sequence of states is sufficient and each state depends on a small set of earlier or later positions.
@@ -5543,25 +6006,22 @@ The requested answer might be the last state, the maximum of all ending states, 
 
 If you can move one or two steps and pay the cost of each step you land on, define `dp[i]` as the minimum cost to stand on step `i`.
 
-```cpp
-long long minCostClimbingStairs(const std::vector<int>& cost) {
-    // Starting before step 0 or step 1 costs nothing.
-    long long two_back = 0;
-    long long one_back = 0;
-
-    for (int step_cost : cost) {
-        const long long current = step_cost + std::min(two_back, one_back);
-        two_back = one_back;
-        one_back = current;
+```java
+static long minCostClimbingStairs(int[] cost) {
+    long twoBack = 0;
+    long oneBack = 0;
+    for (int stepCost : cost) {
+        long current = stepCost + Math.min(twoBack, oneBack);
+        twoBack = oneBack;
+        oneBack = current;
     }
-    // The top can be reached from either of the final two steps.
-    return std::min(two_back, one_back);
+    return Math.min(twoBack, oneBack);
 }
 ```
 
 - **Time:** `O(n)`.
 - **Auxiliary space:** `O(1)`; a full table would use `O(n)`.
-- **Edge cases:** Empty and one-element inputs depend on the exact problem's definition of legal starting positions.
+- **Contract:** Non-null, nonnegative costs; start at index 0 or 1 and move one or two positions. The top is index `cost.length`. This extension returns zero for empty or one-element input because you can start at or beyond the top; confirm the platform contract (often `n ≥ 2`).
 - **Alternative:** Memoized recursion is often easier to derive but uses `O(n)` stack space.
 
 #### Common 1D variations
@@ -5576,7 +6036,7 @@ long long minCostClimbingStairs(const std::vector<int>& cost) {
 
 #### Common mistakes and trade-offs
 
-- Returning `dp.back()` when the answer is `*max_element(dp.begin(), dp.end())`.
+- Returning `dp[dp.length - 1]` when the answer is the maximum over all ending states; maintain a running maximum.
 - Mixing an “index in the input” state with a “prefix length” state, causing an off-by-one error.
 - Initializing a minimum-cost table with zero; unreachable states should normally start at infinity.
 - Compressing to variables before checking which old value each variable represents.
@@ -5585,8 +6045,6 @@ long long minCostClimbingStairs(const std::vector<int>& cost) {
 ### 18.9 2D and Grid DP
 
 **Priority:** 🟠 Tier 2 — Very Important
-
-**Why this priority level was assigned:** Grid and two-index states are common, visually intuitive, and test whether dependencies, obstacles, boundaries, and space compression are handled correctly.
 
 #### Intuition and recognition
 
@@ -5601,23 +6059,27 @@ For a grid with moves only right and down, cells form a DAG. A cell depends on t
 
 #### Example: minimum path sum
 
-```cpp
-long long minPathSum(const std::vector<std::vector<int>>& grid) {
-    if (grid.empty() || grid.front().empty()) return 0;
-    const int rows = static_cast<int>(grid.size());
-    const int cols = static_cast<int>(grid.front().size());
-    const long long INF = std::numeric_limits<long long>::max() / 4;
-    std::vector<long long> dp(cols, INF);
-    dp[0] = 0;
+Use boundary cases directly instead of adding costs to an infinity sentinel. The input is read-only by convention; Java does not enforce that through an array parameter.
 
-    for (int row = 0; row < rows; ++row) {
-        for (int col = 0; col < cols; ++col) {
-            const long long from_above = dp[col];
-            const long long from_left = col > 0 ? dp[col - 1] : INF;
-            dp[col] = grid[row][col] + std::min(from_above, from_left);
+```java
+static long minPathSum(int[][] grid) {
+    if (grid.length == 0 || grid[0].length == 0) return 0;
+    int cols = grid[0].length;
+    long[] dp = new long[cols];
+    for (int row = 0; row < grid.length; row++) {
+        for (int col = 0; col < cols; col++) {
+            if (row == 0 && col == 0) {
+                dp[col] = grid[row][col];
+            } else if (row == 0) {
+                dp[col] = dp[col - 1] + grid[row][col];
+            } else if (col == 0) {
+                dp[col] += grid[row][col];
+            } else {
+                dp[col] = Math.min(dp[col], dp[col - 1]) + grid[row][col];
+            }
         }
     }
-    return dp.back();
+    return dp[cols - 1];
 }
 ```
 
@@ -5625,7 +6087,7 @@ long long minPathSum(const std::vector<std::vector<int>>& grid) {
 - **Time:** `O(rows × cols)`.
 - **Auxiliary space:** `O(cols)` rather than `O(rows × cols)`.
 - **Why one row works:** Before update, `dp[c]` is the value from above; after updating `c - 1`, `dp[c - 1]` is the value from the left.
-- **Edge cases:** Empty grid, one row, one column, obstacles, and whether start/end cost counts.
+- **Contract:** Non-null rectangular grid with no obstacles; empty dimensions return zero. Both start and end costs count. The code handles negative cell values because moves are acyclic. For obstacles, introduce and guard an unreachable state instead of applying this recurrence unchanged.
 
 #### Grid DP versus graph traversal
 
@@ -5645,13 +6107,9 @@ long long minPathSum(const std::vector<std::vector<int>>& grid) {
 
 **Priority:** 🟠 Tier 2 — Very Important
 
-**Why this priority level was assigned:** The 0/1 take-or-skip recurrence underlies many subset and resource problems; its unbounded variant is lower priority.
-
 #### 0/1 knapsack
 
 **Priority:** 🟠 Tier 2 — Very Important
-
-**Why this priority level was assigned:** The exact backpack story is not always common, but its take/skip-with-capacity recurrence underlies subset sum, partition, target feasibility, and many resource-allocation questions.
 
 Each item can be selected at most once. With weight `w` and value `v`:
 
@@ -5666,20 +6124,21 @@ The direct table has `n × capacity` states and `O(1)` work per state.
 
 ##### One-dimensional implementation
 
-```cpp
-long long knapsack01(const std::vector<int>& weights,
-                     const std::vector<long long>& values, int capacity) {
-    if (weights.size() != values.size() || capacity < 0) {
-        throw std::invalid_argument("invalid knapsack input");
-    }
-    std::vector<long long> dp(capacity + 1, 0);
+Contract: non-null equal-length arrays, nonnegative weights, and optional empty selection. Values may be negative; skipping them is allowed. Capacity must be small enough for the table. The method does not mutate inputs.
 
-    for (std::size_t item = 0; item < weights.size(); ++item) {
-        const int weight = weights[item];
-        if (weight < 0) throw std::invalid_argument("weights must be nonnegative");
+```java
+static long knapsack01(int[] weights, int[] values, int capacity) {
+    if (weights.length != values.length || capacity < 0
+            || capacity == Integer.MAX_VALUE) {
+        throw new IllegalArgumentException("Invalid knapsack input");
+    }
+    long[] dp = new long[capacity + 1];
+    for (int item = 0; item < weights.length; item++) {
+        int weight = weights[item];
+        if (weight < 0) throw new IllegalArgumentException("Negative weight");
         // Descending order prevents this item from being reused.
-        for (int cap = capacity; cap >= weight; --cap) {
-            dp[cap] = std::max(dp[cap], dp[cap - weight] + values[item]);
+        for (int cap = capacity; cap >= weight; cap--) {
+            dp[cap] = Math.max(dp[cap], dp[cap - weight] + values[item]);
         }
     }
     return dp[capacity];
@@ -5687,23 +6146,23 @@ long long knapsack01(const std::vector<int>& weights,
 ```
 
 - **State:** `dp[cap]` is the best value for capacity at most `cap` after processed items.
-- **Time:** `O(n × capacity)`.
-- **Auxiliary space:** `O(capacity)`.
+- **Time:** `O((n + 1) × (capacity + 1))`, including initialization, zero capacity, and zero-weight items; conventionally `O(n × capacity)` for positive sizes.
+- **Auxiliary space:** `O(capacity + 1)`.
 - **Critical detail:** Capacity moves downward. Moving upward would read a value already updated by the current item and accidentally allow unlimited copies.
 
 ##### Boolean subset sum
 
-```cpp
-bool canMakeSum(const std::vector<int>& nums, int target) {
+```java
+static boolean canMakeSum(int[] nums, int target) {
     if (target < 0) return false;
-    std::vector<char> possible(target + 1, false);
+    if (target == Integer.MAX_VALUE) {
+        throw new IllegalArgumentException("Target is too large for this table");
+    }
+    boolean[] possible = new boolean[target + 1];
     possible[0] = true;
-
     for (int value : nums) {
-        if (value < 0) {
-            throw std::invalid_argument("this DP requires nonnegative values");
-        }
-        for (int total = target; total >= value; --total) {
+        if (value < 0) throw new IllegalArgumentException("Negative value");
+        for (int total = target; total >= value; total--) {
             possible[total] = possible[total] || possible[total - value];
         }
     }
@@ -5711,37 +6170,40 @@ bool canMakeSum(const std::vector<int>& nums, int target) {
 }
 ```
 
-- **Time:** `O(n × target)`.
-- **Space:** `O(target)`.
+- **Time:** `O((n + 1) × (target + 1))`, including initialization; conventionally `O(n × target)` for positive sizes.
+- **Auxiliary space:** `O(target + 1)`.
 - **Edge cases:** Target zero is normally feasible via the empty subset; zero-valued items need care in counting versions; negative values invalidate this simple index-by-sum model.
 
 #### Unbounded knapsack
 
-**Priority:** 🟡 Tier 3 — Nice to Know
-
-**Why this priority level was assigned:** Reuse-allowed decisions appear in coin change and cutting problems, but this family is less frequent than core array/tree/graph patterns and 0/1 DP.
+**Priority:** 🟠 Tier 2 for minimum Coin Change; 🟡 Tier 3 for further counting variations
 
 Each item may be selected repeatedly. The one-dimensional capacity loop usually moves **upward**, allowing the current item’s newly updated state to be reused:
 
-```cpp
-int minCoins(const std::vector<int>& coins, int amount) {
+```java
+static int minCoins(int[] coins, int amount) {
     if (amount < 0) return -1;
-    const int INF = amount + 1;  // Any feasible answer uses at most amount 1-coins.
-    std::vector<int> dp(amount + 1, INF);
+    if (amount == Integer.MAX_VALUE) {
+        throw new IllegalArgumentException("Amount is too large for this table");
+    }
+    int unreachable = amount + 1; // Any feasible answer uses at most amount coins.
+    int[] dp = new int[amount + 1];
+    Arrays.fill(dp, unreachable);
     dp[0] = 0;
-
     for (int coin : coins) {
-        if (coin <= 0) throw std::invalid_argument("coin values must be positive");
-        for (int total = coin; total <= amount; ++total) {
-            dp[total] = std::min(dp[total], dp[total - coin] + 1);
+        if (coin <= 0) throw new IllegalArgumentException("Nonpositive coin");
+        for (int total = coin; total <= amount; total++) {
+            if (dp[total - coin] != unreachable) {
+                dp[total] = Math.min(dp[total], dp[total - coin] + 1);
+            }
         }
     }
-    return dp[amount] == INF ? -1 : dp[amount];
+    return dp[amount] == unreachable ? -1 : dp[amount];
 }
 ```
 
-- **Time:** `O(number_of_coins × amount)`.
-- **Space:** `O(amount)`.
+- **Time:** `O((numberOfCoins + 1) × (amount + 1))` including validation and initialization; conventionally `O(numberOfCoins × amount)` for positive sizes.
+- **Auxiliary space:** `O(amount + 1)`. The amount must be practical for a dense table; rejecting arithmetic overflow is not a memory-capacity guarantee.
 
 #### Loop order changes the meaning
 
@@ -5759,7 +6221,7 @@ Always state what a partially filled `dp` array means after each outer-loop iter
 #### Recognition, alternatives, and trade-offs
 
 - **Clues:** Select items, each once or unlimited times; capacity/target/budget; exact or at-most sum; count/feasibility/minimum/maximum objective.
-- **Alternative:** An `unordered_set<int>` of reachable sums can be clearer for sparse targets, though worst-case state count can still be large.
+- **Alternative:** A `HashSet<Long>` of reachable sums can help when reachable states are sparse but sums are large. Snapshot the previous set or build a new set for each 0/1 item; modifying it during iteration is invalid and can also reuse the same item.
 - **Meet-in-the-middle:** May be better when item count is around 30–40 but values/target are huge.
 - **Greedy warning:** Choosing the largest value/weight ratio solves fractional knapsack, not general 0/1 knapsack. Standard coin systems can hide the fact that greedy coin choice is not universally correct.
 - **Pseudo-polynomial warning:** Check the numeric capacity before proposing `O(n × capacity)`.
@@ -5767,8 +6229,6 @@ Always state what a partially filled `dp` array means after each outer-loop iter
 ### 18.11 Subsequence DP
 
 **Priority:** 🟠 Tier 2 — Very Important
-
-**Why this priority level was assigned:** Matching prefixes and building best subsequences are recurring interview patterns. LCS and LIS supply reusable state models without requiring every specialized string algorithm.
 
 #### Subsequence versus substring/subarray
 
@@ -5781,34 +6241,36 @@ This distinction changes the approach. Sliding window often helps contiguous seg
 
 Define `dp[i][j]` as the LCS length of prefixes `a[0..i)` and `b[0..j)`.
 
-```cpp
-int lcsLength(const std::string& a, const std::string& b) {
-    // Put the shorter string on the columns to minimize auxiliary space.
-    const std::string* rows = &a;
-    const std::string* cols = &b;
-    if (cols->size() > rows->size()) std::swap(rows, cols);
-
-    std::vector<int> previous(cols->size() + 1, 0);
-    for (std::size_t i = 1; i <= rows->size(); ++i) {
-        std::vector<int> current(cols->size() + 1, 0);
-        for (std::size_t j = 1; j <= cols->size(); ++j) {
-            if ((*rows)[i - 1] == (*cols)[j - 1]) {
+```java
+static int lcsLength(String a, String b) {
+    // Assigning a String reference does not copy its characters.
+    String rows = a.length() >= b.length() ? a : b;
+    String cols = a.length() >= b.length() ? b : a;
+    int[] previous = new int[cols.length() + 1];
+    int[] current = new int[cols.length() + 1];
+    for (int i = 1; i <= rows.length(); i++) {
+        current[0] = 0;
+        for (int j = 1; j <= cols.length(); j++) {
+            if (rows.charAt(i - 1) == cols.charAt(j - 1)) {
                 current[j] = previous[j - 1] + 1;
             } else {
-                current[j] = std::max(previous[j], current[j - 1]);
+                current[j] = Math.max(previous[j], current[j - 1]);
             }
         }
-        previous.swap(current);
+        int[] swap = previous;
+        previous = current;
+        current = swap;
     }
-    return previous.back();
+    return previous[cols.length()];
 }
 ```
 
 - **Transition:** Matching final characters can extend a smaller match; otherwise at least one final character is excluded.
-- **Time:** `O(mn)`, where `m = a.size()` and `n = b.size()`.
-- **Space:** `O(min(m, n))` because the shorter string is placed on the columns.
+- **Time:** `O(mn)` for nonempty strings, where `m = a.length()` and `n = b.length()`; initialization/loop overhead gives `O((m + 1)(n + 1))` including empty inputs.
+- **Auxiliary space:** `O(min(m, n) + 1)`. Two independently allocated arrays are reused; swapping their references does not copy their contents.
 - **Trade-off:** Two-row compression returns only the length. Reconstructing a sequence is easiest with the full `O(mn)` table or a more advanced reconstruction method.
-- **Common mistake:** Using the matching branch plus the nonmatching maximum at the same time and thereby double-counting.
+- **Common mistake:** Reading the current row where the recurrence needs the previous diagonal, or accidentally making both row variables refer to the same array.
+- **Character contract:** This solution compares UTF-16 `char` units. For code-point subsequences, convert with `s.codePoints().toArray()` and account for those extra arrays.
 
 LCS modeling also appears in edit distance, deletions needed to equalize strings, and sequence alignment. The transition differs, but the index-pair state is shared.
 
@@ -5816,18 +6278,20 @@ LCS modeling also appears in edit distance, deletions needed to equalize strings
 
 Define `dp[i]` as the LIS length ending exactly at index `i`:
 
-```cpp
-int lisLengthQuadratic(const std::vector<int>& nums) {
-    if (nums.empty()) return 0;
-    std::vector<int> dp(nums.size(), 1);
-    for (int i = 0; i < static_cast<int>(nums.size()); ++i) {
-        for (int j = 0; j < i; ++j) {
+```java
+static int lisLengthQuadratic(int[] nums) {
+    int[] dp = new int[nums.length];
+    Arrays.fill(dp, 1);
+    int best = 0;
+    for (int i = 0; i < nums.length; i++) {
+        for (int j = 0; j < i; j++) {
             if (nums[j] < nums[i]) {
-                dp[i] = std::max(dp[i], dp[j] + 1);
+                dp[i] = Math.max(dp[i], dp[j] + 1);
             }
         }
+        best = Math.max(best, dp[i]);
     }
-    return *std::max_element(dp.begin(), dp.end());
+    return best;
 }
 ```
 
@@ -5838,18 +6302,23 @@ int lisLengthQuadratic(const std::vector<int>& nums) {
 
 The advanced `O(n log n)` method stores the smallest possible tail for each length and uses lower-bound binary search. It is excellent to know after the `O(n²)` state is understood, but the `tails` array is not itself necessarily an actual LIS.
 
-```cpp
-int lisLength(const std::vector<int>& nums) {
-    std::vector<int> tails;
+```java
+static int lisLength(int[] nums) {
+    int[] tails = new int[nums.length];
+    int size = 0;
     for (int value : nums) {
-        auto position = std::lower_bound(tails.begin(), tails.end(), value);
-        if (position == tails.end()) {
-            tails.push_back(value);
-        } else {
-            *position = value;
+        int left = 0;
+        int right = size;
+        // First tail >= value: equal values must not extend a strict LIS.
+        while (left < right) {
+            int middle = left + (right - left) / 2;
+            if (tails[middle] < value) left = middle + 1;
+            else right = middle;
         }
+        tails[left] = value;
+        if (left == size) size++;
     }
-    return static_cast<int>(tails.size());
+    return size;
 }
 ```
 
@@ -5868,8 +6337,6 @@ int lisLength(const std::vector<int>& nums) {
 ### 18.12 State Compression and Extra State
 
 **Priority:** 🟠 Tier 2 — Very Important
-
-**Why this priority level was assigned:** Adding only future-relevant state and safely removing dead dimensions are common tests of whether the recurrence is understood.
 
 Sometimes the current index is not sufficient. Add the smallest state that distinguishes legal futures.
 
@@ -5892,8 +6359,6 @@ Every added dimension multiplies the state space. If state is `(i, j, k)` with r
 
 **Priority:** 🟡 Tier 3 — Nice to Know
 
-**Why this priority level was assigned:** Interval DP is a recognizable pattern in difficult interviews, but it appears far less often than linear, grid, knapsack, or subsequence DP. Learn the state shape and evaluation order; do not make it an early priority.
-
 #### Intuition and recognition
 
 Define a state for a contiguous interval, usually `dp[left][right]`. A transition then:
@@ -5913,30 +6378,23 @@ Shorter intervals must usually be solved before longer intervals. The common com
 
 #### Example: choose the final action in each interval
 
-In the “Burst Balloons” model, choosing the first balloon is awkward because its neighbors change. Choose the **last** balloon burst inside an interval; then its two outside neighbors are fixed and the left/right subintervals are independent.
+Contract: nonnegative balloon values, practical `n` for an `O(n²)` table, and all products/totals fit in `long`. Empty input returns zero. In the “Burst Balloons” model, choosing the first balloon is awkward because its neighbors change. Choose the **last** balloon burst inside an interval; then its two outside neighbors are fixed and the left/right subintervals are independent.
 
-```cpp
-long long maxCoins(const std::vector<int>& nums) {
-    std::vector<long long> values;
-    values.reserve(nums.size() + 2);
-    values.push_back(1);
-    values.insert(values.end(), nums.begin(), nums.end());
-    values.push_back(1);
-
-    const int n = static_cast<int>(values.size());
+```java
+static long maxCoins(int[] nums) {
+    int n = nums.length + 2;
+    long[] values = new long[n];
+    values[0] = values[n - 1] = 1;
+    for (int i = 0; i < nums.length; i++) values[i + 1] = nums[i];
     // dp[left][right] covers the open interval (left, right).
-    std::vector<std::vector<long long>> dp(
-        n, std::vector<long long>(n, 0));
-
-    for (int width = 2; width < n; ++width) {
-        for (int left = 0; left + width < n; ++left) {
-            const int right = left + width;
-            for (int last = left + 1; last < right; ++last) {
-                const long long gain =
-                    values[left] * values[last] * values[right];
-                dp[left][right] = std::max(
-                    dp[left][right],
-                    dp[left][last] + gain + dp[last][right]);
+    long[][] dp = new long[n][n];
+    for (int width = 2; width < n; width++) {
+        for (int left = 0; left + width < n; left++) {
+            int right = left + width;
+            for (int last = left + 1; last < right; last++) {
+                long gain = values[left] * values[last] * values[right];
+                dp[left][right] = Math.max(dp[left][right],
+                        dp[left][last] + gain + dp[last][right]);
             }
         }
     }
@@ -5955,8 +6413,6 @@ Other representative interval states include longest palindromic subsequence (`O
 ### 18.14 DP on Trees
 
 **Priority:** 🟡 Tier 3 — Nice to Know
-
-**Why this priority level was assigned:** Simple tree DP elegantly handles parent-child choice conflicts, but it is much less common than ordinary tree DFS/BFS. It is best studied after postorder traversal and core DP are comfortable.
 
 #### Intuition and recognition
 
@@ -5977,39 +6433,40 @@ For a tree where directly connected nodes cannot both be selected, return two va
 - `skip`: best subtree value if this node is not selected.
 - `take`: best subtree value if this node is selected.
 
-```cpp
-long long maxNonAdjacentTreeSum(const TreeNode* root) {
-    std::function<std::pair<long long, long long>(const TreeNode*)> dfs =
-        [&](const TreeNode* node) -> std::pair<long long, long long> {
-        if (node == nullptr) return {0, 0};  // skip, take
+```java
+// Uses the TreeNode type from section 12: int val; TreeNode left, right.
+record RobState(long skip, long take) {}
+private static final RobState EMPTY_ROB_STATE = new RobState(0, 0);
 
-        const auto [left_skip, left_take] = dfs(node->left);
-        const auto [right_skip, right_take] = dfs(node->right);
-        const long long take = static_cast<long long>(node->val) +
-                               left_skip + right_skip;
-        const long long skip = std::max(left_skip, left_take) +
-                               std::max(right_skip, right_take);
-        return {skip, take};
-    };
+static long maxNonAdjacentTreeSum(TreeNode root) {
+    RobState result = treeRobState(root);
+    return Math.max(result.skip(), result.take());
+}
 
-    const auto [skip_root, take_root] = dfs(root);
-    return std::max(skip_root, take_root);
+private static RobState treeRobState(TreeNode node) {
+    if (node == null) return EMPTY_ROB_STATE;
+    RobState left = treeRobState(node.left);
+    RobState right = treeRobState(node.right);
+    long take = node.val + left.skip() + right.skip();
+    long skip = Math.max(left.skip(), left.take())
+            + Math.max(right.skip(), right.take());
+    return new RobState(skip, take);
 }
 ```
 
 - **Time:** `O(n)` because each node is processed once.
-- **Space:** `O(h)` recursion stack, where `h` is tree height; worst-case `O(n)`.
+- **Auxiliary space:** `O(h)` live recursion and subtree summaries, worst-case `O(n)` on a skewed tree; `O(n)` records are allocated across the traversal. Iterative postorder avoids call-stack overflow but needs its own state storage.
 - **Correctness intuition:** Taking a node forces every child into its skip state. Skipping it lets each child independently choose its better state.
 - **Edge cases:** Empty tree, negative values (is choosing nothing allowed?), and a skewed tree that can overflow the call stack.
-- **Alternative:** An `unordered_map` keyed by `(node pointer, parent_taken)` works but adds hashing/state overhead and usually communicates the postorder idea less cleanly.
+- **Alternative:** A map keyed by a node reference plus the parent-selection flag can memoize a different formulation, but adds hashing/state overhead. The postorder summary visits each node once and needs no map.
+
+> 🌐 **Java Backend Relevance — MEDIUM:** `RobState` is an immutable record whose named accessors make a small result easier to read. A short `long[]` is possible in an interview; records help when result fields have distinct meanings. Immutability of a record is shallow when a component itself is mutable.
 
 More advanced forms—rerooting, many states per node, or DP on arbitrary tree decompositions—are **⚪ Tier 4 — Low Priority / Specialized** for general SWE interviews.
 
 ### 18.15 Value, Feasibility, Counting, and Reconstruction
 
 **Priority:** 🟠 Tier 2 — Very Important
-
-**Why this priority level was assigned:** Changing the objective changes identities and aggregation even when the state graph is similar; this is a common source of interview bugs.
 
 The same state graph may support different questions, but the identity values and combining operation change.
 
@@ -6026,7 +6483,7 @@ The same state graph may support different questions, but the identity values an
 
 If an interviewer asks which choices form the optimum, keep either:
 
-- a `parent[state]` or `choice[state]` pointer while filling the table; or
+- a `parent[state]` index/reference or `choice[state]` value while filling the table; or
 - the full value table and walk backward by checking which transition could have produced the current value.
 
 Reconstruction usually adds `O(number of states)` storage even when the value-only DP could be compressed. Say this trade-off explicitly.
@@ -6036,56 +6493,26 @@ Reconstruction usually adds `O(number of states)` storage even when the value-on
 - Determine whether order matters: `[1, 2]` versus `[2, 1]` may be one combination or two sequences.
 - Determine whether duplicates are distinct items.
 - If the problem requests modulo arithmetic, apply the modulus during transitions.
-- In fixed-width languages, counts may overflow even when the final input size looks modest.
+- Java `int` and `long` silently wrap on overflow. Use `long` when its bound is sufficient, apply the requested modulus during transitions, or use `java.math.BigInteger` when an exact unbounded count is required. Widen operands before multiplication; a later cast cannot repair an overflowed `int` expression.
 
 ### 18.16 Representative DP Problems
 
-These are representative **problem types**, not a checklist to memorize. Equivalent problems from LeetCode, NeetCode, HackerRank, CodeSignal, books, or mock interviews teach the same patterns.
+Start with **10–12 distinct core problems**, expanding only when a mistake or transfer gap justifies another. A ladder is a progression, not a requirement to complete every row at once. A cold revisit is the same problem solved without hints after a delay; it does not count as a new problem. See [How to Learn DSA Effectively](#25-how-to-learn-dsa-effectively) for the shared review schedule.
 
-#### Beginner
+| Family | Mechanics | Canonical | Variation | Mixed pattern | Cold revisit |
+|---|---|---|---|---|---|
+| Linear / take-skip | Climbing Stairs | ⭐ **Canonical Interview Problem:** House Robber | House Robber II: handle the circular boundary | Delete and Earn: group values, then take/skip | House Robber; derive all stages and justify live dependencies |
+| Grid | Unique Paths | ⭐ **Canonical Interview Problem:** Minimum Path Sum | Unique Paths II: reset blocked cells | Longest Increasing Path in a Matrix (later): grid DFS plus memoization | Minimum Path Sum with one row, one column, and negative cells |
+| 0/1 subset | Small boolean Subset Sum | ⭐ **Canonical Interview Problem:** Partition Equal Subset Sum | Target Sum: count assignments and inspect zero/parity cases | Last Stone Weight II: reduce minimization to a partition | Partition; explain descending capacity without a memorized rule |
+| Unlimited reuse | Hand-trace minimum coins for `[1, 3, 4]`, amount `6` | ⭐ **Canonical Interview Problem:** Coin Change | Coin Change II (Tier 3): unordered counts | Word Break: prefix DP plus dictionary membership | Coin Change with impossible target and no coin of value 1 |
+| Two sequences | LCS table for `"ab"` and `"ac"` | ⭐ **Canonical Interview Problem:** Longest Common Subsequence | Edit Distance: operation-based transitions | Delete Operation for Two Strings: relate deletions to LCS | LCS; reconstruct row dependencies before compression |
+| Increasing subsequence | Quadratic LIS on a tiny array | ⭐ **Canonical Interview Problem:** Longest Increasing Subsequence | Non-decreasing variant: change the bound condition | Russian Doll Envelopes (later): sorting/tie policy plus LIS | LIS; explain why `tails` is sufficient and is not the actual sequence |
 
-| Problem type / well-known example | Pattern it teaches | Why it is worth solving | What to learn |
-|---|---|---|---|
-| Climbing Stairs | Count ways in 1D | Clean recurrence with tiny state | State meaning, base cases, Fibonacci-like compression |
-| Min Cost Climbing Stairs | Minimum-cost 1D DP | Separates cost to reach a state from cost of leaving it | Terminal-state handling and `min` aggregation |
-| House Robber | Take/skip | Canonical local-conflict recurrence | Derive recursion, memoize, tabulate, compress |
-| Unique Paths | Grid counting | Makes dependency order visible | Empty-border initialization and row compression |
-| Maximum Subarray | Best ending at index | Shows that not every DP needs a table | Decide between extending and restarting; compare with prefix-sum thinking |
+**Java cost check for Word Break:** A naive scan of all splits with `dictionary.contains(s.substring(j, i))` can take `O(n³)` time: `O(n²)` candidates each copy/hash up to `O(n)` UTF-16 units. Limit candidate lengths to dictionary word lengths, or compare words against positions without creating substrings; explain the resulting cost for the chosen implementation.
 
-#### Core Interview
+**Optional expansion after the core:** Decode Ways (zero/boundary counting), Stock with Cooldown (small state machine), Distinct Subsequences (counting and overflow). For Tier 3 interval/tree DP, do Longest Palindromic Subsequence then Burst Balloons, or House Robber III after tree postorder. Regular Expression Matching remains an optional advanced exercise.
 
-| Problem type / well-known example | Pattern it teaches | Why it is worth solving | What to learn |
-|---|---|---|---|
-| Coin Change (minimum coins) | Unbounded minimum DP | Tests impossible-state initialization | Distinguish `+∞` from zero and verify target feasibility |
-| Coin Change II | Count unordered combinations | Same ingredients, different loop meaning | Why loop order affects counting |
-| Partition Equal Subset Sum | 0/1 subset feasibility | Turns a partition question into target sum | Descending updates and pseudo-polynomial limits |
-| Word Break | Prefix segmentation | A 1D state with variable-length predecessors | State for prefix `s[0..i)`, `unordered_set` lookup, and practical pruning by word length |
-| Decode Ways | Conditional count DP | Base cases and validity dominate the problem | Handle zero and two-character boundaries precisely |
-| Longest Increasing Subsequence | Best ending plus optimized tails | Offers a standard optimization follow-up | `O(n²)` DP first; then explain `O(n log n)` tails invariant |
-| Longest Common Subsequence | Prefix pair | Foundational two-sequence recurrence | Empty-prefix row/column and match/mismatch cases |
-| Edit Distance | Prefix pair with three operations | Forces precise transition semantics | Insert/delete/replace as movement in the table |
-| Target Sum | Counting assignments | Shows transformation and alternative state choices | Offset sums or reduction to subset counting; inspect negatives and parity |
-| Stock with Cooldown | Small state machine DP | Demonstrates extra state without giant tables | Define holding/sold/rest states and legal transitions |
-
-#### Advanced
-
-| Problem type / well-known example | Pattern it teaches | Why it is worth solving after the core | What to learn |
-|---|---|---|---|
-| Distinct Subsequences | Two-sequence counting | Tests counting bases and overflow | Match creates use/skip branches |
-| Longest Palindromic Subsequence | Endpoint interval DP | Introduces interval length order gently | Endpoint equality and inner interval dependencies |
-| Burst Balloons | Interval split / choose last | A strong test of reframing decisions | Fixed boundaries, `O(n³)` split recurrence |
-| House Robber III | Tree include/exclude | Connects DFS summaries to DP state | Return multiple subtree states |
-| Regular Expression Matching | Boolean two-index DP | Many edge cases and transitions | Only attempt after core DP; define wildcard semantics rigorously |
-
-#### A productive way to practice each problem
-
-1. State the brute force and estimate its complexity.
-2. Draw a small recursion tree and circle repeated argument tuples.
-3. Write the state sentence and recurrence without code.
-4. Implement memoization.
-5. Convert to tabulation only after the recursive version is understood.
-6. Explain evaluation order and complexity.
-7. Re-solve later from a blank editor; change a constraint and predict how the state changes.
+For each attempted problem, derive the state before coding, trace one tiny state graph, justify transitions and order, and record the rule behind any mistake. On a revisit, remove the topic label and explain why a competing greedy, window, or graph method does or does not apply.
 
 ### 18.17 Common DP Mistakes and Prevention
 
@@ -6164,7 +6591,7 @@ I have mastered the interview-relevant DP core when I can:
 ### Topic Overview
 
 - **What it is:** A trie (prefix tree) stores strings character by character. Strings with the same prefix share the same path from the root.
-- **Why it exists:** An `unordered_set<string>` answers “is this complete word present?” well, but does not naturally answer “does any stored word begin with this prefix?” A trie supports both queries incrementally.
+- **Why it exists:** A `HashSet<String>` answers “is this complete word present?” well, but does not naturally answer “does any stored word begin with this prefix?” A trie supports both queries incrementally.
 - **Why it matters in interviews:** Tries appear in autocomplete, dictionary, wildcard, prefix-replacement, and board word-search problems. They also test whether a candidate can combine a data structure with DFS/backtracking.
 - **Interview priority:** **🟡 Tier 3 — Nice to Know.** Tries are useful and recognizable but much less frequent than hashing, trees, graphs, and core sequence patterns. Implement the standard form and understand trie-guided pruning; do not overinvest in compressed or persistent variants.
 - **Prerequisites:** Hash maps or fixed arrays, strings, tree traversal, recursion, and backtracking for board search.
@@ -6173,9 +6600,11 @@ I have mastered the interview-relevant DP core when I can:
 - **How to recognize it:** Many strings are queried by prefix, searches proceed character-by-character, or a brute-force search repeats the same prefix checks across a large dictionary.
 - **How deeply to understand it:** Implement insert, exact search, and prefix search; explain child-storage trade-offs; augment nodes with useful metadata; and combine a trie with backtracking for multiword search.
 
+**Study contract:** Implement the three basic operations from memory after 3–4 representative problems. Understand prefix pruning; look up deletion and specialized trie variants. The following snippets use non-null inputs and UTF-16 units unless a narrower alphabet is stated.
+
 ### Why This Priority Was Assigned
 
-An `unordered_set<string>` is simpler for exact-word membership, and a sorted `vector<string>` plus binary search can answer some offline prefix queries. A trie earns its space cost only when prefixes are first-class operations or when shared-prefix pruning saves repeated work. This narrower applicability makes it Tier 3 for general SWE interviews.
+A `HashSet<String>` is simpler for exact-word membership, and a sorted `String[]` plus binary search can answer some offline prefix queries. A trie earns its space cost only when prefixes are first-class operations or when shared-prefix pruning saves repeated work. This narrower applicability makes it Tier 3 for general SWE interviews.
 
 ### Focus First
 
@@ -6199,8 +6628,6 @@ An `unordered_set<string>` is simpler for exact-word membership, and a sorted `v
 ### 19.1 Core Intuition and Invariant
 
 **Priority:** 🟡 Tier 3 — Nice to Know
-
-**Why this priority level was assigned:** Shared-prefix paths and terminal markers are the essential trie model, though tries are narrower than core hash/tree patterns.
 
 Each root-to-node path spells a prefix. A node can be both:
 
@@ -6226,56 +6653,49 @@ The central invariant is:
 
 **Priority:** 🟡 Tier 3 — Nice to Know
 
-**Why this priority level was assigned:** A basic implementation is worth reconstructing for prefix questions, but sophisticated variants have low general-interview return.
+```java
+static final class TrieNode {
+    final Map<Character, TrieNode> children = new HashMap<>();
+    boolean isWord;
+    String word; // Optional terminal payload, used only by board search below.
+}
 
-```cpp
-struct TrieNode {
-    std::unordered_map<char, std::unique_ptr<TrieNode>> children;
-    bool is_word = false;
-    std::optional<std::string> word;  // Optional terminal payload.
-};
+static final class Trie {
+    private final TrieNode root = new TrieNode();
 
-class Trie {
-    TrieNode root_;
-
-    const TrieNode* findNode(const std::string& text) const {
-        const TrieNode* node = &root_;
-        for (char ch : text) {
-            const auto found = node->children.find(ch);
-            if (found == node->children.end()) return nullptr;
-            node = found->second.get();
+    private TrieNode findNode(String text) {
+        TrieNode node = root;
+        for (int i = 0; i < text.length(); i++) {
+            node = node.children.get(text.charAt(i));
+            if (node == null) return null;
         }
         return node;
     }
 
-public:
-    void insert(const std::string& word) {
-        TrieNode* node = &root_;
-        for (char ch : word) {
-            auto& child = node->children[ch];
-            if (!child) child = std::make_unique<TrieNode>();
-            node = child.get();
+    void insert(String word) {
+        TrieNode node = root;
+        for (int i = 0; i < word.length(); i++) {
+            char ch = word.charAt(i);
+            node = node.children.computeIfAbsent(ch, key -> new TrieNode());
         }
-        node->is_word = true;
+        node.isWord = true;
     }
 
-    bool search(const std::string& word) const {
-        const TrieNode* node = findNode(word);
-        return node != nullptr && node->is_word;
+    boolean search(String word) {
+        TrieNode node = findNode(word);
+        return node != null && node.isWord;
     }
 
-    bool startsWith(const std::string& prefix) const {
-        return findNode(prefix) != nullptr;
+    boolean startsWith(String prefix) {
+        return findNode(prefix) != null;
     }
-
-    const TrieNode& root() const { return root_; }
-};
+}
 ```
 
 #### What changes from problem to problem
 
 - The alphabet and child representation.
-- Terminal metadata: `is_word`, count, index, score, or stored full word.
+- Terminal metadata: `isWord`, count, index, score, or stored full word.
 - Whether duplicates increment a frequency.
 - Whether search allows wildcards, substitutions, or approximate matches.
 - Whether deletion and cleanup are required.
@@ -6293,34 +6713,36 @@ Let `L` be the key length and `S` the total number of characters inserted.
 
 Character hash-map operations are expected `O(1)`. Fixed-size child arrays also give `O(1)` indexing, but the constant memory cost is paid at every node.
 
+The table uses nonempty-key shorthand. An empty-key operation is `O(1)`; building from `W` words takes `O(S + W)` time if empty words are allowed, with the root taking constant space even when `S = 0`.
+
 #### Child-storage trade-offs
 
 | Representation | Prefer when | Advantages | Costs |
 |---|---|---|---|
-| `unordered_map` | Alphabet is large or nodes are sparse | Simple and memory proportional to actual children | Hash/allocation overhead; expected rather than strict constant lookup |
-| Fixed array of size 26 | Alphabet is known, small, and dense | Fast direct indexing and predictable behavior | Often wastes many child slots |
-| Sorted `vector<pair<char, child>>` | Nodes have very few children and memory matters | Compact | Search may be linear or require binary search |
+| `HashMap<Character, TrieNode>` | Alphabet is large or nodes are sparse | Stores only actual edges | Per-node map/entry overhead and boxing; expected lookup |
+| `TrieNode[26]` | Lowercase English alphabet is guaranteed | Direct `children[ch - 'a']` indexing; no character boxing | Pays for 26 reference slots at every node |
+| Sorted edge array/list | Nodes have very few children and memory matters | Can reduce per-edge overhead | Insertion shifts elements; search scans or uses binary search |
 
-For interview code, `unordered_map<char, unique_ptr<TrieNode>>` children are usually the clearest unless the prompt fixes lowercase English letters and emphasizes the lower constant factor of an `array<unique_ptr<TrieNode>, 26>`.
+Use `TrieNode[26]` when the prompt guarantees lowercase English letters; the map implementation above supports arbitrary UTF-16 units with the same prefix invariant. Java creates and garbage-collects nodes automatically; `get` returns a reference or `null`. `computeIfAbsent` installs one child for a missing key.
+
+> 🌐 **Java Backend Relevance — HIGH:** A map stores references to the same mutable node objects. A `final` map field prevents reassignment of the field; it does not freeze the map or its nodes. This distinction matters in shared caches and mutable object graphs.
 
 ### 19.3 Prefix Search, Counts, and Deletion
 
 **Priority:** 🟡 Tier 3 — Nice to Know
 
-**Why this priority level was assigned:** Prefix queries and small node augmentations are useful standard extensions; deletion is secondary.
-
 #### Prefix search
 
-`startsWith(prefix)` succeeds as soon as every prefix character is consumed; it does not require `is_word` at the final node. Exact search does.
+`startsWith(prefix)` succeeds as soon as every prefix character is consumed; it does not require `isWord` at the final node. Exact search does.
 
 To list completions, first locate the prefix node, then DFS below it. If there may be many results, output size dominates runtime; returning `k` characters of results cannot be faster than `Ω(k)`.
 
 #### Useful node augmentations
 
-- `pass_count`: how many inserted words pass through the node.
-- `end_count`: how many copies terminate at the node.
+- `passCount`: how many inserted words pass through the node.
+- `endCount`: how many copies terminate at the node.
 - `word`: store the full word at terminal nodes for easy board-search output.
-- `top_suggestions`: cached ranked completions for an autocomplete system.
+- `topSuggestions`: cached ranked completions for an autocomplete system.
 
 Augmentation improves a particular query but adds update and memory costs. Store only metadata the problem requests.
 
@@ -6338,120 +6760,103 @@ Simply deleting every node on the path would corrupt shared prefixes such as del
 
 **Priority:** 🟡 Tier 3 — Nice to Know
 
-**Why this priority level was assigned:** Wildcards test trie-guided branching but appear less often than exact and prefix search.
-
 If `.` matches any one character, a normal character follows one child while `.` branches over every child.
 
-```cpp
-bool wildcardSearch(const TrieNode& root, const std::string& pattern) {
-    std::function<bool(const TrieNode*, std::size_t)> dfs =
-        [&](const TrieNode* node, std::size_t index) {
-        if (index == pattern.size()) return node->is_word;
+This helper belongs alongside the trie implementation. A dictionary API can call `wildcardSearch(root, pattern)` internally; keep the mutable root private rather than exposing it to callers.
 
-        const char ch = pattern[index];
-        if (ch != '.') {
-            const auto found = node->children.find(ch);
-            return found != node->children.end() &&
-                   dfs(found->second.get(), index + 1);
-        }
+```java
+// Uses TrieNode from section 19.2; call with the dictionary's root node.
+static boolean wildcardSearch(TrieNode root, String pattern) {
+    return wildcardFrom(root, pattern, 0);
+}
 
-        for (const auto& [next_char, child] : node->children) {
-            (void)next_char;
-            if (dfs(child.get(), index + 1)) return true;
-        }
-        return false;
-    };
-
-    return dfs(&root, 0);
+private static boolean wildcardFrom(TrieNode node, String pattern, int index) {
+    if (index == pattern.length()) return node.isWord;
+    char ch = pattern.charAt(index);
+    if (ch != '.') {
+        TrieNode child = node.children.get(ch);
+        return child != null && wildcardFrom(child, pattern, index + 1);
+    }
+    for (TrieNode child : node.children.values()) {
+        if (wildcardFrom(child, pattern, index + 1)) return true;
+    }
+    return false;
 }
 ```
 
-- **Typical time:** `O(L)` without wildcards.
+- **Expected time:** `O(L)` without wildcards for hash-map children.
 - **Worst-case time:** Exponential in the number of wildcard positions, bounded by nodes reachable at the required depths.
 - **Space:** `O(L)` recursion depth.
-- **Common mistake:** Returning true for a prefix after the pattern is consumed without checking `is_word`.
-- **Alternative:** A regular expression engine or finite automaton may be appropriate in production, but a trie DFS is the expected interview model for a small dictionary API.
+- **Common mistake:** Returning true for a prefix after the pattern is consumed without checking `isWord`.
+- **Contract:** `.` is the wildcard token and cannot mean a literal period here. Empty patterns succeed only for a stored empty word. Depth `L` can still overflow the Java call stack for unusually long keys.
 
 ### 19.5 Trie + Backtracking for Word Search
 
 **Priority:** 🟡 Tier 3 — Nice to Know
 
-**Why this priority level was assigned:** This is the most valuable combined trie pattern, but it belongs after core grid backtracking and hashing.
-
 #### Why one trie beats one search per word
 
 If the task asks whether one word exists in a board, ordinary DFS/backtracking is enough. If it asks for **all dictionary words**, searching once per word repeats exploration for shared prefixes. A trie lets one board traversal pursue all words with the current prefix and stop immediately when no dictionary word can continue.
 
-```cpp
-std::vector<std::string> findWords(
-    std::vector<std::vector<char>>& board,
-    const std::vector<std::string>& words) {
-    if (board.empty() || board.front().empty() || words.empty()) return {};
-
-    TrieNode root;
-    for (const std::string& word : words) {
-        TrieNode* node = &root;
-        for (char ch : word) {
-            auto& child = node->children[ch];
-            if (!child) child = std::make_unique<TrieNode>();
-            node = child.get();
-        }
-        node->is_word = true;
-        node->word = word;
+```java
+// Uses TrieNode from section 19.2. Contract: rectangular lowercase-English
+// board, nonempty lowercase-English dictionary words; no cell reuse in a path.
+static List<String> findWords(char[][] board, String[] words) {
+    List<String> found = new ArrayList<>();
+    if (board.length == 0 || board[0].length == 0 || words.length == 0) {
+        return found;
     }
-
-    const int rows = static_cast<int>(board.size());
-    const int cols = static_cast<int>(board.front().size());
-    const std::array<std::pair<int, int>, 4> directions{{
-        {1, 0}, {-1, 0}, {0, 1}, {0, -1}
-    }};
-    std::vector<std::string> found_words;
-
-    std::function<void(int, int, TrieNode*)> dfs =
-        [&](int row, int col, TrieNode* parent) {
-        const char ch = board[row][col];
-        const auto child_it = parent->children.find(ch);
-        if (child_it == parent->children.end()) return;
-        TrieNode* node = child_it->second.get();
-
-        if (node->word.has_value()) {
-            found_words.push_back(*node->word);
-            node->word.reset();       // Suppress duplicate output.
-            node->is_word = false;
+    TrieNode root = new TrieNode();
+    for (String word : words) {
+        TrieNode node = root;
+        for (int i = 0; i < word.length(); i++) {
+            node = node.children.computeIfAbsent(word.charAt(i), key -> new TrieNode());
         }
-
-        board[row][col] = '#';        // Temporary, path-local mutation.
-        for (const auto& [dr, dc] : directions) {
-            const int next_row = row + dr;
-            const int next_col = col + dc;
-            if (0 <= next_row && next_row < rows &&
-                0 <= next_col && next_col < cols &&
-                board[next_row][next_col] != '#') {
-                dfs(next_row, next_col, node);
-            }
-        }
-        board[row][col] = ch;
-
-        // Optional pruning; use only when this trie is disposable.
-        if (node->children.empty() && !node->is_word) {
-            parent->children.erase(ch);
-        }
-    };
-
-    for (int row = 0; row < rows; ++row) {
-        for (int col = 0; col < cols; ++col) {
-            dfs(row, col, &root);
+        node.isWord = true;
+        node.word = word; // Copies the reference; String is immutable.
+    }
+    int[] rowDelta = {1, -1, 0, 0};
+    int[] colDelta = {0, 0, 1, -1};
+    for (int row = 0; row < board.length; row++) {
+        for (int col = 0; col < board[0].length; col++) {
+            findWordsFrom(board, row, col, root, rowDelta, colDelta, found);
         }
     }
-    return found_words;
+    return found;
+}
+
+private static void findWordsFrom(char[][] board, int row, int col,
+        TrieNode parent, int[] rowDelta, int[] colDelta, List<String> found) {
+    char ch = board[row][col];
+    TrieNode node = parent.children.get(ch);
+    if (node == null) return;
+    if (node.word != null) {
+        found.add(node.word);
+        node.word = null; // Suppress duplicate output in this disposable trie.
+        node.isWord = false;
+    }
+    board[row][col] = '#'; // Marker is outside the declared alphabet.
+    for (int direction = 0; direction < 4; direction++) {
+        int nextRow = row + rowDelta[direction];
+        int nextCol = col + colDelta[direction];
+        if (0 <= nextRow && nextRow < board.length
+                && 0 <= nextCol && nextCol < board[0].length
+                && board[nextRow][nextCol] != '#') {
+            findWordsFrom(board, nextRow, nextCol, node, rowDelta, colDelta, found);
+        }
+    }
+    board[row][col] = ch;
+    if (node.children.isEmpty() && !node.isWord) {
+        parent.children.remove(ch);
+    }
 }
 ```
 
 #### Complexity and trade-offs
 
-- Building the trie takes `O(S)` time and space for `S` total dictionary characters.
-- Let `B = rows × cols` and `L` be the longest word. A loose board-search bound is `O(B × 4 × 3^(L-1))`: four first moves and at most three thereafter because the current path cannot immediately reuse the prior cell. Trie prefix failures and pruning often reduce actual work substantially.
-- Recursion path space is `O(L)`; temporarily modifying the board avoids a separate `vector<vector<bool>> visited`.
+- Building the trie takes expected `O(S)` time and `O(S)` node/edge space for `S` total dictionary UTF-16 units. Terminal payloads reference the original immutable strings rather than copying them.
+- Let `B = rows × cols`, `L` be the longest word, and `D = min(L, B)`. A loose expected board-search bound is `O(B × 4 × 3^(D-1))` for nonempty words, with constant expected child lookup: four first directions and at most three onward directions because the path cannot immediately reuse the prior cell. Prefix failures and pruning often reduce actual work. Include `O(S)` construction and `O(K)` output references for `K` distinct found words.
+- Recursion path space is `O(D)`; temporarily modifying the board avoids a separate `boolean[][] visited`. The board is restored on normal return. If mutation is forbidden, allocate visited state; if exceptional exits must restore shared input, use `try/finally` around the temporary change.
 - Mutating the trie to suppress duplicates/prune dead branches is efficient only if that trie is disposable. Do not do it if later queries must reuse the original dictionary.
 
 #### Common mistakes
@@ -6467,12 +6872,10 @@ std::vector<std::string> findWords(
 
 **Priority:** 🟡 Tier 3 — Nice to Know
 
-**Why this priority level was assigned:** Knowing when an `unordered_set` or sorted `vector` is simpler prevents paying the trie's substantial memory cost unnecessarily.
-
 | Need | Usually prefer | Why |
 |---|---|---|
-| Exact membership only | `unordered_set<string>` | Simpler, compact, expected `O(L)` hashing/lookup |
-| Offline prefix range in sorted words | Sorted `vector<string>` + binary search | Avoids node overhead; contiguous lexical range |
+| Exact membership only | `HashSet<String>` | Simpler, compact, expected `O(L)` hashing/lookup |
+| Offline prefix range in sorted words | Sorted `String[]` + binary search | Avoids node overhead; contiguous lexical range |
 | One word in a board | Plain backtracking | No benefit from shared dictionary prefixes |
 | Many words or repeated prefix queries | Trie | Shares prefix work |
 | Many patterns searched inside one long text | KMP/Aho–Corasick depending count | Search direction and workload differ |
@@ -6482,28 +6885,17 @@ A trie’s asymptotic lookup is `O(L)`, just like hashing a length-`L` string. I
 
 ### 19.7 Representative Trie Problems
 
-#### Beginner
+Budget **3–4 distinct problems** after hashing and backtracking; one cold revisit is more useful than several near-duplicate dictionary exercises.
 
-| Problem type / well-known example | Pattern it teaches | Why solve it | Lesson to retain |
-|---|---|---|---|
-| Implement Trie / Prefix Tree | Core operations | Establishes the path invariant | Terminal marker versus prefix node |
-| Longest Common Prefix via trie or direct scan | Prefix traversal | Encourages comparison with simpler alternatives | A trie is valid but often unnecessary for one batch |
+| Step | Problem | Lesson to retain |
+|---|---|---|
+| Mechanics | Insert `app` and `apple`; test exact, prefix, duplicate, and empty-word queries | Terminal marker differs from prefix existence |
+| Canonical | ⭐ **Canonical Interview Problem:** Implement Trie / Prefix Tree | Reconstruct insert/search/startsWith from the path invariant |
+| Variation | Design Add and Search Words | A literal follows one edge; `.` explores children and still requires a terminal marker |
+| Mixed pattern | ⭐ **Canonical Interview Problem:** Word Search II | Combine trie pruning with grid backtracking, restoration, and duplicate suppression |
+| Cold revisit | Implement Trie, then re-explain Word Search II after a delay | Compare the trie with exact hashing and a separate DFS per word |
 
-#### Core Interview
-
-| Problem type / well-known example | Pattern it teaches | Why solve it | Lesson to retain |
-|---|---|---|---|
-| Replace Words | Shortest stored prefix | Simple trie query embedded in text processing | Stop at the first terminal prefix |
-| Design Add and Search Words | Wildcard branching | Combines trie nodes with DFS | Fixed character follows one edge; wildcard explores all |
-| Word Search II | Trie-guided backtracking | Canonical multi-pattern pruning problem | Share prefixes, restore board, deduplicate output |
-
-#### Advanced
-
-| Problem type / well-known example | Pattern it teaches | Why solve it later | Lesson to retain |
-|---|---|---|---|
-| Autocomplete system | Metadata and ranking | Adds system-design trade-offs | Cache versus update cost and result-size complexity |
-| Maximum XOR pair using a binary trie | Bitwise trie | Specialized but elegant | Prefer the opposite bit greedily at each position |
-| Stream of characters matching suffix words | Reverse trie / automaton thinking | Changes query direction | Data structure orientation should match query flow |
+Replace Words is a useful extra query variation if shortest-prefix lookup is still unfamiliar. Autocomplete ranking, binary XOR tries, and reversed stream queries are optional target-specific extensions. For Longest Common Prefix over one batch, first explain why a direct scan is usually enough.
 
 ### 19.8 Trie Edge Cases and Interview Tips
 
@@ -6513,7 +6905,7 @@ A trie’s asymptotic lookup is `O(L)`, just like hashing a length-`L` string. I
 - Unicode “character” handling and normalization are production concerns; clarify them rather than silently assuming ASCII.
 - Explain memory as total created nodes and child-container overhead, not merely number of words.
 - For a board search, state whether diagonals are allowed and whether cells can be reused.
-- Start with `unordered_map` children for readable interview code; optimize representation only when constraints justify it.
+- Match child storage to the alphabet: a fixed array for guaranteed lowercase English, a map for a sparse or broad alphabet. `Character` keys model UTF-16 code units; use `Integer` keys and code-point iteration if complete Unicode code points are required.
 
 ### 19.9 Trie Mastery Checklist
 
@@ -6522,13 +6914,14 @@ I have mastered interview-level tries when I can:
 - [ ] Explain why a terminal flag is separate from the existence of children.
 - [ ] Implement insert, exact search, and prefix search from scratch.
 - [ ] Analyze each operation as `O(L)` and total node space as `O(S)` worst case.
-- [ ] Compare a trie with an `unordered_set` and sorted `vector` for prefix workloads.
-- [ ] Choose `unordered_map` versus fixed-array children and explain the memory trade-off.
+- [ ] Compare a trie with a `HashSet<String>` and sorted `String[]` for prefix workloads.
+- [ ] Choose `HashMap` versus fixed-array children and explain the memory trade-off.
 - [ ] Add wildcard search using DFS without accepting a prefix as a complete word.
 - [ ] Combine a trie with board backtracking and restore visited cells correctly.
 - [ ] Explain how prefix pruning helps and why its worst case can still be exponential.
 - [ ] Avoid using a trie when exact membership or a single search has a simpler solution.
 
+<a id="20-specialized-advanced-topics"></a>
 ## 20. Specialized / Advanced Topics
 
 **Priority:** ⚪ Tier 4 — Low Priority / Specialized
@@ -6544,6 +6937,8 @@ I have mastered interview-level tries when I can:
 - **Common problem patterns:** Many interleaved updates and range queries; search a pattern inside a long text; detect string borders; choose subsets when `n ≤ 20`; find strongly connected regions; or reason about point orientation.
 - **How to recognize it:** Constraints explicitly rule out the simpler tool, the operation algebra matches a specialized structure, or the prompt names/strongly suggests the technique.
 - **How deeply to understand it:** First know what problem each technique solves, its complexity, and the simpler alternative. Implement only the Tier 3 techniques relevant to target companies; study Tier 4 implementations on demand.
+
+**Study contract:** Memorize purpose and headline complexity only for techniques relevant to your target. Understand the trigger and simpler alternative; look up implementations of Tier 4 techniques. Do not add them to the daily template recall set.
 
 ### Why This Priority Was Assigned
 
@@ -6589,8 +6984,6 @@ General SWE interviews overwhelmingly reward fluency in arrays, hashing, two poi
 
 **Priority:** ⚪ Tier 4 — Low Priority / Specialized
 
-**Why this priority level was assigned:** Static prefix sums cover the common case. Dynamic query structures become necessary only when many updates are interleaved with queries, a relatively uncommon general-interview workload.
-
 Start from the operation workload, not the fanciest structure.
 
 | Workload | Best first consideration | Build | Query | Update |
@@ -6599,70 +6992,62 @@ Start from the operation workload, not the fanciest structure.
 | Many offline range additions, final values only | Difference array | `O(n + q)` total | Final pass | `O(1)` per recorded update |
 | Point updates + prefix/range sums | Fenwick tree | `O(n)` or `O(n log n)` | `O(log n)` | `O(log n)` |
 | General associative range query + point updates | Segment tree | `O(n)` | `O(log n)` | `O(log n)` |
-| Range updates + range queries | Lazy segment tree | `O(n)` | `O(log n)` | `O(log n)` amortized per operation |
+| Range updates + range queries | Lazy segment tree | `O(n)` | `O(log n)` | `O(log n)` worst-case for standard lazy range-add/aggregate operations |
 
 #### Fenwick Tree (Binary Indexed Tree)
 
 **Priority:** ⚪ Tier 4 — Low Priority / Specialized
 
-**Why this priority level was assigned:** Fenwick trees are concise and useful for dynamic prefix aggregates, but ordinary interview problems much more often use static prefix sums or hashing.
-
 A Fenwick tree compactly stores partial aggregates. With one-based indexing, `i & -i` gives the size of the block represented at index `i`.
 
-```cpp
-class FenwickTree {
-    std::vector<long long> tree_;  // Internal indexing is one-based.
+```java
+static final class FenwickTree {
+    private final long[] tree; // Internal indexing is one-based.
 
-public:
-    explicit FenwickTree(int size) {
-        if (size < 0) throw std::invalid_argument("size must be nonnegative");
-        tree_.assign(static_cast<std::size_t>(size) + 1, 0);
+    FenwickTree(int size) {
+        if (size < 0 || size == Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Invalid size");
+        }
+        tree = new long[size + 1];
     }
 
-    int size() const { return static_cast<int>(tree_.size()) - 1; }
+    int size() {
+        return tree.length - 1;
+    }
 
-    void add(int index, long long delta) {
-        if (index < 0 || index >= size()) {
-            throw std::out_of_range("Fenwick index out of range");
-        }
-        for (int i = index + 1; i < static_cast<int>(tree_.size());
-             i += i & -i) {
-            tree_[i] += delta;
+    void add(int index, long delta) {
+        if (index < 0 || index >= size()) throw new IndexOutOfBoundsException();
+        // long protects the upward index step from signed-int overflow.
+        for (long i = (long) index + 1; i < tree.length; i += i & -i) {
+            tree[(int) i] += delta;
         }
     }
 
-    long long prefixSum(int index) const {
-        if (index < 0) return 0;
-        if (index >= size()) {
-            throw std::out_of_range("Fenwick index out of range");
-        }
-        long long total = 0;
-        for (int i = index + 1; i > 0; i -= i & -i) {
-            total += tree_[i];
-        }
+    long prefixSum(int index) {
+        if (index < -1 || index >= size()) throw new IndexOutOfBoundsException();
+        long total = 0;
+        for (int i = index + 1; i > 0; i -= i & -i) total += tree[i];
         return total;
     }
 
-    long long rangeSum(int left, int right) const {  // Inclusive [left, right].
+    long rangeSum(int left, int right) { // Inclusive [left, right].
         if (left < 0 || left > right || right >= size()) {
-            throw std::out_of_range("invalid Fenwick range");
+            throw new IndexOutOfBoundsException("Invalid range");
         }
         return prefixSum(right) - prefixSum(left - 1);
     }
-};
+}
 ```
 
 - **Time:** `O(log n)` for point update and prefix/range sum.
 - **Space:** `O(n)`.
 - **When to use:** Interleaved updates and cumulative/range-sum queries; also frequency tables for order-statistic-style counting after coordinate compression.
 - **Common mistakes:** Mixing zero- and one-based indices, calling `i += i & -i` at `i = 0`, and assuming every associative operation has the inverse needed to derive the interval `[left, right]` from two prefix queries.
-- **Trade-off:** Smaller and simpler than a segment tree for sums, but less flexible.
+- **Trade-off:** Smaller and simpler than a segment tree for sums, but less flexible. This constructor initializes an all-zero tree in `O(n)`; inserting `n` initial values through `add` costs `O(n log n)`. `prefixSum(-1)` is the empty prefix; sums and updates must fit in `long`.
 
 #### Segment Tree
 
 **Priority:** ⚪ Tier 4 — Low Priority / Specialized
-
-**Why this priority level was assigned:** Segment trees support broad dynamic range operations, but their implementation cost and low general-SWE frequency make deep study a poor early investment.
 
 A segment tree stores an aggregate for each interval in a binary decomposition of the array. Parent nodes combine child results using an associative operation such as sum, minimum, maximum, or greatest common divisor.
 
@@ -6685,13 +7070,9 @@ A segment tree stores an aggregate for each interval in a binary decomposition o
 
 **Priority:** 🟡 Tier 3 — Nice to Know
 
-**Why this priority level was assigned:** Linear pattern matching and rolling hashes occasionally appear as string-focused follow-ups, while most advanced indexes remain rare. Learn the ideas behind KMP and rolling hash, then stop unless the role is string/search heavy.
-
 #### KMP (Knuth–Morris–Pratt)
 
 **Priority:** 🟡 Tier 3 — Nice to Know
-
-**Why this priority level was assigned:** KMP is the standard deterministic linear-time exact-pattern matcher and teaches useful border/prefix reasoning. Exact substring search is not a dominant general interview topic, so it belongs after core patterns.
 
 ##### Intuition
 
@@ -6699,35 +7080,31 @@ When a mismatch occurs after matching part of the pattern, some suffix of what m
 
 `lps[i]` is the length of the longest **proper** prefix of `pattern[0..i+1)` that is also a suffix.
 
-```cpp
-int kmpFind(const std::string& text, const std::string& pattern) {
-    if (pattern.empty()) return 0;
-
-    std::vector<int> lps(pattern.size(), 0);
+```java
+static int kmpFind(String text, String pattern) {
+    if (pattern.isEmpty()) return 0;
+    int[] lps = new int[pattern.length()];
     int length = 0;
-    for (int i = 1; i < static_cast<int>(pattern.size());) {
-        if (pattern[i] == pattern[length]) {
+    for (int i = 1; i < pattern.length();) {
+        if (pattern.charAt(i) == pattern.charAt(length)) {
             lps[i++] = ++length;
         } else if (length > 0) {
             length = lps[length - 1];
         } else {
-            ++i;
+            i++;
         }
     }
-
-    int text_index = 0;
-    int pattern_index = 0;
-    while (text_index < static_cast<int>(text.size())) {
-        if (text[text_index] == pattern[pattern_index]) {
-            ++text_index;
-            ++pattern_index;
-            if (pattern_index == static_cast<int>(pattern.size())) {
-                return text_index - pattern_index;
-            }
-        } else if (pattern_index > 0) {
-            pattern_index = lps[pattern_index - 1];
+    int textIndex = 0;
+    int patternIndex = 0;
+    while (textIndex < text.length()) {
+        if (text.charAt(textIndex) == pattern.charAt(patternIndex)) {
+            textIndex++;
+            patternIndex++;
+            if (patternIndex == pattern.length()) return textIndex - patternIndex;
+        } else if (patternIndex > 0) {
+            patternIndex = lps[patternIndex - 1];
         } else {
-            ++text_index;
+            textIndex++;
         }
     }
     return -1;
@@ -6738,13 +7115,12 @@ int kmpFind(const std::string& text, const std::string& pattern) {
 - **Space:** `O(pattern length)`.
 - **Correctness intuition:** On fallback, KMP retains exactly the longest prefix already known to match the suffix before the mismatch; no possible earlier match start is skipped.
 - **Common mistakes:** Treating the whole string as a proper prefix, resetting `j` to zero instead of following failure links, and advancing the text index during a fallback when the current character has not been resolved.
-- **Alternatives:** Built-in substring search for practical code, naive `O(nm)` when constraints are small, or rolling hash when comparing many equal-length windows.
+- **Java contract:** `String` arguments are non-null; matching/indexing uses UTF-16 units, as `String.indexOf` does. Empty pattern returns zero.
+- **Alternatives:** `text.indexOf(pattern)` for practical code, naive `O(nm)` when constraints are small, or rolling hash when comparing many equal-length windows.
 
 #### Rabin–Karp and rolling hash
 
 **Priority:** 🟡 Tier 3 — Nice to Know
-
-**Why this priority level was assigned:** Rolling hash is versatile for repeated substring comparisons and binary-search-on-length problems, but hash collisions complicate a supposedly exact interview solution.
 
 Represent a window as a polynomial hash. When the window shifts, remove the outgoing character’s weighted contribution, multiply/shift, and add the incoming character in `O(1)`.
 
@@ -6752,8 +7128,8 @@ Represent a window as a polynomial hash. When the window shifts, remove the outg
 - **Worst-case time:** `O(nm)` if many candidate hashes collide and each is verified.
 - **Space:** `O(1)` for one rolling window, or `O(n)` when storing many hashes/prefix hashes.
 - **Use when:** Comparing many fixed-length substrings, detecting duplicates, or pairing with binary search on substring length.
-- **Correctness requirement:** Equal hashes are candidates, not mathematical proof of equal strings. Verify the substring, use two independent hashes, or explicitly discuss collision risk.
-- **Common mistakes:** Incorrect removal power, negative modulo behavior across languages, overflow assumptions, and claiming collision-free `O(n)` without qualification.
+- **Correctness requirement:** Equal hashes are candidates, not proof of equal strings. Verify character equality for an exact answer. Two independent hashes reduce collision probability but still give a probabilistic answer without verification.
+- **Java pitfalls:** `%` can leave a negative remainder; normalize it when the hash requires `[0, modulus)`. Promote before multiplication and bound the `long` product. Hashing a newly created `substring` scans/copies its units, so it is not a constant-time rolling update.
 
 #### Manacher’s algorithm
 
@@ -6778,8 +7154,6 @@ Manacher computes every odd/even palindrome radius in `O(n)` time and `O(n)` spa
 
 **Priority:** ⚪ Tier 4 — Low Priority / Specialized
 
-**Why this priority level was assigned:** Standard traversal, topological sorting, Union-Find, and Dijkstra cover most interview graphs. A few extensions are Tier 3, but the broader advanced graph toolbox is rarely required for general SWE hiring.
-
 Graph BFS/DFS, topological sorting, Union-Find, and Dijkstra belong in the main graph curriculum. The techniques here solve less common variants.
 
 #### Selective priority map
@@ -6787,10 +7161,10 @@ Graph BFS/DFS, topological sorting, Union-Find, and Dijkstra belong in the main 
 | Technique | Priority | Trigger | Complexity | What to know |
 |---|---|---|---:|---|
 | Kruskal MST | 🟡 Tier 3 — Nice to Know | Connect all vertices with minimum total edge cost | `O(E log E)` | Sort edges; add one if DSU says it joins components |
-| Prim MST | 🟡 Tier 3 — Nice to Know | Same MST goal, grow from a vertex | `O(E log V)` with heap | Cheapest crossing edge; stale heap entries |
+| Prim MST | 🟡 Tier 3 — Nice to Know | Same MST goal, grow from a vertex | `O((V + E) log(E + 1))` with lazy heap; `O(E log V)` for a connected simple graph | Cheapest crossing edge; discard stale entries |
 | Bellman–Ford | 🟡 Tier 3 — Nice to Know | Negative edges or negative-cycle detection | `O(VE)` | Relax every edge `V-1` times; one more pass detects reachable negative cycle |
 | Floyd–Warshall | 🟡 Tier 3 — Nice to Know | Dense, small graph; all-pairs paths | `O(V³)` time, `O(V²)` space | Intermediate-vertex DP: `dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j])` |
-| 0–1 BFS | 🟡 Tier 3 — Nice to Know | Edge weights only 0 or 1 | `O(V+E)` | `std::deque`: zero-cost edge to front, one-cost edge to back |
+| 0–1 BFS | 🟡 Tier 3 — Nice to Know | Edge weights only 0 or 1 | `O(V+E)` | `ArrayDeque`: zero-cost edge to front, one-cost edge to back |
 | Strongly connected components | ⚪ Tier 4 — Low Priority / Specialized | Mutual reachability in directed graph | `O(V+E)` | Know Tarjan/Kosaraju purpose; implement only if target-relevant |
 | Bridges / articulation points | ⚪ Tier 4 — Low Priority / Specialized | Single failure disconnects graph | `O(V+E)` | DFS discovery/low-link concept |
 | Eulerian path / Hierholzer | ⚪ Tier 4 — Low Priority / Specialized | Use every edge exactly once | `O(E)` | Degree conditions and postorder edge consumption |
@@ -6815,13 +7189,9 @@ Graph BFS/DFS, topological sorting, Union-Find, and Dijkstra belong in the main 
 
 **Priority:** ⚪ Tier 4 — Low Priority / Specialized
 
-**Why this priority level was assigned:** Advanced DP families have large, delicate state spaces and are disproportionately common in competitions rather than general SWE interviews. Study them only after standard DP is reliable and target evidence justifies the cost.
-
 #### Bitmask DP
 
 **Priority:** ⚪ Tier 4 — Low Priority / Specialized
-
-**Why this priority level was assigned:** Bitmask DP can turn a factorial search into `O(2^n × poly(n))`, but that remains exponential and usually applies only when `n` is around 15–22. Such constraints are rare in general SWE interviews.
 
 A mask encodes which members of a small set have already been used. A common state is:
 
@@ -6837,7 +7207,7 @@ For a traveling-salesperson-style recurrence, try each unvisited next vertex.
 - **Space:** Often `O(2^n × n)`.
 - **Recognition:** Very small `n`, need to remember an arbitrary chosen subset, and order/assignment matters.
 - **Alternative:** Backtracking with pruning may be easier and faster on typical instances; greedy may solve special metric/structure variants but not the general problem.
-- **Common mistakes:** Operator precedence in bit tests, confusing bit position with mask value, allocating an infeasible `2^n` table, and failing to exploit symmetry.
+- **Java pitfalls:** Parenthesize `(mask & (1 << bit)) != 0`; `1 << n` uses an `int` and Java masks the shift distance modulo 32. `1L << n` uses a `long` and masks modulo 64, but does not make an exponential table feasible. Estimate cells and bytes before allocating; use primitive arrays when dense state is justified.
 
 #### Other specialized DP families
 
@@ -6854,8 +7224,6 @@ The right baseline is to recognize that a DP exists and estimate its dimensions 
 ### 20.6 Computational Geometry
 
 **Priority:** ⚪ Tier 4 — Low Priority / Specialized
-
-**Why this priority level was assigned:** Geometry problems are uncommon in general SWE interviews, have many degeneracies, and often depend on precision conventions. Basic coordinate reasoning is useful; a full geometry toolkit is not a high-return investment.
 
 #### Minimum useful toolkit
 
@@ -6883,39 +7251,20 @@ is positive for one turn direction, negative for the other, and zero when collin
 - Comparing floating-point values for exact equality.
 - Ignoring collinear overlap or endpoint-touch cases.
 - Using slopes and dividing by zero when cross products avoid division.
-- Overflowing products before storing them in a wider type.
+- Overflowing products before storing them in a wider type. In Java, cast before subtraction too: `((long) bx - ax) * ((long) cy - ay)`. Even `long` is insufficient for every product of unrestricted `int` coordinate differences; derive bounds or use `java.math.BigInteger` for exact larger arithmetic.
 - Mixing screen coordinates (often y increases downward) with Cartesian orientation assumptions.
 
 ### 20.7 Selective Representative Problems
 
-Do these only after the core interview curriculum is reliable.
+The default budget is **zero new specialized implementations** until the core is reliable and a target requirement justifies one. Then choose one ladder and spend roughly **2–3 problems**, including a later cold revisit; do not study every row as a course.
 
-#### Beginner exposure
+| Family | Mechanics | Canonical | Variation | Mixed pattern | Cold revisit |
+|---|---|---|---|---|---|
+| Dynamic range sums | Trace low-bit blocks and `add` by hand | ⭐ **Canonical Interview Problem:** Range Sum Query — Mutable | Point assignment: convert new value to a delta | Count Smaller Numbers After Self: compression plus frequency prefixes (advanced) | Rebuild the Fenwick invariant and test boundary indices |
+| Exact string matching | Build LPS for a repeated-prefix pattern | ⭐ **Canonical Interview Problem:** Find the Index of the First Occurrence in a String, implementing KMP | Report every match, including overlapping matches | Repeated String Match: repetition bounds plus substring search | Rebuild LPS and explain why the text index never retreats |
+| Graph extensions | Trace relaxation and crossing-edge choices | ⭐ **Canonical Interview Problem:** Min Cost to Connect All Points | Connect a disconnected graph: detect a spanning forest | Cheapest Flights Within K Stops: separate previous/current distance layers | Classify MST versus shortest path before choosing an algorithm |
 
-| Problem type | Technique | What it teaches |
-|---|---|---|
-| Mutable Range Sum Query | Fenwick tree | One-based low-bit updates and prefix subtraction |
-| Implement substring search without a built-in | KMP | LPS fallback invariant |
-| Connect Points with Minimum Cost | Prim or Kruskal MST | Distinguish global connection cost from shortest paths |
-| Cheapest Flights with a stop limit | Bounded Bellman–Ford / layered state | Why copies/layers prevent using too many edges in one round |
-
-#### Core only for algorithm-heavy targets
-
-| Problem type | Technique | What it teaches |
-|---|---|---|
-| Range minimum with point updates | Segment tree | Associative combine and neutral element |
-| Repeated DNA / duplicate fixed-length substrings | Rolling hash | Window hashing and collision policy |
-| Network delay with a negative-edge variant | Bellman–Ford | Relaxation and algorithm-selection constraints |
-| Small traveling salesperson / assignment | Bitmask DP | Subset state and feasibility of `2^n` |
-
-#### Advanced specialization
-
-| Problem type | Technique | What it teaches |
-|---|---|---|
-| Range addition plus range queries | Lazy segment tree | Deferred updates and composition invariants |
-| Longest palindromic substring in strict linear time | Manacher | Mirror-radius invariant |
-| Critical connections in a network | Bridge-finding DFS | Discovery time and low-link values |
-| Convex hull of points | Monotonic-chain geometry | Orientation, sorting, and collinear policy |
+Pick further work only by a concrete constraint: range minimum with updates → segment tree; many equal-length substring comparisons → rolling hash with a collision policy; small arbitrary subsets → bitmask DP. Lazy range updates, strict linear palindrome search, critical connections, and convex hulls remain specialization exercises. Their existence is reference knowledge, not a core mastery gate.
 
 ### 20.8 Advanced-Topic Study Decision
 
@@ -6927,7 +7276,7 @@ Before investing deeply, ask:
 4. Does a simpler method already meet the constraints?
 5. Will one hour here improve my interview odds more than a mock interview or re-solving a weak core pattern?
 
-If the answer to questions 1–3 is no, defer the specialized topic.
+If any of questions 1–3 has answer “no,” defer deep study. A “yes” to question 4 usually means use the simpler method.
 
 ### 20.9 Specialized Topics Mastery Checklist
 
@@ -6962,7 +7311,7 @@ Pattern recognition is disciplined hypothesis generation, not keyword matching. 
 | Contiguous range, repeated range sum | 🔴 Tier 1 — Must Master | Array/map | Prefix sum | Range sum, subarray sum equals `k` | Using a sliding window when negative values break monotonicity |
 | Many offline range additions | 🟡 Tier 3 — Nice to Know | Difference array | Mark boundaries, then prefix | Flight bookings, capacity changes | Updating the wrong closing boundary |
 | Longest/shortest contiguous range satisfying a maintainable constraint | 🔴 Tier 1 — Must Master | Map/set/deque | Variable sliding window | Longest unique substring, minimum covering window | Shrinking only once when the invariant needs a `while` loop |
-| Statistic over every fixed-length contiguous range | 🔴 Tier 1 — Must Master | Frequency map/deque | Fixed window; monotonic deque for extrema | Maximum average, window maximum | Recomputing the entire window each step |
+| Statistic over every fixed-length contiguous range | 🔴 Tier 1 for ordinary windows; 🟡 Tier 3 for monotonic deque | Frequency map/deque | Fixed window; monotonic deque for extrema | Maximum average, window maximum | Recomputing the entire window each step |
 | Sorted sequence plus pair/triple condition | 🔴 Tier 1 — Must Master | Array | Opposite-direction two pointers | Two-sum sorted, 3Sum, closest pair | Skipping duplicates incorrectly |
 | Remove/compact/partition in place | 🔴 Tier 1 — Must Master | Array | Read/write or slow/fast pointers | Remove duplicates, move zeroes | Losing unread values during writes |
 | Sorted input and exact target/boundary | 🔴 Tier 1 — Must Master | Array | Binary search / lower bound | First occurrence, insertion position | Mixing closed and half-open interval rules |
@@ -6971,14 +7320,14 @@ Pattern recognition is disciplined hypothesis generation, not keyword matching. 
 | Nested scopes, matching delimiters, undo order | 🔴 Tier 1 — Must Master | Stack | Push open state, pop on closure | Valid parentheses, decode string | Popping an empty stack or ignoring final leftovers |
 | Repeated minimum/maximum or highest-priority item | 🟠 Tier 2 — Very Important | Heap | Push/pop priority queue | Task scheduling, merge streams | Assuming heap iteration is sorted |
 | Top `k` while `k` is much smaller than `n` | 🟠 Tier 2 — Very Important | Size-`k` heap | Retain best `k` | Top frequent items, kth largest | Choosing min- versus max-heap incorrectly |
-| Merge `k` sorted sources | 🟠 Tier 2 — Very Important | Heap | Keep one frontier per source | Merge lists, smallest range | Failing to include a tie-breaker for incomparable objects |
+| Merge `k` sorted sources | 🟠 Tier 2 — Very Important | Heap | Keep one frontier per source | Merge lists, smallest range | Omitting the comparator for custom objects; equal priorities need a tie-breaker only when the contract requires one |
 | Running median or balanced lower/upper halves | 🟡 Tier 3 — Nice to Know | Two heaps | Max-heap + min-heap rebalance | Median from data stream | Rebalancing sizes without maintaining ordering |
-| Overlapping ranges or schedules | 🟠 Tier 2 — Very Important | Sorted interval list | Sort then merge/scan | Merge intervals, insert interval | Treating touching endpoints incorrectly for the stated semantics |
+| Overlapping ranges or schedules | 🔴 Tier 1 — Must Master | Sorted interval list | Sort then merge/scan | Merge intervals, insert interval | Treating touching endpoints incorrectly for the stated semantics |
 | Maximum compatible activities | 🟠 Tier 2 — Very Important | Sorted intervals | Greedy by earliest finish | Non-overlapping intervals | Sorting by start because it feels natural |
 | Number of simultaneous events/resources | 🟠 Tier 2 — Very Important | Heap or event list | End-time heap; sweep line | Meeting rooms, maximum overlap | Processing equal-time starts/ends in the wrong order |
 | Hierarchical structure, subtree result | 🔴 Tier 1 — Must Master | Tree + call stack | DFS / postorder | Height, diameter, balanced tree | Returning global information instead of the subtree state parent needs |
 | Tree level, nearest node, minimum edges | 🔴 Tier 1 — Must Master | Queue | BFS by level | Level order, nearest target | Mixing levels or marking visited too late |
-| Ordered binary tree | 🟠 Tier 2 — Very Important | BST | Use lower/upper bounds or inorder order | Validate BST, kth smallest | Comparing only a node with its parent |
+| Ordered binary tree | 🔴 Tier 1 — Must Master | BST | Use lower/upper bounds or inorder order | Validate BST, kth smallest | Comparing only a node with its parent |
 | Ancestor or path through a tree | 🟠 Tier 2 — Very Important | Tree / parent map | Recursive state; LCA | Lowest common ancestor, path sum | Confusing node identity with duplicate values |
 | Grid regions or islands | 🔴 Tier 1 — Must Master | Grid + queue/stack | Flood-fill BFS/DFS | Number of islands, surrounded regions | Marking visited after enqueue and duplicating work |
 | Shortest path in an unweighted graph | 🔴 Tier 1 — Must Master | Adjacency list + queue | BFS | Word ladder, minimum moves | Using DFS and accepting the first found path |
@@ -6995,7 +7344,7 @@ Pattern recognition is disciplined hypothesis generation, not keyword matching. 
 | Local choice appears to leave a smaller same-form problem | 🟠 Tier 2 — Very Important | Often sorted list | Greedy—only with exchange/stays-ahead reasoning | Jump reachability, scheduling | Trusting intuition without a correctness argument |
 | Prefix dictionary, many prefix queries | 🟡 Tier 3 — Nice to Know | Trie | Character-by-character descent | Autocomplete, replace words | Omitting end-of-word state |
 | Pattern inside text | 🟡 Tier 3 — Nice to Know | String / hash | Built-in search, KMP, rolling hash as needed | Find substring, repeated pattern | Reaching for advanced matching when constraints do not require it |
-| Linked structure cycle or midpoint | 🟠 Tier 2 — Very Important | Linked-list pointers | Floyd fast/slow pointers | Cycle detection, middle node | Dereferencing `fast->next` without a guard |
+| Linked structure cycle or midpoint | 🟠 Tier 2 — Very Important | Linked-list node references | Floyd fast/slow pointers | Cycle detection, middle node | Reading `fast.next` without guarding `fast != null` |
 | Recently used key with O(1) updates | 🟠 Tier 2 — Very Important | Map + doubly linked list | LRU design | LRU cache | Updating the map but not list links consistently |
 | Static order statistic without needing all sorted output | 🟡 Tier 3 — Nice to Know | Array | Quickselect or heap | Kth largest | Claiming worst-case linear time for ordinary quickselect |
 
@@ -7012,7 +7361,7 @@ Ask these questions in order:
 
 ### Constraint-to-complexity heuristics
 
-These are rough interview clues, not contractual limits; language and constant factors matter.
+These are rough interview clues, not contractual limits; Java allocation, boxing, key-comparison cost, output size, memory limits, and runtime limits matter. A table with `2^25` states can exhaust memory even when enumerating that many lightweight states might be feasible.
 
 | Input scale | First complexity to investigate | Typical families |
 |---:|---|---|
@@ -7039,6 +7388,10 @@ These are rough interview clues, not contractual limits; language and constant f
 **Priority:** 🔴 Tier 1 — Must Master
 
 This workflow is itself an interview skill. It gives the interviewer visible evidence of how you handle ambiguity, correctness, trade-offs, and feedback.
+
+> **Problem statement → clarify contract → examples → constraints → brute force → bottleneck → recognition clues → candidate pattern/data structure → invariant/state → algorithm → complexity → implementation → edge cases → testing → follow-up optimization**
+
+The steps below group that sequence into a practical conversation. Return to the contract or invariant whenever a counterexample invalidates an assumption.
 
 ### Step 1 — Understand the problem
 
@@ -7126,6 +7479,8 @@ This short explanation frequently exposes a missing condition before it becomes 
 
 - Use names that encode roles: `left`, `right`, `indegree`, `remaining`, `best`.
 - Keep one boundary convention throughout.
+- Choose primitive arrays for dense numeric state; name object fields when an array entry would hide its meaning.
+- State null, empty-input, and mutation assumptions. Promote arithmetic to `long` before a potentially overflowing operation.
 - Separate a feasibility predicate or DFS helper when it clarifies state.
 - Avoid premature micro-optimization and clever one-liners.
 - Comment invariants or non-obvious choices, not syntax.
@@ -7150,7 +7505,7 @@ During a trace, write the important state (`left`, `right`, map, queue, `dp[i]`)
 
 Restate complexity and trade-offs, then mention one meaningful alternative:
 
-> “This is `O(n)` expected time and `O(n)` extra space with `std::unordered_map`. Sorting would cost `O(n log n)`, mutate or copy the input, and complicate original indices.”
+> “This is `O(n)` expected time and `O(n)` extra space with `HashMap`. Sorting would cost `O(n log n)`, mutate or copy the input, and complicate original indices.”
 
 If time remains, improve naming and cover one untested edge rather than introducing an unrelated optimization.
 
@@ -7183,1274 +7538,302 @@ In a real interview, share these observations. Silence hides useful reasoning an
 
 **Priority:** 🔴 Tier 1 — Must Master
 
-Avoiding predictable errors often improves performance more than learning one more specialized algorithm.
+Avoiding predictable errors often improves performance more than learning one more specialized algorithm. Record repeated failures using the categories in the [mistake log](#26-mistake-log-system); use the [Java reference](#java-for-dsa-interviews-essential-reference) for API examples.
 
 | Trap | Why it fails | Prevention |
 |---|---|---|
 | Off-by-one errors | A loop misses or repeats a boundary element. | Write whether ranges are inclusive or half-open; test sizes `0`, `1`, and `2`. |
-| Mixed binary-search conventions | Update rules no longer guarantee progress. | Pick `[lo, hi]` or `[lo, hi)` and use its matching loop, midpoint, and updates. |
-| Wrong bound after binary search | The loop terminates correctly but `lo` has no defined meaning. | State the predicate and postcondition: “`lo` is the first true index.” |
-| Forgetting duplicates | Counts, index choices, or generated results become wrong. | Ask whether identity, value, and multiplicity matter; sort and skip at the correct recursion depth. |
-| Using one element twice | A complement lookup sees the current item. | Check before insert when distinct positions are required. |
-| Modifying a container while iterating | Reallocation or erasure invalidates C++ iterators, pointers, or references. | Follow that container's invalidation rules; use the iterator returned by `erase`, collect changes, or use a controlled index. |
-| Quadratic front deletion | Calling `vector.erase(vector.begin())` shifts all remaining items. | Use `std::queue`, `std::deque`, or a head index. |
-| Infinite pointer loop | A branch changes neither boundary. | Verify that every iteration advances, returns, or shrinks a finite state. |
+| Mixed binary-search conventions | Updates no longer guarantee progress or the returned boundary has no meaning. | State the interval invariant and final postcondition; trace absent targets and duplicates. |
+| Forgetting duplicates | Counts, original indices, ties, or generated results become wrong. | Clarify whether identity, value, and multiplicity matter; skip duplicates at the correct recursion depth. |
+| Using one element twice | A complement lookup sees the current position. | Query previously stored positions before inserting the current one. |
+| Incompatible mutation during iteration | Structural changes during enhanced `for` traversal may cause `ConcurrentModificationException`; detection is best-effort. | Use the iterator's supported `remove`, `removeIf`, a separate change list, or an index-based algorithm whose shifting rules you understand. |
+| Quadratic queue simulation | `ArrayList.remove(0)` shifts the remaining elements. | Use `ArrayDeque` with `offer`/`poll`, or a head index over suitable storage. |
+| Infinite loop | A branch changes neither boundary nor state. | Verify that every iteration advances, returns, or shrinks a finite candidate set. |
 | Incorrect recursion base case | Work stops too soon, never stops, or returns the wrong identity. | Define the function contract first; test the smallest legal state. |
-| Missing backtracking undo | One branch contaminates another. | Use choose → explore → unchoose symmetrically; copy only at completed answers. |
-| Shared mutable result/path | Stored pointers/references all observe the same changing path. | Save a value snapshot such as `answers.push_back(path)`, not a pointer or reference to the live path. |
-| Forgetting visited nodes | Graph traversal loops or repeats exponential work. | Decide when a node becomes discovered; normally mark on enqueue/push. |
-| Treating a directed graph as undirected | Cycles, reachability, and indegrees are wrong. | Encode edge direction explicitly and test a one-way example. |
-| DFS for shortest unweighted path | First depth-first path need not be shortest. | Use BFS layers for equal-weight edges. |
-| BFS for weighted shortest path | Fewest edges may cost more. | Use Dijkstra for nonnegative weights; reconsider if negative edges exist. |
-| Finalizing Dijkstra too early | A later relaxation may produce a cheaper route. | Ignore stale heap entries and finalize the best popped distance. |
-| Incorrect grid boundaries | In C++, an unchecked negative or oversized index can produce undefined behavior. | Check signed coordinates before converting/indexing; distinguish rows from columns. |
-| Losing tree return state | Parent cannot combine subtree results. | Ask exactly what one recursive call promises to return. |
-| Confusing depth and height | Edge/node conventions produce wrong answers. | Define them explicitly; for example, empty height `0`, leaf height `1`. |
-| Integer overflow | Sums, products, or midpoint calculations overflow. | Use wider types; compute `lo + (hi - lo) / 2` where the bounds make subtraction safe. |
-| Signed/unsigned mismatch | Comparing `int` with `size_t`, or subtracting from `size()`, can wrap or warn unexpectedly. | Check emptiness first; keep one index type within a loop or convert deliberately with `static_cast<int>`. |
-| Reading an empty container | `front()`, `back()`, `top()`, or indexing has no valid element and may cause undefined behavior. | Establish non-emptiness before access; make the empty-result contract explicit. |
-| Accidental large copy | Passing a `vector`, `string`, map, or set by value adds hidden linear work and storage. | Use `const T&` for read-only input and `T&` for intentional caller-visible mutation; copy only when the algorithm needs ownership. |
-| Invalid iterator use | Dereferencing `end()` or keeping an iterator across reallocation/rehash produces undefined behavior. | Compare with `end()` before dereferencing and know the chosen container's invalidation rules. |
-| Uninitialized scalar | A counter, pointer, or best-so-far value starts indeterminate and corrupts the invariant. | Initialize every scalar from the problem's identity, first valid value, or a justified sentinel. |
-| Incorrect custom comparator | Using `<=`, inconsistent tie handling, or overflow-prone subtraction violates strict weak ordering. | Return true only when the first item must precede the second; use lexicographic comparisons and explicit ties. |
-| Default heap direction | `std::priority_queue<T>` returns the maximum, but the algorithm needs the minimum. | State the required root and use `std::priority_queue<T, vector<T>, greater<T>>` for a min-heap. |
-| Assignment inside a condition | Writing `=` where `==` was intended mutates state and tests the assigned value. | Read conditions aloud and enable compiler warnings in practice; keep assignments outside conditions unless deliberate. |
-| Assuming hash operations are ordered | Output or tie behavior becomes nondeterministic. | Sort explicitly or use an ordered structure when order is required. |
-| Assuming heap contents are globally sorted | Reading the backing array gives the wrong sequence. | Only the root is guaranteed extreme; pop repeatedly if order is required. |
-| Recomputing window state | An intended linear scan becomes `O(n²)`. | Maintain counts/sum incrementally as boundaries move. |
-| Sliding window with negative values | Expanding/shrinking no longer changes the sum predictably. | Use prefix sums + map, or another method justified by constraints. |
-| Incorrect interval endpoint semantics | Touching meetings are merged or separated incorrectly. | Clarify closed vs half-open intervals and order equal-time events accordingly. |
-| Greedy without a proof idea | A locally attractive choice blocks the optimum. | Give an exchange or stays-ahead argument; otherwise try DP/search. |
-| DP state lacks information | Different futures collapse into one table entry. | Phrase `dp[state]` as a complete sentence and test two histories mapping to it. |
-| DP state stores irrelevant history | State count explodes. | Retain only information needed to choose and evaluate future decisions. |
-| Wrong DP update direction | A 0/1 item is reused, or an unlimited item is used only once. | For compressed knapsack, iterate capacity backward for 0/1 and forward for unbounded. |
-| Memoization key omits mutable state | Cached results are reused for nonequivalent subproblems. | Include every future-relevant dimension or redesign state. |
-| Calling output storage “auxiliary space” | Complexity explanation becomes ambiguous. | State auxiliary space and required output space separately. |
-| Ignoring recursion stack | Claimed space is too low. | Include maximum call depth even if no explicit container is used. |
-| Hidden subrange copying | A clean-looking loop or recursion becomes slower and larger. | Know language costs; pass indices or iterator pairs instead of repeatedly copying ranges. |
-| Premature advanced algorithm | Complexity and bug risk rise without need. | Match the simplest correct method to the actual constraints. |
-| Coding before agreement | A correct implementation solves the wrong interpretation. | Restate contract and example before writing code. |
+| Missing backtracking undo | One branch contaminates another. | Match each choice with restoration after exploration. |
+| Shared mutable result/path | `answers.add(path)` stores the same list reference repeatedly. | Snapshot a completed path with `new ArrayList<>(path)`; this copies references to its elements, so mutable elements may need their own copies. |
+| Forgetting visited state | A graph traversal loops or performs duplicate work. | Normally mark a state on enqueue/push; use the visited key that represents the full search state. |
+| Losing directed edges or disconnected vertices | Cycles, reachability, and indegrees become wrong. | Encode direction explicitly and start component scans from every unvisited vertex. |
+| Wrong shortest-path algorithm | The first DFS route need not be shortest; fewest edges need not mean cheapest weight. | BFS for equal/unweighted edges; Dijkstra for nonnegative weights. |
+| Finalizing Dijkstra on insertion | A later relaxation can find a cheaper route. | Skip stale heap entries and expand the cheapest current distance. |
+| Incorrect grid boundaries | Java throws `ArrayIndexOutOfBoundsException`; empty or ragged rows also invalidate assumptions. | Check bounds before indexing, distinguish rows and columns, and state the rectangular-grid contract. |
+| Losing tree return state | The parent cannot combine child results. | State what one recursive call returns; distinguish carried state from returned subtree state. |
+| Confusing node identity with value | Different nodes may contain equal values. | Use `==` for node identity when identifying a particular node; use value comparisons for ordering. |
+| Integer overflow | Java integer arithmetic can wrap silently. | Widen before arithmetic: `(long) a * b`; choose bounds/sentinels and do not add blindly to `Long.MAX_VALUE`. |
+| Unsafe midpoint arithmetic | `left + right`, or an unconstrained `right - left`, may overflow. | Use `left + (right - left) / 2` when the bounds make subtraction safe; otherwise derive a method for the actual domain. |
+| Object/String equality with `==` | It compares object references rather than logical contents. | Use `.equals()` for logical equality, or `Objects.equals(a, b)` when null is allowed. Do not rely on String interning or boxed-number caching. |
+| Inconsistent custom-key equality | Equal keys may occupy different hash buckets; mutable key fields can make entries unreachable by lookup. | Keep equality fields stable and implement compatible `equals()`/`hashCode()`; arrays use identity equality by default. |
+| Assuming `String` is mutable | `replace`, `substring`, and concatenation return values; they do not modify the original string. | Assign the returned value or choose `char[]`/`StringBuilder` when mutation is required. |
+| Repeated string concatenation | Building a growing immutable string in a loop can copy a quadratic total number of characters. | Use a `StringBuilder` and account for the final string copy. |
+| Confusing length APIs | Arrays, strings, and collections expose different members. | Recall `array.length`, `text.length()`, and `list.size()`. |
+| Null unboxing or absent map value | Assigning a missing `Integer` to `int` throws `NullPointerException`. | Use an appropriate default for absent keys, or explicitly test null; `getOrDefault` does not replace an explicitly stored null. |
+| Primitive/wrapper confusion | `List<int>` is illegal; boxed values add allocation/indirection and `==` is unreliable for logical equality. | Use `int[]` for dense numeric state and `List<Integer>` when collection behavior is needed. |
+| Overloaded list removal | On `List<Integer>`, `remove(1)` removes index `1`. | Use `remove(Integer.valueOf(1))` to remove the first matching value. |
+| Accidental reference aliasing | Assigning an array/list variable copies a reference; cloning a two-dimensional array copies only the outer array. | Decide whether you need a new container, copied rows, or copied mutable elements. |
+| Pass-by-value misconception | Reassigning a parameter does not replace the caller's variable, although mutating its referenced object is visible. | Return a new head/result and assign it at the call site; draw variables separately from objects. |
+| Fixed-size or unmodifiable list | `Arrays.asList` is backed by the source array and rejects size changes; `List.of` rejects mutation and null elements. | Use `new ArrayList<>(...)` when you need a resizable list. `Arrays.asList(intArray)` is a one-element list containing that array, not a list of boxed integers. |
+| Wrong empty-container behavior | `poll`/`peek` can return null; `pop`/`removeFirst` can throw on empty; null unboxing can then fail. | Make empty-result behavior explicit and guard before access. `ArrayDeque` and `PriorityQueue` reject null elements. |
+| Wrong comparator | Subtraction may overflow; inconsistent comparisons corrupt ordering assumptions. | Use `Integer.compare`, `Long.compare`, or `Comparator.comparingInt(...).thenComparingInt(...)`; return zero for equal keys and maintain transitivity. |
+| Wrong heap direction | Java `PriorityQueue` exposes the minimum by default. | State which item must be removed next; use `Comparator.reverseOrder()` for a natural-order max-heap. |
+| Mutating a stored priority | A heap does not automatically reorganize after an element's comparison fields change. | Use immutable entries and remove/reinsert or use the algorithm's stale-entry strategy. |
+| Assuming hash or heap iteration is sorted | Neither promises sorted iteration. | Use `TreeMap`/`TreeSet`, sort explicitly, or repeatedly poll a heap when ordered removal is required. |
+| Deep recursive traversal | A skewed tree or long graph path can cause `StackOverflowError`. | Use iterative DFS/BFS when depth is uncontrolled; Java has no portable safe recursion-depth constant. |
+| Wrong initial state | Java requires local-variable initialization, but array/field defaults may not match the algorithm's identity or unreachable state. | Initialize from the contract: first valid value, neutral element, or justified sentinel; use a separate computed flag when zero is a valid result. |
+| Treating `char` as every Unicode character | A Java `char` is one UTF-16 code unit; some code points require two units. | State ASCII/lowercase/code-unit assumptions; use code-point iteration when the contract requires it, and clarify normalization separately. |
+| Recomputing window state | The intended linear scan becomes quadratic. | Maintain counts/sums incrementally; justify why each boundary moves at most `n` times. |
+| Sum window with arbitrary negatives | Expanding and shrinking no longer changes sums predictably. | Use prefix-state lookup or another method justified by constraints. |
+| Wrong interval endpoint semantics | Touching intervals and equal-time events are processed incorrectly. | Clarify closed versus half-open intervals before choosing comparisons. |
+| Greedy without a proof idea | An attractive local choice may block the optimum. | Seek a counterexample, then give an exchange or stays-ahead argument. |
+| Incomplete or oversized DP state | Different futures collapse together, or irrelevant history explodes state count. | Define a sufficient state in a sentence; keep only history needed for future decisions. |
+| Wrong DP update direction | A 0/1 item is reused, or an unlimited item is used only once. | Derive capacity direction from the dependency: backward for compressed 0/1, forward for the usual unbounded recurrence. |
+| Hidden copying or omitted space | Slices, snapshots, sorting buffers, and recursion invalidate a stated bound. | Count their actual costs; pass indices to avoid unnecessary slices; separate auxiliary space from required output. |
+| Coding before agreement | A correct program solves the wrong interpretation. | Restate the contract, examples, and invariant before typing. |
+| Testing only the intended algorithm | A sound idea hides a wrong comparison or update in the code. | Trace actual statements on a minimal adversarial input and confirm termination. |
+
+The operation contracts above follow the [Java collections APIs](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/package-summary.html). The guide's snippets remain compatible with Java 17.
 
 ### A five-point pre-submit scan
 
-Before saying “done,” inspect:
-
-1. **Contract:** right return type, indices versus values, mutation allowed?
-2. **Boundaries:** empty input, loop endpoints, last element, neighbor checks?
-3. **Multiplicity:** duplicates, ties, multiple paths/answers?
-4. **State:** initialized, updated in correct order, and restored when branching?
-5. **Complexity:** hidden nested work, recursion depth, and data-structure costs?
+1. **Contract:** right return type, indices versus values, null/empty behavior, mutation allowed?
+2. **Boundaries:** endpoints, last element, neighbor checks, overflow?
+3. **Multiplicity:** duplicates, ties, object equality versus identity?
+4. **State:** initialized, updated in the right order, snapshotted/restored correctly?
+5. **Evidence:** trace actual code; include hidden Java operation costs, recursion, and output in analysis?
 
 ---
 
 ## 24. Code Templates
 
-**Priority:** 🔴 Tier 1 — Must Master
+**Priority:** 🔴 Tier 1 for reconstructing common control flow; each algorithm keeps its own topic priority.
 
-Why this priority: Reconstructing common control flow is important interview practice, but each template inherits the depth of its underlying topic—Tier 1 patterns still require unaided implementation, while lower-tier templates require proportionally less fluency.
+This is a **retrieval index to the canonical Java implementations in the topic sections**. Keep one maintained implementation per algorithm and use these cards to reconstruct it from a blank page before following the link. The topic implementation defines exact argument, mutation, empty-result, and numeric contracts; do not silently transfer one contract to a different problem.
 
-These templates expose common control flow. Before adapting one, fill in four blanks:
+Before adapting any template, fill in four blanks:
 
 1. **State:** what does each variable/container mean?
 2. **Invariant:** what is true before and after every iteration/call?
 3. **Change:** which condition adds, removes, branches, or terminates?
 4. **Result:** where is the answer valid and when is it updated?
 
-Do not memorize placeholder code. Rebuild it from the invariant, then compare.
-
-The snippets below target **C++17** and assume the standard headers for the types they use. Standard-library names are qualified with `std::`. Read-only collections are passed by `const&`; a template that mutates or copies input says so explicitly. Integer sums and path costs use `long long` where overflow from `int` is plausible.
+For imports, node conventions, equality, and collection syntax, use the [Java essential reference](#java-for-dsa-interviews-essential-reference). A template is a control-flow shape supported by a proof, not a complete solution to memorize.
 
 ### 24.1 Array traversal
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§4.1 traversal and running invariants](#41-traversal-and-running-invariants).
 
-**What it does:** Scans an indexed sequence once while maintaining a small summary. This example returns no value for an empty input rather than inventing a sentinel.
-**Use when:** every item may affect a count, total, extreme, or simple transformation.  
-**Invariant:** after index `i`, `best` is the maximum over the processed prefix `[0, i]`.  
-**Complexity:** `O(n)` time and `O(1)` auxiliary space.
-
-```cpp
-std::optional<int> maximum_value(const std::vector<int>& values) {
-    if (values.empty()) {
-        return std::nullopt;
-    }
-
-    int best = values.front();
-    for (std::size_t i = 1; i < values.size(); ++i) {
-        best = std::max(best, values[i]);
-    }
-    return best;
-}
-```
-
-**Change per problem:** the maintained summary, update condition, and empty-input contract.  
-**Common mistakes:** indexing before checking emptiness, copying a large collection into the function, using `int` for a potentially large sum, or hiding linear work inside the loop.
+- **Reconstruct:** initialize a summary from the identity or first valid item, scan once, and update it. For a maximum, `best` describes the processed prefix.
+- **Adapt/check:** empty-result contract, all-negative values, count versus sum versus extreme, and `long` for a potentially large sum. A method call copies the array reference, not the array.
+- **Cost:** `O(n)` time and `O(1)` auxiliary state for one summary.
 
 ### 24.2 Frequency counting
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§5.2 frequency tables and lookup](#52-frequency-tables-and-lookup-techniques).
 
-**What it does:** Builds `value → occurrence count` for later membership, multiplicity, grouping, or equality checks.  
-**Use when:** duplicates or the number of occurrences affects the answer.  
-**Invariant:** after processing a prefix, `frequency[x]` equals the number of times `x` appears in that prefix.  
-**Complexity:** expected `O(n)` time and `O(k)` space for `k` distinct values.
-
-```cpp
-std::unordered_map<int, long long> frequency_table(
-        const std::vector<int>& values) {
-    std::unordered_map<int, long long> frequency;
-    for (int value : values) {
-        ++frequency[value];
-    }
-    return frequency;
-}
-```
-
-For a small fixed alphabet, prefer `std::array<int, ALPHABET_SIZE>` to avoid hashing overhead.
-
-**Change per problem:** key type, fixed array versus hash map, whether zero counts are erased, and whether only membership is needed.  
-**Common mistakes:** using `operator[]` during a read-only lookup and accidentally inserting a key, overlooking case/normalization rules, or using a set when multiplicity matters.
+- **Reconstruct:** count each processed value with `HashMap.getOrDefault` and `put`; a fixed `int[]` is simpler for a small known alphabet.
+- **Adapt/check:** membership versus multiplicity, key equality, case/alphabet rules, and whether zero counts must be removed. Map size counts keys, including keys mapped to zero.
+- **Cost:** expected `O(n)` time and `O(d)` map space for `d` distinct constant-cost keys; initializing a count array costs `O(alphabet)`.
 
 ### 24.3 Stack
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§9.1 delimiters](#91-stack-fundamentals-and-parentheses).
 
-**What it does:** Keeps the most recent unresolved item at the top. This canonical version validates nested delimiters.  
-**Use when:** work is LIFO—nested scopes, undo, parsing, or an explicit DFS frontier.  
-**Invariant:** the stack contains exactly the unmatched opening delimiters from the processed prefix.  
-**Complexity:** `O(n)` time and `O(n)` space in the worst case.
-
-```cpp
-bool valid_parentheses(const std::string& text) {
-    std::stack<char> open;
-
-    for (char token : text) {
-        if (token == '(' || token == '[' || token == '{') {
-            open.push(token);
-            continue;
-        }
-
-        if (token != ')' && token != ']' && token != '}') {
-            continue;  // Change this policy if non-delimiter input is invalid.
-        }
-        if (open.empty()) {
-            return false;
-        }
-
-        char expected = token == ')' ? '(' : (token == ']' ? '[' : '{');
-        if (open.top() != expected) {
-            return false;
-        }
-        open.pop();
-    }
-
-    return open.empty();
-}
-```
-
-**Change per problem:** stack entry type, what resolves an entry, and whether processing occurs on push, top, or pop.  
-**Common mistakes:** reading `top()` before checking `empty()`, reversing operand order in expression evaluation, or assuming the stack is globally sorted.
+- **Reconstruct:** use `Deque<Character>` backed by `ArrayDeque`; the stack contains exactly the unmatched opening delimiters from the processed prefix.
+- **Adapt/check:** define non-delimiter input policy, guard before popping, verify matching type, and reject leftover open delimiters. In expression problems, preserve operand order.
+- **Cost:** `O(n)` time and up to `O(n)` auxiliary space.
 
 ### 24.4 Queue and deque
 
-**Priority:** 🔴 Tier 1 — Must Master for queues; 🟡 Tier 3 — Nice to Know for monotonic deques
+**🔴 Tier 1 for FIFO; 🟡 Tier 3 for monotonic windows. Canonical Java:** [§14.3 BFS queue implementation](#143-graph-bfs-and-unweighted-shortest-paths), [§9.5 sliding-window maximum](#95-monotonic-deque); [§9.4 queue invariant](#94-queue-fundamentals-and-bfs-usage).
 
-**What it does:** A queue preserves FIFO discovery order; a deque additionally permits constant-time work at both ends.  
-**Use when:** tasks must run in arrival order, layers must remain ordered, or candidates expire from the front and are dominated from the back.  
-**Invariant:** `pending.front()` is the earliest enqueued item not yet processed.  
-**Complexity:** The FIFO demonstration is `O(n)` time and `O(n)` space. The monotonic-deque example below is `O(n)` time because every index enters and leaves once, with `O(k)` auxiliary space.
-
-```cpp
-std::vector<int> process_in_fifo_order(const std::vector<int>& items) {
-    std::queue<int> pending;
-    for (int item : items) {
-        pending.push(item);
-    }
-
-    std::vector<int> order;
-    order.reserve(items.size());
-    while (!pending.empty()) {
-        order.push_back(pending.front());
-        pending.pop();
-    }
-    return order;
-}
-```
-
-Use `std::deque<T>` when the algorithm genuinely needs `push_front`, `pop_front`, `push_back`, and `pop_back`; ordinary BFS usually needs only `std::queue<T>`.
-
-```cpp
-std::vector<int> max_each_window(
-        const std::vector<int>& nums,
-        std::size_t k) {
-    if (k == 0 || k > nums.size()) {
-        return {};
-    }
-
-    std::deque<std::size_t> candidates;
-    std::vector<int> answer;
-    answer.reserve(nums.size() - k + 1);
-
-    for (std::size_t right = 0; right < nums.size(); ++right) {
-        while (!candidates.empty() && right >= k &&
-               candidates.front() <= right - k) {
-            candidates.pop_front();
-        }
-        while (!candidates.empty() &&
-               nums[candidates.back()] <= nums[right]) {
-            candidates.pop_back();
-        }
-        candidates.push_back(right);
-
-        if (right + 1 >= k) {
-            answer.push_back(nums[candidates.front()]);
-        }
-    }
-
-    return answer;
-}
-```
-
-**Change per problem:** queued state, discovery timing, level boundaries, and whether both ends are required.  
-**Common mistakes:** calling `front()` on an empty container, using `vector.erase(vector.begin())` as a queue, or marking graph states only after dequeueing and creating duplicates.
+- **Reconstruct FIFO:** `offer` at the tail, `poll` from the head; mark graph states discovered before enqueuing. For levels, snapshot queue size before processing that layer.
+- **Reconstruct monotonic deque:** expire old indices at the front, remove dominated indices at the back, append the new index, then emit the front after a full window exists.
+- **Adapt/check:** `1 <= k <= n`, indices versus values, strictness for ties, and output versus auxiliary space. `ArrayDeque` rejects null.
+- **Cost:** end insertions are amortized `O(1)`; sliding maxima take `O(n)` total time and `O(k)` auxiliary space because each index enters and leaves once.
 
 ### 24.5 Prefix sum and prefix-state lookup
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§4.3 prefix sums](#43-prefix-sums), [§5.2 subarray-sum counting](#52-frequency-tables-and-lookup-techniques).
 
-**What it does:** Precomputes cumulative sums or stores prior cumulative states so a range relationship becomes one subtraction or lookup.  
-**Use when:** many static range-sum queries, or a subarray can be recognized from two prefix states.  
-**Invariant:** `prefix[i]` is the sum of the first `i` values, so range `[left, right)` sums to `prefix[right] - prefix[left]`.  
-**Complexity:** build `O(n)` time/space; each range query `O(1)`.
-
-```cpp
-std::vector<long long> build_prefix(const std::vector<int>& nums) {
-    std::vector<long long> prefix(nums.size() + 1, 0);
-    for (std::size_t i = 0; i < nums.size(); ++i) {
-        prefix[i + 1] = prefix[i] + nums[i];
-    }
-    return prefix;
-}
-
-long long range_sum(
-        const std::vector<long long>& prefix,
-        std::size_t left,
-        std::size_t right) {
-    // Sum of the original values in [left, right); caller supplies valid bounds.
-    return prefix[right] - prefix[left];
-}
-```
-
-For “number of subarrays with sum `target`,” store earlier prefix frequencies:
-
-```cpp
-long long count_subarrays_with_sum(
-        const std::vector<int>& nums,
-        long long target) {
-    std::unordered_map<long long, long long> seen{{0, 1}};
-    long long prefix = 0;
-    long long answer = 0;
-
-    for (int value : nums) {
-        prefix += value;
-        auto it = seen.find(prefix - target);
-        if (it != seen.end()) {
-            answer += it->second;
-        }
-        ++seen[prefix];
-    }
-    return answer;
-}
-```
-
-**Change per problem:** the aggregated value and the relationship between current and earlier prefixes.  
-**Common mistakes:** omitting initial prefix `0`, mixing inclusive/exclusive endpoints, and storing only one index when frequencies are needed.
+- **Reconstruct:** `prefix[i]` is the sum of the first `i` values; `[left, right)` sums to `prefix[right] - prefix[left]`. For inclusive `right`, use `prefix[right + 1]`.
+- **Counting invariant:** the map holds frequencies of earlier prefixes. Seed zero with one occurrence; query `currentPrefix - target` before recording the current prefix.
+- **Adapt/check:** `long` sums and answer count, initial zero, endpoint convention, frequency versus first/latest index. This relationship still works with negative values.
+- **Cost:** prefix-array build `O(n)` time/space and `O(1)` queries; prefix-map counting expected `O(n)` time and `O(n)` auxiliary space.
 
 ### 24.6 Opposite-direction two pointers
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§6.1 sorted two-sum scan](#61-opposite-direction-pointers).
 
-**What it does:** Uses ordered comparisons to discard one endpoint at a time without missing a valid pair.  
-**Use when:** sorted order makes a comparison tell you which boundary cannot participate.  
-**Invariant:** discarded elements cannot form a better/valid answer under the problem's ordering rule.  
-**Complexity:** usually `O(n)` after any sorting; sorting makes total time `O(n log n)`.
-
-```cpp
-std::optional<std::pair<std::size_t, std::size_t>> pair_sum_sorted(
-        const std::vector<int>& nums,
-        long long target) {
-    if (nums.size() < 2) {
-        return std::nullopt;
-    }
-
-    std::size_t left = 0;
-    std::size_t right = nums.size() - 1;
-    while (left < right) {
-        long long total = static_cast<long long>(nums[left]) + nums[right];
-        if (total == target) {
-            return std::pair<std::size_t, std::size_t>{left, right};
-        }
-        if (total < target) {
-            ++left;
-        } else {
-            --right;
-        }
-    }
-    return std::nullopt;
-}
-```
-
-**Change per problem:** comparison, answer update, duplicate handling, and whether the array may be sorted.  
-**Common mistakes:** using it without exploitable order, moving the wrong boundary, or returning sorted positions when original indices are required.
+- **Reconstruct:** compare endpoint sum with the target; sorted order proves which endpoint cannot work and may be discarded.
+- **Adapt/check:** sorted-input requirement, distinct indices, duplicate policy, return values versus original indices, and widening before addition. Sorting changes positions and may mutate input.
+- **Cost:** `O(n)` scan and `O(1)` auxiliary state; include sorting/copying if you introduce it.
 
 ### 24.7 Same-direction read/write pointers
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§4.2 in-place compaction](#42-in-place-operations), [§6.2 read/write and merge pointers](#62-same-direction-and-parallel-pointers).
 
-**What it does:** Compacts selected values into a finalized prefix without allocating another result vector.  
-**Use when:** filtering or compacting an array in place.  
-**Invariant:** `nums[0..write)` contains the finalized kept values from the processed prefix.  
-**Complexity:** `O(n)` time and `O(1)` auxiliary space.
-
-```cpp
-template <typename Predicate>
-std::size_t keep_if(std::vector<int>& nums, Predicate should_keep) {
-    std::size_t write = 0;
-    for (std::size_t read = 0; read < nums.size(); ++read) {
-        if (should_keep(nums[read])) {
-            nums[write] = nums[read];
-            ++write;
-        }
-    }
-    return write;  // The valid result occupies nums[0..write).
-}
-```
-
-**Change per problem:** keep condition and whether relative order must remain stable.  
-**Common mistakes:** confusing returned length with last valid index or overwriting data still needed later.
+- **Reconstruct:** `read` inspects input; `write` is the next kept position. The prefix `[0, write)` contains the finalized result and forward compaction maintains `write <= read`.
+- **Adapt/check:** keep predicate, stable relative order, empty input, and returned valid length. A Java array keeps its original capacity; trailing entries are outside the logical result.
+- **Cost:** `O(n)` time and `O(1)` auxiliary space.
 
 ### 24.8 Fixed-size sliding window
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§7.1 fixed-size window](#71-fixed-size-window).
 
-**What it does:** Updates an aggregate by adding the entering value and removing the leaving value.  
-**Use when:** evaluate every contiguous block of exactly `k` elements.  
-**Invariant:** after removing the outgoing value, `window` describes exactly the current `k` elements.  
-**Complexity:** `O(n)` time and `O(1)` space for a sum; frequency state may use `O(k)`.
-
-```cpp
-std::optional<long long> max_sum_window(
-        const std::vector<int>& nums,
-        std::size_t k) {
-    if (k == 0 || k > nums.size()) {
-        return std::nullopt;
-    }
-
-    long long window = 0;
-    for (std::size_t i = 0; i < k; ++i) {
-        window += nums[i];
-    }
-
-    long long best = window;
-    for (std::size_t right = k; right < nums.size(); ++right) {
-        window += nums[right];
-        window -= nums[right - k];
-        best = std::max(best, window);
-    }
-    return best;
-}
-```
-
-**Change per problem:** maintained aggregate and answer type.  
-**Common mistakes:** failing to validate `k`, removing the wrong index, or rescanning the whole window.
+- **Reconstruct:** build the first `k`-element aggregate, then add the entering value and remove the leaving value before updating the answer.
+- **Adapt/check:** legal `k`, all-negative values, outgoing index, `long` sum, and whether the aggregate supports efficient removal. Extrema need a different maintained structure.
+- **Cost:** `O(n)` time and `O(1)` auxiliary space for a sum.
 
 ### 24.9 Variable-size sliding window
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§7.3 frequency-based windows](#73-frequency-based-windows).
 
-**What it does:** Expands a right boundary and shrinks the left boundary until a maintainable validity rule is restored.  
-**Use when:** a contiguous window becomes valid again by repeatedly moving `left`.  
-**Invariant:** after the inner loop, the current window satisfies the required condition.  
-**Complexity:** usually `O(n)` time because each boundary advances at most `n` times; state is often `O(alphabet)` or `O(n)`.
-
-```cpp
-std::size_t longest_window_with_at_most_k_distinct(
-        const std::vector<int>& items,
-        std::size_t k) {
-    if (k == 0) {
-        return 0;
-    }
-
-    std::unordered_map<int, int> frequency;
-    std::size_t left = 0;
-    std::size_t best = 0;
-
-    for (std::size_t right = 0; right < items.size(); ++right) {
-        ++frequency[items[right]];
-
-        while (frequency.size() > k) {
-            int outgoing = items[left++];
-            auto it = frequency.find(outgoing);
-            if (--it->second == 0) {
-                frequency.erase(it);
-            }
-        }
-
-        best = std::max(best, right - left + 1);
-    }
-    return best;
-}
-```
-
-**Change per problem:** state, invalid predicate, and whether the answer updates before or after shrinking.  
-**Common mistakes:** `if` instead of `while`, incorrect removal order, and applying the template when negative values destroy monotonic repair.
+- **Reconstruct:** expand right, update counts, then shrink left in a `while` loop until validity is restored. For “at most `k` distinct,” remove zero-count keys before using `map.size()`.
+- **Adapt/check:** state the repair property, define when the answer updates, and distinguish longest-valid from shortest-covering windows. Arbitrary negative sums do not obey the usual sum-window repair rule.
+- **Cost:** expected `O(n)` with hash state because both boundaries advance at most `n` times; auxiliary space is the retained distinct-key state, at most `O(n)`.
 
 ### 24.10 Binary search: exact match
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§10.1 exact binary search](#101-exact-binary-search).
 
-**What it does:** Repeatedly halves a sorted candidate range and returns an index only when an exact value is found.  
-**Use when:** search a sorted random-access collection.  
-**Invariant:** if the target exists, it remains inside half-open range `[left, right)`.  
-**Complexity:** `O(log n)` time, `O(1)` space.
-
-```cpp
-std::optional<std::size_t> binary_search_exact(
-        const std::vector<int>& nums,
-        int target) {
-    std::size_t left = 0;
-    std::size_t right = nums.size();
-
-    while (left < right) {
-        std::size_t mid = left + (right - left) / 2;
-        if (nums[mid] == target) {
-            return mid;
-        }
-        if (nums[mid] < target) {
-            left = mid + 1;
-        } else {
-            right = mid;
-        }
-    }
-    return std::nullopt;
-}
-```
-
-**Change per problem:** comparison key; exact-match search does not by itself guarantee first/last duplicate.  
-**Common mistakes:** using `left < right` with inclusive updates or setting a boundary to `mid` without proving progress.
+- **Reconstruct:** choose one range convention; if the target exists it remains in the candidate range. Every nonreturning comparison strictly shrinks that range.
+- **Adapt/check:** empty input, absent target, duplicate semantics, returned sentinel, and safe midpoint arithmetic. An arbitrary exact match does not promise the first duplicate.
+- **Cost:** `O(log n)` time and `O(1)` auxiliary space over indexed data.
 
 ### 24.11 Binary search: lower bound, upper bound, and first true
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1 for array bounds; 🟠 Tier 2 for answer search. Canonical Java:** [§10.2 lower/upper bounds](#102-lower-bound-and-upper-bound), [§10.3 binary search on answer](#103-binary-search-on-answer).
 
-**What it does:** Finds a transition boundary: first value `>= target`, first value `> target`, or first candidate satisfying a monotone predicate.  
-**Use when:** a predicate over ordered candidates is false, then true; find the first true position.  
-**Invariant:** a boundary answer lies in half-open search interval `[left, right)`; `right` may be the sentinel `values.size()`.  
-**Complexity:** `O(log n)` predicate calls.
-
-```cpp
-std::size_t lower_bound_index(
-        const std::vector<int>& values,
-        int target) {
-    std::size_t left = 0;
-    std::size_t right = values.size();
-    while (left < right) {
-        std::size_t mid = left + (right - left) / 2;
-        if (values[mid] >= target) {
-            right = mid;
-        } else {
-            left = mid + 1;
-        }
-    }
-    return left;
-}
-
-std::size_t upper_bound_index(
-        const std::vector<int>& values,
-        int target) {
-    std::size_t left = 0;
-    std::size_t right = values.size();
-    while (left < right) {
-        std::size_t mid = left + (right - left) / 2;
-        if (values[mid] > target) {
-            right = mid;
-        } else {
-            left = mid + 1;
-        }
-    }
-    return left;
-}
-
-std::optional<long long> first_true_nonnegative(
-        long long low,
-        long long high,
-        const std::function<bool(long long)>& feasible) {
-    if (low < 0 || low > high || !feasible(high)) {
-        return std::nullopt;
-    }
-
-    while (low < high) {
-        long long mid = low + (high - low) / 2;
-        if (feasible(mid)) {
-            high = mid;
-        } else {
-            low = mid + 1;
-        }
-    }
-    return low;
-}
-```
-
-This version deliberately uses a nonnegative answer domain, so `high - low` cannot overflow. Adapt the midpoint logic explicitly if a problem truly needs the full signed-integer domain.
-
-**Change per problem:** domain bounds and monotone feasibility predicate. Test the returned candidate if no feasible value is guaranteed.  
-**Common mistakes:** guessing bounds, reversing predicate direction, and multiplying by predicate cost incorrectly; total time is `O(feasibility_cost × log(domain_size))`.
+- **Reconstruct:** find the first true boundary. Lower bound uses `value >= target`; upper bound uses `value > target`. Every discarded left position is false and every discarded right position is true; the insertion boundary can equal `n`.
+- **Adapt/check:** prove predicate monotonicity, justify numeric bounds, distinguish sentinel from a valid index, and handle no feasible candidate. For nonnegative `long` bounds with `low <= high`, `high - low` is safe.
+- **Cost:** `O(log n)` indexed comparisons; answer search is `O(feasibilityCost * log(domainSize + 1))`.
 
 ### 24.12 Linked-list reversal and fast/slow pointers
 
-**Priority:** 🟠 Tier 2 — Very Important
+**🟠 Tier 2. Canonical Java:** [§8.2 reversal](#82-reversal), [§8.3 fast/slow pointers](#83-fast-and-slow-pointers).
 
-**What it does:** Rewires links in place or advances pointers at different speeds to expose a midpoint or cycle.  
-**Use when:** links must be redirected in place, or a cycle/midpoint must be detected without extra storage.  
-**Complexity:** `O(n)` time, `O(1)` auxiliary space.
-
-```cpp
-struct ListNode {
-    int val;
-    ListNode* next;
-
-    explicit ListNode(int value, ListNode* next_node = nullptr)
-        : val(value), next(next_node) {}
-};
-
-ListNode* reverse_list(ListNode* head) {
-    ListNode* previous = nullptr;
-    ListNode* current = head;
-    while (current != nullptr) {
-        ListNode* following = current->next;  // Save before overwriting.
-        current->next = previous;
-        previous = current;
-        current = following;
-    }
-    return previous;
-}
-
-bool has_cycle(const ListNode* head) {
-    const ListNode* slow = head;
-    const ListNode* fast = head;
-    while (fast != nullptr && fast->next != nullptr) {
-        slow = slow->next;
-        fast = fast->next->next;
-        if (slow == fast) {
-            return true;
-        }
-    }
-    return false;
-}
-
-const ListNode* middle_node(const ListNode* head) {
-    const ListNode* slow = head;
-    const ListNode* fast = head;
-    while (fast != nullptr && fast->next != nullptr) {
-        slow = slow->next;
-        fast = fast->next->next;
-    }
-    return slow;  // For even length, returns the second middle.
-}
-```
-
-**Change per problem:** reversal segment boundaries, midpoint convention, or post-meeting cycle logic.  
-**Common mistakes:** losing the next node, failing to reconnect a reversed segment, and unsafe `fast->next->next` access.
+- **Reconstruct reversal:** save the next node, redirect the current link to the reversed prefix, then advance. Return the new head and assign it at the caller.
+- **Reconstruct fast/slow:** guard `fast != null && fast.next != null`, move at different speeds, and compare node identity with `==` for a meeting.
+- **Adapt/check:** empty list, midpoint convention for even length, cyclic-input assumptions, and reconnecting a reversed segment. Changing `node.next` mutates a shared object; reassigning a parameter changes only its local copy of the reference.
+- **Cost:** `O(n)` time and `O(1)` auxiliary space for reversal, middle, or cycle detection.
 
 ### 24.13 Monotonic stack
 
-**Priority:** 🟠 Tier 2 — Very Important
+**🟠 Tier 2. Canonical Java:** [§9.3 monotonic stack](#93-monotonic-stack).
 
-**What it does:** Retains unresolved indices in monotone value order and resolves them when a breaking value arrives.  
-**Use when:** each item needs the next prior/later item that breaks a monotone condition.  
-**Invariant:** indices in the stack have unresolved answers and their values remain monotone.  
-**Complexity:** `O(n)` time—each index enters and leaves once—and `O(n)` space.
-
-```cpp
-std::vector<int> next_greater_distance(const std::vector<int>& nums) {
-    std::vector<int> answer(nums.size(), 0);
-    std::vector<std::size_t> unresolved;  // Values decrease along the stack.
-
-    for (std::size_t i = 0; i < nums.size(); ++i) {
-        while (!unresolved.empty() && nums[unresolved.back()] < nums[i]) {
-            std::size_t j = unresolved.back();
-            unresolved.pop_back();
-            answer[j] = static_cast<int>(i - j);
-        }
-        unresolved.push_back(i);
-    }
-    return answer;
-}
-```
-
-**Change per problem:** increasing/decreasing direction, strict versus non-strict comparison, answer on pop versus current item, and circular traversal.  
-**Common mistakes:** storing values instead of indices and mishandling equal values.
+- **Reconstruct:** keep unresolved indices in monotone value order. When the new value breaks the rule, pop indices and finalize their answers.
+- **Adapt/check:** increasing/decreasing order, strictly greater versus greater-or-equal, answer at pop versus current index, distances versus values, and circular traversal.
+- **Cost:** `O(n)` total time and `O(n)` auxiliary space; the nested loop is linear because each index enters and leaves once.
 
 ### 24.14 Tree DFS and BFS
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§12.2 recursive DFS and subtree contracts](#122-recursive-dfs-traversals), [§12.3 iterative DFS](#123-iterative-dfs-traversals), [§12.4 level order](#124-tree-bfs-level-order-traversal).
 
-**What it does:** DFS returns a subtree summary; BFS groups nodes by distance from the root.  
-**Use when:** the parent answer combines child results.  
-**Invariant:** `dfs(node)` has one explicitly stated return contract.  
-**Complexity:** both traversals take `O(n)` time. Recursive DFS uses `O(h)` call-stack space for height `h`; BFS uses `O(w)` frontier space for maximum width `w`, excluding returned output.
-
-```cpp
-struct TreeNode {
-    int val;
-    TreeNode* left;
-    TreeNode* right;
-
-    explicit TreeNode(int value, TreeNode* left_child = nullptr,
-                      TreeNode* right_child = nullptr)
-        : val(value), left(left_child), right(right_child) {}
-};
-
-int tree_height(const TreeNode* root) {
-    if (root == nullptr) {
-        return 0;
-    }
-    return 1 + std::max(tree_height(root->left), tree_height(root->right));
-}
-
-std::vector<std::vector<int>> level_order(const TreeNode* root) {
-    if (root == nullptr) {
-        return {};
-    }
-
-    std::vector<std::vector<int>> levels;
-    std::queue<const TreeNode*> pending;
-    pending.push(root);
-
-    while (!pending.empty()) {
-        std::size_t level_size = pending.size();
-        std::vector<int> level;
-        level.reserve(level_size);
-
-        for (std::size_t i = 0; i < level_size; ++i) {
-            const TreeNode* node = pending.front();
-            pending.pop();
-            level.push_back(node->val);
-            if (node->left != nullptr) {
-                pending.push(node->left);
-            }
-            if (node->right != nullptr) {
-                pending.push(node->right);
-            }
-        }
-        levels.push_back(std::move(level));
-    }
-    return levels;
-}
-```
-
-**Change per problem:** traversal moment (pre/in/post), returned state, carried path data, and whether levels or a flat order are required.  
-**Common mistakes:** computing a value but not returning it, mixing node- and edge-count height, dereferencing `nullptr`, or failing to snapshot a BFS level size.
+- **Reconstruct DFS:** define what one call returns, handle null, obtain child results, then combine at the correct traversal moment.
+- **Reconstruct BFS:** enqueue a non-null root, snapshot level size, process exactly that layer, and enqueue only non-null children.
+- **Adapt/check:** node/edge height convention, carried path state versus returned state, identity versus value, and recursion depth.
+- **Cost:** `O(n)` time, `O(h)` DFS stack or `O(w)` BFS frontier, excluding returned traversal output. Use iterative traversal when depth may exhaust Java's call stack.
 
 ### 24.15 Graph BFS
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§14.3 BFS and unweighted shortest paths](#143-graph-bfs-and-unweighted-shortest-paths), [§14.4 multi-source BFS](#144-multi-source-bfs).
 
-**What it does:** Explores an unweighted graph in nondecreasing edge distance from the source.  
-**Use when:** exploring by minimum number of unweighted edges or processing one level at a time.  
-**Invariant:** queue items are discovered but not fully processed; discovery distance is minimal.  
-**Complexity:** graph `O(V + E)` time and `O(V)` space.
-
-```cpp
-std::optional<int> shortest_unweighted(
-        const std::vector<std::vector<int>>& graph,
-        int start,
-        int target) {
-    const int n = static_cast<int>(graph.size());
-    if (start < 0 || start >= n || target < 0 || target >= n) {
-        return std::nullopt;
-    }
-
-    std::vector<int> distance(n, -1);
-    std::queue<int> pending;
-    distance[start] = 0;
-    pending.push(start);
-
-    while (!pending.empty()) {
-        int node = pending.front();
-        pending.pop();
-        if (node == target) {
-            return distance[node];
-        }
-
-        for (int neighbor : graph[node]) {
-            if (distance[neighbor] == -1) {
-                distance[neighbor] = distance[node] + 1;  // Mark on enqueue.
-                pending.push(neighbor);
-            }
-        }
-    }
-    return std::nullopt;
-}
-```
-
-For level processing, capture `std::size_t level_size = pending.size()` and process exactly that many nodes before incrementing the level.  
-**Change per problem:** neighbor generation, visited key, stored state, and success condition.  
-**Common mistakes:** marking on dequeue, using `vector.erase(vector.begin())` for FIFO work, and reusing one visited set across logically different searches.
+- **Reconstruct:** initialize source distance, mark on enqueue, then set each undiscovered neighbor's distance to current distance plus one. Queue order is nondecreasing edge distance.
+- **Adapt/check:** direction, source/target labels, full visited-state key, unreachable result, and parent storage if a path must be reconstructed. Multi-source BFS starts all sources at distance zero.
+- **Cost:** `O(V + E)` time and `O(V)` auxiliary space excluding the adjacency list.
 
 ### 24.16 Grid traversal
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§14.6 grid as a graph](#146-grid-as-a-graph).
 
-**What it does:** Treats each eligible cell as a graph node and generates neighbors from direction offsets.  
-**Use when:** a matrix is an implicit graph.  
-**Invariant:** every enqueued cell is in bounds, eligible, and already marked discovered.  
-**Complexity:** `O(rows × cols)` time and up to `O(rows × cols)` space.
-
-```cpp
-std::vector<std::pair<int, int>> flood_fill(
-        const std::vector<std::vector<int>>& grid,
-        int start_row,
-        int start_col,
-        int allowed_value) {
-    if (grid.empty() || grid.front().empty()) {
-        return {};
-    }
-
-    const int rows = static_cast<int>(grid.size());
-    const int cols = static_cast<int>(grid.front().size());
-    if (start_row < 0 || start_row >= rows ||
-        start_col < 0 || start_col >= cols ||
-        grid[start_row][start_col] != allowed_value) {
-        return {};
-    }
-
-    const std::array<std::pair<int, int>, 4> directions{{
-        {1, 0}, {-1, 0}, {0, 1}, {0, -1}
-    }};
-    std::vector<std::vector<bool>> visited(
-        rows, std::vector<bool>(cols, false));
-    std::queue<std::pair<int, int>> pending;
-    std::vector<std::pair<int, int>> reached;
-
-    visited[start_row][start_col] = true;
-    pending.push({start_row, start_col});
-
-    while (!pending.empty()) {
-        auto [row, col] = pending.front();
-        pending.pop();
-        reached.push_back({row, col});
-
-        for (auto [dr, dc] : directions) {
-            int next_row = row + dr;
-            int next_col = col + dc;
-            if (next_row >= 0 && next_row < rows &&
-                next_col >= 0 && next_col < cols &&
-                !visited[next_row][next_col] &&
-                grid[next_row][next_col] == allowed_value) {
-                visited[next_row][next_col] = true;
-                pending.push({next_row, next_col});
-            }
-        }
-    }
-    return reached;
-}
-```
-
-**Change per problem:** directions, allowed-cell predicate, multi-source initialization, and whether the grid itself can mark visited.  
-**Common mistakes:** failing to handle an empty grid, assuming a rectangular grid without a contract, swapping dimensions, and marking after rather than before enqueue.
+- **Reconstruct:** generate neighbors from direction offsets, check bounds and eligibility before indexing/enqueuing, and mark at discovery. Each queued cell is already known valid and discovered.
+- **Adapt/check:** rectangular or ragged grid, empty rows, four/eight directions, in-place visited marking versus separate storage, and whether coordinates are output. `new int[] {row, col}` is convenient state; allocate a distinct entry for each queued coordinate.
+- **Cost:** `O(rows * cols)` time and up to `O(rows * cols)` auxiliary space for a rectangular grid.
 
 ### 24.17 Iterative graph DFS
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§14.2 graph DFS](#142-graph-dfs).
 
-**What it does:** Uses an explicit stack to explore one branch deeply while visiting each reachable node once.  
-**Use when:** reachability/components do not require shortest paths and recursion depth may be unsafe.  
-**Complexity:** `O(V + E)` time and `O(V)` space.
-
-```cpp
-std::vector<int> dfs_iterative(
-        const std::vector<std::vector<int>>& graph,
-        int start) {
-    const int n = static_cast<int>(graph.size());
-    if (start < 0 || start >= n) {
-        return {};
-    }
-
-    std::vector<bool> visited(n, false);
-    std::vector<int> stack{start};
-    std::vector<int> order;
-    visited[start] = true;
-
-    while (!stack.empty()) {
-        int node = stack.back();
-        stack.pop_back();
-        order.push_back(node);
-
-        // Reverse iteration preserves left-to-right adjacency order in this DFS.
-        for (auto it = graph[node].rbegin(); it != graph[node].rend(); ++it) {
-            int neighbor = *it;
-            if (!visited[neighbor]) {
-                visited[neighbor] = true;
-                stack.push_back(neighbor);
-            }
-        }
-    }
-    return order;
-}
-```
-
-**Change per problem:** neighbor construction and work performed on entry/exit. Recursive DFS is often clearer when postorder exit state matters.  
-**Common mistakes:** assuming traversal order when adjacency order is unspecified and forgetting to start a traversal from every vertex for components.
+- **Reconstruct:** use an explicit stack, mark discovered vertices before pushing, and process each reachable vertex once. For components, start again from every unvisited vertex.
+- **Adapt/check:** an ordinary reachability stack need not reproduce recursive DFS entry/exit order. Use explicit frames or an appropriate postorder method when exit state, directed recursion-path membership, or exact DFS order matters.
+- **Cost:** `O(V + E)` time and `O(V)` auxiliary space for the marked-on-push reachability version, excluding the graph.
 
 ### 24.18 Topological sort (Kahn's algorithm)
 
-**Priority:** 🟠 Tier 2 — Very Important
+**🟠 Tier 2. Canonical Java:** [§14.8 topological sorting](#148-topological-sorting).
 
-**What it does:** Repeatedly emits zero-indegree nodes, producing a dependency order or detecting a directed cycle.  
-**Use when:** directed prerequisites must be ordered or a directed cycle detected.  
-**Invariant:** the queue contains currently unblocked vertices with indegree zero.  
-**Complexity:** `O(V + E)` time and `O(V + E)` storage including the graph.
+- **Reconstruct:** build edges from prerequisite to dependent, count indegrees, enqueue every zero-indegree vertex, emit one vertex, and decrement its outgoing neighbors. The queue contains currently unblocked vertices.
+- **Adapt/check:** isolated vertices, duplicate-edge policy, requested order versus feasibility, and cycle detection when processed count is less than `V`. Multiple valid orders are normal.
+- **Cost:** `O(V + E)` time and `O(V)` auxiliary space beyond the graph and returned order.
 
-```cpp
-std::optional<std::vector<int>> topological_order(
-        int num_nodes,
-        const std::vector<std::pair<int, int>>& edges) {
-    if (num_nodes < 0) {
-        return std::nullopt;
-    }
-
-    std::vector<std::vector<int>> graph(num_nodes);
-    std::vector<int> indegree(num_nodes, 0);
-    for (const auto& [before, after] : edges) {
-        if (before < 0 || before >= num_nodes ||
-            after < 0 || after >= num_nodes) {
-            return std::nullopt;
-        }
-        graph[before].push_back(after);
-        ++indegree[after];
-    }
-
-    std::queue<int> ready;
-    for (int node = 0; node < num_nodes; ++node) {
-        if (indegree[node] == 0) {
-            ready.push(node);
-        }
-    }
-
-    std::vector<int> order;
-    order.reserve(num_nodes);
-    while (!ready.empty()) {
-        int node = ready.front();
-        ready.pop();
-        order.push_back(node);
-        for (int neighbor : graph[node]) {
-            if (--indegree[neighbor] == 0) {
-                ready.push(neighbor);
-            }
-        }
-    }
-
-    if (static_cast<int>(order.size()) != num_nodes) {
-        return std::nullopt;  // Directed cycle.
-    }
-    return order;
-}
-```
-
-**Change per problem:** edge orientation, node labels, and whether any valid order or only feasibility is required.  
-**Common mistakes:** reversing prerequisite edges, using an out-of-range vertex label without validation, and forgetting that multiple valid orders can exist.
-
+<a id="2419-union-find-disjoint-set-union"></a>
 ### 24.19 Union-Find / Disjoint Set Union
 
-**Priority:** 🟠 Tier 2 — Very Important
+**🟠 Tier 2. Canonical Java:** [§14.9 DSU](#149-union-find-disjoint-set-union-dsu).
 
-**What it does:** Maintains component representatives under repeated undirected merges.  
-**Use when:** repeatedly merge undirected groups and ask whether two items are connected.  
-**Invariant:** each root represents one component; `size[root]` is meaningful only at roots.  
-**Complexity:** `O(α(n))` amortized per operation, effectively constant; `O(n)` space.
-
-```cpp
-class UnionFind {
-public:
-    explicit UnionFind(int n) {
-        if (n < 0) {
-            throw std::invalid_argument("size must be nonnegative");
-        }
-        parent_.resize(n);
-        size_.assign(n, 1);
-        components_ = n;
-        std::iota(parent_.begin(), parent_.end(), 0);
-    }
-
-    int find(int x) {
-        while (x != parent_[x]) {
-            parent_[x] = parent_[parent_[x]];  // Path halving.
-            x = parent_[x];
-        }
-        return x;
-    }
-
-    bool unite(int a, int b) {
-        int root_a = find(a);
-        int root_b = find(b);
-        if (root_a == root_b) {
-            return false;
-        }
-        if (size_[root_a] < size_[root_b]) {
-            std::swap(root_a, root_b);
-        }
-        parent_[root_b] = root_a;
-        size_[root_a] += size_[root_b];
-        --components_;
-        return true;
-    }
-
-    int components() const {
-        return components_;
-    }
-
-private:
-    std::vector<int> parent_;
-    std::vector<int> size_;
-    int components_ = 0;
-};
-```
-
-**Change per problem:** label-to-index mapping and metadata stored per component.  
-**Common mistakes:** reading `parent[x]` as the root without calling `find`, or using DSU for directed reachability.
+- **Reconstruct:** initialize each vertex as its own root; find representatives with compression/path halving; attach the smaller component to the larger; decrement component count only on a successful merge.
+- **Adapt/check:** valid labels, root-only size/rank metadata, and same-component union. `parent[x]` need not be the representative until you follow the chain. DSU does not answer directed reachability or reconstruct a graph path.
+- **Cost:** `O(n)` initialization/space; `O(alpha(n))` amortized per operation with compression and union by size/rank.
 
 ### 24.20 Heap: retain Top-K
 
-**Priority:** 🟠 Tier 2 — Very Important
+**🟠 Tier 2. Canonical Java:** [§13.2 Top-K](#132-top-k-and-kth-element-pattern), [§13.3 k-way merge](#133-k-way-merge).
 
-**What it does:** Keeps a min-heap containing only the strongest `k` values seen so far.  
-**Use when:** only the best `k` items matter and the full order does not.  
-**Invariant:** the min-heap contains the best `k` items seen; its root is the weakest retained item.  
-**Complexity:** `O(n log k)` time and `O(k)` space.
-
-This contract returns all `n` values when `k > n`.
-
-```cpp
-std::vector<int> k_largest(
-        const std::vector<int>& nums,
-        std::size_t k) {
-    if (k == 0) {
-        return {};
-    }
-
-    std::priority_queue<int, std::vector<int>, std::greater<int>> winners;
-    for (int value : nums) {
-        if (winners.size() < k) {
-            winners.push(value);
-        } else if (value > winners.top()) {
-            winners.pop();
-            winners.push(value);
-        }
-    }
-
-    std::vector<int> result;
-    result.reserve(winners.size());
-    while (!winners.empty()) {
-        result.push_back(winners.top());
-        winners.pop();
-    }
-    return result;  // Members are correct; this happens to be ascending.
-}
-```
-
-For k-way merge, store entries such as `std::tuple{value, source_id, index}` and push the next item only from the source just popped.
-**Change per problem:** priority key, heap orientation, tie-breaker, and retained payload.  
-**Common mistakes:** expecting sorted heap iteration, mishandling `k > n`, and retaining `n-k` items by accident.
+- **Reconstruct Top-K:** keep a size-`k` min-heap for the largest values; its root is the weakest retained winner. Replace that root only with a better candidate.
+- **Reconstruct merge:** keep one frontier entry per sorted source; after polling an entry, offer only the next item from that source.
+- **Adapt/check:** `k <= 0`, `k > n`, kth value versus all retained values, output order, immutable priority fields, and safe comparators. A tie-breaker is required only for a defined secondary order; custom entries still need a comparison rule.
+- **Cost:** Top-K `O(n log(m + 1))` time and `O(m)` auxiliary space for `m = min(k, n)` and positive `k`; k-way merge `O(N log(k + 1))` time and `O(k)` frontier space for `N` items. Polling retained items produces ordered output at an additional `O(m log(m + 1))` cost, within the Top-K bound.
 
 ### 24.21 Dijkstra's shortest path
 
-**Priority:** 🟠 Tier 2 — Very Important
+**🟠 Tier 2. Canonical Java:** [§14.12 Dijkstra](#1412-dijkstras-algorithm).
 
-**What it does:** Repeatedly expands the cheapest non-stale tentative distance and relaxes outgoing edges.  
-**Use when:** single-source shortest paths have nonnegative edge weights.  
-**Invariant:** when a non-stale `(distance, node)` is popped, it is the cheapest known route to expand.  
-**Complexity:** `O((V + E) log E)` with duplicate heap entries in a general graph, simplifying to `O((V + E) log V)` for simple graphs; `O(V + E)` graph/distance storage and up to `O(E)` heap entries.
-
-```cpp
-std::vector<long long> dijkstra(
-        const std::vector<std::vector<std::pair<int, long long>>>& graph,
-        int source) {
-    const int n = static_cast<int>(graph.size());
-    const long long INF = std::numeric_limits<long long>::max();
-    if (source < 0 || source >= n) {
-        throw std::out_of_range("source vertex is outside the graph");
-    }
-    for (const auto& edges : graph) {
-        for (const auto& [neighbor, weight] : edges) {
-            if (neighbor < 0 || neighbor >= n) {
-                throw std::out_of_range("edge endpoint is outside the graph");
-            }
-            if (weight < 0) {
-                throw std::invalid_argument(
-                    "Dijkstra requires nonnegative weights");
-            }
-        }
-    }
-
-    using State = std::pair<long long, int>;  // (distance, node)
-    std::priority_queue<State, std::vector<State>, std::greater<State>> heap;
-    std::vector<long long> distance(n, INF);
-    distance[source] = 0;
-    heap.push({0, source});
-
-    while (!heap.empty()) {
-        auto [dist, node] = heap.top();
-        heap.pop();
-        if (dist != distance[node]) {
-            continue;  // Stale entry.
-        }
-
-        for (const auto& [neighbor, weight] : graph[node]) {
-            if (weight > INF - dist) {
-                continue;  // Prevent overflow; this path exceeds the chosen INF.
-            }
-            long long candidate = dist + weight;
-            if (candidate < distance[neighbor]) {
-                distance[neighbor] = candidate;
-                heap.push({candidate, neighbor});
-            }
-        }
-    }
-    return distance;
-}
-```
-
-**Change per problem:** graph construction, source(s), early target exit, and extra path state.  
-**Common mistakes:** negative weights, reversing directed edges, or treating the first inserted distance as final.
+- **Reconstruct:** maintain `long[] distance`, put the source at distance zero in a min-heap, discard stale popped entries, and relax outgoing nonnegative edges.
+- **Adapt/check:** nonnegative weights, edge direction, representable distance range and infinity sentinel, unreachable vertices, and early target exit only on a non-stale extraction. A finite answer equal to a reserved infinity sentinel needs a different contract.
+- **Cost:** with duplicate entries, `O(V + E log(E + 1))` time including initialization/edge checks; `O(V + E)` auxiliary space because the heap may contain `O(E)` entries. For simple graphs this is commonly expressed as `O((V + E) log(V + 1))`.
 
 ### 24.22 Backtracking: choose, explore, unchoose
 
-**Priority:** 🟠 Tier 2 — Very Important
+**🟠 Tier 2. Canonical Java:** [§15.3 backtracking contract](#153-general-backtracking-template), [§15.4 subsets](#154-subsets-choose-or-skip), [§15.6 permutations](#156-permutations-used-choice-search).
 
-**What it does:** Traverses a decision tree while restoring branch-local state after every recursive call.  
-**Use when:** enumerate candidates subject to constraints.  
-**Invariant:** `path` represents exactly the choices on the current recursion branch.  
-**Complexity:** for this subset template, `O(n · 2^n)` time including output snapshots, `O(n)` auxiliary recursion/path space, and `O(n · 2^n)` output space. Other searches depend on branching, depth, pruning, and output.
-
-```cpp
-std::vector<std::vector<int>> subsets(const std::vector<int>& nums) {
-    std::vector<std::vector<int>> answers;
-    std::vector<int> path;
-
-    std::function<void(std::size_t)> backtrack = [&](std::size_t start) {
-        answers.push_back(path);  // Value copy: snapshot the current candidate.
-
-        for (std::size_t i = start; i < nums.size(); ++i) {
-            path.push_back(nums[i]);  // Choose.
-            backtrack(i + 1);         // Explore; next-state rule varies.
-            path.pop_back();          // Unchoose.
-        }
-    };
-
-    backtrack(0);
-    return answers;
-}
-```
-
-**Change per problem:** choice set, completion, next index, used-state, duplicate skipping, and pruning.  
-**Common mistakes:** advancing past `i` when reuse is allowed, saving a pointer/reference to the live path instead of a value snapshot, and skipping duplicates across different depths.
+- **Reconstruct:** `path` contains exactly the choices on the current branch; choose, recurse with the correct next state, and undo. Save completed answers with a new list snapshot.
+- **Adapt/check:** completion condition, reuse versus advance, start index versus used array, duplicate skipping at one depth, and safe pruning. A shallow list snapshot is enough for immutable `Integer` elements, not arbitrary mutable objects.
+- **Cost:** derive the actual search tree. Enumerating all subsets has `O(n * 2^n)` time/output space and `O(n)` auxiliary path/stack space; other choice trees differ.
 
 ### 24.23 Greedy frontier
 
-**Priority:** 🟠 Tier 2 — Very Important
+**🟠 Tier 2. Canonical Java:** [§16.4 reachability frontier](#164-reachability-frontier), [§16.1 greedy proof ideas](#161-greedy-reasoning-choice-invariant-proof).
 
-**What it does:** Retains one dominance summary—here, the farthest reachable index—rather than remembering every path.  
-**Use when:** a local choice can be proved safe and all processed choices collapse to one equally good or better frontier.  
-**Invariant:** every index through `farthest` is reachable using choices from the processed prefix.  
-**Complexity:** `O(n)` time and `O(1)` auxiliary space.
-
-```cpp
-bool can_reach_end(const std::vector<int>& jumps) {
-    std::size_t farthest = 0;
-
-    for (std::size_t i = 0; i < jumps.size(); ++i) {
-        if (i > farthest) {
-            return false;
-        }
-        if (jumps[i] < 0) {
-            throw std::invalid_argument("jump lengths must be nonnegative");
-        }
-
-        std::size_t jump = static_cast<std::size_t>(jumps[i]);
-        std::size_t reach = jump > jumps.size() - i
-            ? jumps.size()
-            : i + jump;
-        farthest = std::max(farthest, reach);
-        if (!jumps.empty() && farthest >= jumps.size() - 1) {
-            return true;
-        }
-    }
-    return jumps.empty();
-}
-```
-
-**Change per problem:** the dominance summary, safe-choice rule, sorting key if ordering is required, and proof technique.  
-**Common mistakes:** choosing a locally attractive value without a safe-choice argument, updating from an unreachable state, or forcing greedy onto a weighted choice problem that needs DP.
+- **Reconstruct:** retain the farthest reachable index. Before using a position's jump, prove the position is reachable; all indices through the frontier are reachable under the nonnegative-jump contract.
+- **Adapt/check:** empty-input policy, nonnegative jumps, widening/capping reach arithmetic, and whether the frontier truly dominates discarded histories.
+- **Cost:** `O(n)` time and `O(1)` auxiliary space. A different greedy rule needs its own safe-choice argument.
 
 ### 24.24 Dynamic programming: memoization and tabulation
 
-**Priority:** 🟠 Tier 2 — Very Important
+**🟠 Tier 2. Canonical Java:** [§18.6 full take/skip evolution](#186-worked-evolution-from-brute-force-to-optimized-dp), [§18.3 DP design](#183-the-six-part-dp-design-process).
 
-**What it does:** Evaluates each distinct decision state once, either lazily through recursion or explicitly in dependency order.  
-**Use when:** a recurrence revisits the same fully described state. Define the state before choosing either form.  
-**Example contract:** `solve(i)` is the maximum score obtainable from suffix starting at `i`.
-
-```cpp
-long long best_score_memo(const std::vector<int>& values) {
-    std::vector<std::optional<long long>> memo(values.size());
-
-    std::function<long long(std::size_t)> solve = [&](std::size_t i) {
-        if (i >= values.size()) {
-            return 0LL;
-        }
-        if (memo[i].has_value()) {
-            return *memo[i];
-        }
-
-        long long skip = solve(i + 1);
-        long long take = static_cast<long long>(values[i]) + solve(i + 2);
-        memo[i] = std::max(skip, take);
-        return *memo[i];
-    };
-
-    return solve(0);
-}
-```
-
-Equivalent bottom-up form:
-
-```cpp
-long long best_score_table(const std::vector<int>& values) {
-    long long next_one = 0;  // dp[i + 1]
-    long long next_two = 0;  // dp[i + 2]
-
-    for (std::size_t end = values.size(); end > 0; --end) {
-        std::size_t i = end - 1;
-        long long current = std::max(
-            next_one,
-            static_cast<long long>(values[i]) + next_two);
-        next_two = next_one;
-        next_one = current;
-    }
-    return next_one;
-}
-```
-
-**Complexity:** number of distinct states × work per state; here `O(n)` time and `O(n)` memo space or `O(1)` table-state space.  
-**Change per problem:** state meaning, choices, transition, base cases, evaluation order, and reconstructing decisions.  
-**Common mistakes:** caching an incomplete state, claiming `O(1)` space while using recursion, and optimizing storage before validating the recurrence.
+- **Reconstruct:** define state, choices, transition, base cases, evaluation order, and requested answer. For nonadjacent score with skipping allowed, a suffix state chooses between skipping `i` and taking `value[i]` plus the result from `i + 2`.
+- **Adapt/check:** whether empty selection is allowed, a separate computed flag when zero/negative results are legitimate, `long` scores, complete memo keys, and dependencies before compressing storage. Keep parent/choice information if reconstruction is requested.
+- **Cost:** states times transition work; this example takes `O(n)` time, `O(n)` memo plus recursion space, or `O(1)` rolling state with iteration.
 
 ### 24.25 Trie
 
-**Priority:** 🟡 Tier 3 — Nice to Know
+**🟡 Tier 3. Canonical Java:** [§19.2 trie implementation](#192-standard-trie-implementation), [§19.3 prefix variants](#193-prefix-search-counts-and-deletion).
 
-**What it does:** Stores shared string prefixes as root-to-node paths and marks complete words separately.  
-**Use when:** many operations share string prefixes.  
-**Invariant:** a path from the root spells a prefix; `is_word` distinguishes a complete key from a prefix.  
-**Complexity:** insert/search `O(L)` for word length `L`; storage is proportional to created prefix nodes.
-
-```cpp
-class Trie {
-private:
-    struct Node {
-        std::unordered_map<char, std::unique_ptr<Node>> children;
-        bool is_word = false;
-    };
-
-    Node root_;
-
-    const Node* walk(std::string_view text) const {
-        const Node* node = &root_;
-        for (char character : text) {
-            auto it = node->children.find(character);
-            if (it == node->children.end()) {
-                return nullptr;
-            }
-            node = it->second.get();
-        }
-        return node;
-    }
-
-public:
-    void insert(std::string_view word) {
-        Node* node = &root_;
-        for (char character : word) {
-            auto& child = node->children[character];
-            if (child == nullptr) {
-                child = std::make_unique<Node>();
-            }
-            node = child.get();
-        }
-        node->is_word = true;
-    }
-
-    bool contains(std::string_view word) const {
-        const Node* node = walk(word);
-        return node != nullptr && node->is_word;
-    }
-
-    bool starts_with(std::string_view prefix) const {
-        return walk(prefix) != nullptr;
-    }
-};
-```
-
-**Change per problem:** alphabet representation, counts, stored payload, deletion, and wildcard traversal.  
-**Common mistakes:** treating any prefix as a complete word and overlooking the trie's substantial constant-factor memory.
+- **Reconstruct:** descend through one edge per alphabet symbol, create missing nodes only on insertion, and mark the terminal node separately from its prefix path.
+- **Adapt/check:** fixed alphabet versus mapped children, lowercase/code-unit/code-point contract, empty word, duplicate insertion, exact versus prefix search, and terminal counts when deletion is needed.
+- **Cost:** `O(L)` per key with fixed-alphabet constant-time edges; mapped edges give expected `O(L)` under constant-cost key hashing. Space depends on distinct prefix nodes and child-storage representation.
 
 ### 24.26 Interval merge
 
-**Priority:** 🔴 Tier 1 — Must Master
+**🔴 Tier 1. Canonical Java:** [§17.2 interval merge](#172-merge-overlapping-intervals), [§17.1 endpoint semantics](#171-endpoint-semantics-and-overlap).
 
-**What it does:** Sorts by start and extends only the last merged interval while overlap continues.  
-**Use when:** combine all overlapping intervals.  
-**Invariant:** output intervals are sorted, disjoint, and cover all processed input intervals.  
-**Complexity:** `O(n log n)` time, `O(n)` auxiliary space for the explicit input-preserving working copy, and `O(n)` output space.
-
-```cpp
-using Interval = std::array<long long, 2>;  // {start, end}
-
-std::vector<Interval> merge_intervals(
-        const std::vector<Interval>& intervals) {
-    if (intervals.empty()) {
-        return {};
-    }
-
-    std::vector<Interval> ordered = intervals;  // Explicit copy: preserve input.
-    std::sort(ordered.begin(), ordered.end(),
-              [](const Interval& a, const Interval& b) {
-                  return a[0] < b[0] || (a[0] == b[0] && a[1] < b[1]);
-              });
-
-    std::vector<Interval> merged;
-    merged.reserve(ordered.size());
-    merged.push_back(ordered.front());
-
-    for (std::size_t i = 1; i < ordered.size(); ++i) {
-        long long start = ordered[i][0];
-        long long end = ordered[i][1];
-        if (start <= merged.back()[1]) {  // Closed intervals; adjust semantics.
-            merged.back()[1] = std::max(merged.back()[1], end);
-        } else {
-            merged.push_back({start, end});
-        }
-    }
-    return merged;
-}
-```
-
-**Change per problem:** overlap definition, mutation policy, and whether the answer is a count, schedule, or merged ranges.  
-**Common mistakes:** sorting by the wrong key and assuming closed-interval semantics without clarification.
+- **Reconstruct:** sort by start; extend only the latest merged interval while overlap continues. Completed output is sorted, disjoint, and covers all processed input.
+- **Adapt/check:** closed versus half-open boundaries, nested/equal intervals, valid start/end ordering, comparator overflow, and mutation policy. Sorting an outer `int[][]` array rearranges row references; copying only the outer array does not isolate row mutation.
+- **Cost:** `O(n log n)` time with Java object-array sorting; account for `O(n)` worst-case sorting/copy workspace and `O(n)` output separately as used by the canonical implementation.
 
 ### Template practice rule
 
-For each Tier 1 template, write it on blank paper or a plain editor, state the invariant aloud, and adapt it to at least two variations. For Tier 2 templates, be able to reconstruct the core and look up only infrequent C++ standard-library API details. If you cannot explain why every update preserves the invariant, the template is not yet learned.
+For each Tier 1 pattern, reconstruct the invariant and Java control flow unaided, then change one constraint and explain the adaptation. For Tier 2, reconstruct common forms with the same care. Tier 3 requires a selected basic implementation; Tier 4 usually requires recognition only. Look up rare APIs after the retrieval attempt and record the general rule when an API mistake changes correctness. Follow the [practice ladder and review schedule](#25-how-to-learn-dsa-effectively) rather than repeatedly typing unchanged templates.
 
 ---
 
@@ -8460,12 +7843,23 @@ The goal is durable retrieval and transfer to unfamiliar problems. Use this cycl
 
 > **Learn → Implement → Solve → Struggle → Review → Re-solve → Generalize**
 
+### Start the next study session
+
+Use this order when the guide feels too large:
+
+1. **Due review:** take one due mistake-log item cold, with its notes hidden.
+2. **Repair or advance:** if its invariant or Java rule fails again, drill that exact gap; otherwise choose the first unmet prerequisite gate in the [roadmap](#27-learning-roadmap).
+3. **One ladder step:** solve the next mechanics, canonical, variation, or mixed problem for that pattern. Do not start several new topics at once.
+4. **Close the loop:** explain the rule aloud, record hint level and the first error, and schedule a cold revisit.
+
+For a 60-minute session, a starting allocation is 10 minutes of recall, 30 minutes of deliberate solving, 15 minutes of correction/testing, and 5 minutes of logging. Adjust to the problem; an unfinished attempt can still produce a useful invariant, counterexample, and next step. If an interview is close, replace new breadth with the highest recurring Tier 1/2 weakness and mixed practice.
+
 ### 25.1 What each step contributes
 
 | Step | What to do | Why it matters | Evidence that the step worked |
 |---|---|---|---|
 | Learn | Understand the motivating bottleneck, invariant, and complexity. Trace one small example. | Facts without a mental model disappear quickly. | You can explain why the method works without code. |
-| Implement | Reconstruct the core operation in your interview language. | Converts recognition into executable detail. | You can write it with only API references. |
+| Implement | Reconstruct the core operation in Java. | Converts recognition into executable detail. | During learning you need only occasional API references; common operations later work unaided. |
 | Solve | Start with a learning problem, then a standard variation. | Builds the clue-to-pattern connection. | You choose the technique for a reason, not from the tag. |
 | Struggle | Explore examples, brute force, and state before seeking help. | Retrieval effort strengthens memory and exposes gaps. | Your notes contain attempted reasoning, not just copied code. |
 | Review | Compare with a strong solution and classify the difference. | Turns failure into a reusable rule. | You can name the missed clue or broken invariant. |
@@ -8486,6 +7880,14 @@ For a new technique, make a compact note containing:
 
 Then close the note and recreate it from memory. Drawing pointer movement, a recursion tree, BFS layers, or a DP table is useful when it makes state transitions concrete.
 
+Keep three kinds of knowledge separate:
+
+| Retrieve from memory | Understand and derive | Safe to look up occasionally |
+|---|---|---|
+| Common array/String/list/map/set/deque/heap operations; sorting/comparator syntax; equality, null, arithmetic, and common costs | Why an invariant permits an update; recursion contracts; graph modeling; greedy proof; DP state/transition and dependency order | Rare `NavigableMap` methods; specialized APIs; selected Tier 3/4 algorithms |
+
+Memorize a small API vocabulary and a few boundary conventions. Reconstruct algorithms from their invariants. Never treat memorizing a complete problem solution as the goal. The [Java reference](#java-for-dsa-interviews-essential-reference) supplies the detailed memory/understanding/lookup split.
+
 ### 25.3 Use a deliberate problem ladder
 
 For each high-value pattern:
@@ -8496,7 +7898,18 @@ For each high-value pattern:
 4. **Mixed problem:** combines it with another pattern.
 5. **Cold revisit:** no topic label and no notes.
 
-Three deeply reviewed problems often teach more than fifteen random accepted submissions. Increase volume only when analysis quality remains high.
+Label the anchor problem **⭐ Canonical Interview Problem** in your tracker. For example, a hashing ladder is: build a frequency table → Two Sum → Group Anagrams (a changed key) → Subarray Sum Equals K (prefix sums plus hashing) → a cold, untagged revisit. The mixed problem belongs after its other prerequisite is learned.
+
+Use these as initial doses **per pattern**, not quotas per broad chapter:
+
+| Priority | Initial distinct problems | Retrieval target |
+|---|---:|---|
+| 🔴 Tier 1 | 3–4 across the ladder; add a distinct variation if needed | Reconstruct common forms, solve an untagged variation, and pass at least two delayed attempts |
+| 🟠 Tier 2 | 3–4 across the ladder | Reconstruct standard forms and pass two delayed attempts; expand when a variation exposes a gap |
+| 🟡 Tier 3 | 1–2 chosen basics | Explain when it applies and implement a basic form if selected for study |
+| ⚪ Tier 4 | 0 unless a target requires it | Recognition and alternatives; deepen only from evidence |
+
+Cold revisits are additional attempts, not new-problem quotas. A mechanics exercise may be brief if the Java operation is already automatic. Increase volume only when a distinct transfer gap remains; move on when evidence meets the gate, while keeping reviews scheduled.
 
 ### 25.4 Struggle and use hints correctly
 
@@ -8532,12 +7945,12 @@ Do not copy code line by line. Syntax familiarity can imitate competence while l
 Review based on weakness rather than a rigid calendar. A useful starting cadence is:
 
 - same day: explain the insight and repair the code;
-- 2–3 days: re-solve or outline from scratch;
+- 2–3 days: re-solve from scratch; an outline is a lighter review, not implementation evidence;
 - 1 week: solve cold;
 - 2–4 weeks: solve a variation or include it in a mixed set;
 - before interviews: prioritize items still marked uncertain in the mistake log.
 
-Successful cold recalls can be spaced farther apart; failures return sooner. Ask “What clue points to this pattern?” before asking “What was the code?”
+Successful cold recalls can be spaced farther apart; failures return sooner. Ask “What clue points to this pattern?” before asking “What was the code?” Record whether you independently recognized, explained, implemented, tested, and analyzed it. An immediate reconstruction after reading a solution is repair; it does not pass a delayed mastery gate.
 
 ### 25.7 Debug systematically
 
@@ -8557,13 +7970,13 @@ For recursion, log call state and return value. For windows, log both boundaries
 
 - Explain approaches aloud before typing.
 - Periodically code in a plain editor without autocomplete, running only after a manual trace.
-- Know the C++17 standard-library interfaces for maps, sets, queues, heaps, sorting, and custom comparators.
+- Retrieve the common Java array, String, map, set, `ArrayDeque`, `PriorityQueue`, sorting, and comparator APIs without autocomplete. Look up infrequent APIs after an honest recall attempt.
 - Practice correcting a bug while narrating calmly.
 - Do not ban the IDE entirely; use it for feedback during learning, then reduce assistance to test recall.
 
 ### 25.9 Mock interviews
 
-Begin after you can solve core easy problems and some standard mediums. Run mocks under realistic time and communication constraints:
+Begin short mixed sessions once you have two or three usable patterns; start full mocks after core easy problems and some standard mediums are reliable. Phase 8 increases mock frequency, but is not the first time you mix topics. Run mocks under realistic time and communication constraints:
 
 - five minutes to clarify and outline;
 - most time on reasoning and implementation;
@@ -8610,17 +8023,18 @@ A mistake log is a spaced-repetition queue built from your own weaknesses. Keep 
 | Better approach | Short outline, not copied full code |
 | Time complexity | Derived final time |
 | Space complexity | Auxiliary space, plus output if relevant |
-| Mistake category | Recognition, modeling, correctness, boundary, implementation, complexity, communication, or language/API |
+| Mistake category | Pattern recognition, conceptual, invariant/state, boundary, implementation, Java/API, complexity, testing, or communication |
 | What clue I missed | Exact phrase, constraint, or structural fact |
 | Hint level used | No hint, pattern, invariant, pseudocode, or full solution |
 | Date solved | First correct implementation date |
 | Date to review | Next active-recall date |
-| Could I solve it again without help? | No / uncertain / yes, with evidence |
+| Could I solve it again without help? | No / uncertain / yes, with dated recognition, implementation, explanation, and testing evidence |
+| General rule and regression case | One reusable correction plus the smallest input exposing it |
 
 Copyable entry:
 
-```markdown
-## [Problem name]
+```text
+Problem: [name or link]
 
 - Topic / pattern:
 - Difficulty to me:
@@ -8630,6 +8044,7 @@ Copyable entry:
 - Better approach:
 - Time / auxiliary space:
 - Mistake category:
+- General rule / smallest failing case:
 - Clue I missed:
 - Hint level used:
 - Date solved:
@@ -8642,14 +8057,27 @@ Copyable entry:
 
 | Category | Example | Corrective drill |
 |---|---|---|
-| Recognition | Missed that feasibility is monotone | Sort five mixed prompts by likely pattern and justify each |
-| Modeling | DP state omitted remaining capacity | Write state contracts without code for three related problems |
-| Correctness | Greedy choice had no safe-choice argument | Find a counterexample, then articulate a proof idea for the correct rule |
-| Boundary | Lower bound failed on empty input | Test the same template on sizes `0`, `1`, `2`, duplicates, and absent targets |
-| Implementation | Linked-list node was lost | Trace pointer assignments on three nodes before coding |
-| Complexity | Repeated subrange copies made recursion quadratic | Annotate cost of every nonconstant operation |
-| Communication | Began coding without explaining state | Record a two-minute spoken outline before the next solve |
-| Language/API | Used an array as a slow queue | Drill the standard queue/heap/map APIs in your interview language |
+| Pattern recognition | Missed monotone feasibility or used a window with arbitrary negative sums | Compare five untagged prompts; name a supporting clue and a disqualifying constraint for each candidate |
+| Conceptual | Believed the first DFS route was the shortest, or assumed an attractive greedy rule was always optimal | Build a minimal counterexample; explain the correct theorem or safe-choice argument |
+| Invariant/state | DP omitted remaining capacity; a window answer was updated before validity was restored | Write state contracts and trace the first divergent update on three tiny cases |
+| Boundary | Lower bound failed on empty input or returned `n` was indexed | Trace sizes `0`, `1`, `2`, duplicates, and absent targets using one range convention |
+| Implementation | Lost a linked-list node or forgot the backtracking undo | Trace the assignments and branch restoration before rewriting the method |
+| Java/API | Used `==` for logical String equality, or unboxed a missing map value | Write the general semantic rule, then a minimal snippet/case that distinguishes correct from incorrect behavior |
+| Complexity | Repeated substring copies or `ArrayList.remove(0)` made a scan quadratic | Annotate hidden allocation, copying, shifting, key, comparator, and recursion costs |
+| Testing | Only traced a normal example; missed zero, duplicate, no-solution, or cyclic input | Derive one test from each precondition, boundary, and invariant rather than from the sample list alone |
+| Communication | Began coding without a contract or stayed silent while stuck | Record a two-minute outline: contract, baseline, bottleneck, invariant, complexity, and first test |
+
+Choose the root cause as the primary category; use one secondary category only if it adds a distinct repair. A boundary bug caused by a misunderstood window state primarily needs invariant practice, not more random edge cases.
+
+**Worked Java/API entry**
+
+- **Problem:** group or compare text values created from input.
+- **Failure:** two separately created strings with contents `cat` compared false because I used `==`.
+- **General rule:** `==` compares object identity; `.equals()` compares String contents. When null is legal, use `Objects.equals(a, b)`. Interned literals can hide this error in tests.
+- **Smallest regression:** two `new String("cat")` objects are equal by contents; two different strings are not; include a null case only if the contract allows null.
+- **Repair and review:** explain identity versus equality without code, write a small comparison from a blank editor, then revisit in a map-key or grouping problem after a delay.
+
+Bad note: “I forgot line 8.” Useful note: “I used identity comparison for logical String equality; test separately allocated equal strings.” Record the reusable rule rather than merely a forgotten method name.
 
 ### Revision workflow
 
@@ -8666,115 +8094,113 @@ The log should become shorter in explanation and richer in generalizable rules o
 
 ## 27. Learning Roadmap
 
-Progress by mastery gates rather than calendar time. A part-time learner often spends roughly 12–20 weeks on a first pass, but prior coding experience and interview date matter more than that estimate. Continue reviewing old phases while adding new ones.
+Progress by mastery gates rather than calendar time. Section numbers are stable reference addresses; this roadmap supplies the **study order**, which deliberately introduces sorting before comparator-dependent topics and greedy/interval reasoning before DP. Continue reviewing earlier patterns throughout later phases.
 
+**What to study next:** select the first phase whose prerequisite or mastery gate you cannot demonstrate. Inside it, take one due review, then the next unlearned core pattern in the listed order. Use the [problem ladder](#253-use-a-deliberate-problem-ladder) and [mistake log](#26-mistake-log-system); an accepted submission alone does not advance a gate. If you already know a phase, pass a cold diagnostic and move forward instead of rereading every page.
+
+<a id="phase-1-foundations"></a>
 ### Phase 1 — Foundations
 
-**Learning objectives:** reason about resource costs; manipulate loops and recursion; connect constraints to feasible complexity; write and test simple functions.
+**Learning objectives:** write simple Java methods, reason about resource costs, and explain object/reference behavior that affects algorithms.
 
-- **Prerequisites:** basic C++ syntax, functions, vectors/strings, conditionals, and loops.
-- **🔴 Tier 1 — Must Master:** Big-O time/space, loop analysis, recursion contracts/base cases, array/string traversal.
-- **🟠 Tier 2 — Very Important:** amortized dynamic-array/hash behavior, recursion trees at an intuitive level.
-- **🟠 Tier 2 — Very Important:** logarithms, modular arithmetic basics, gcd, and overflow-safe arithmetic.
-- **🟡 Tier 3 — Nice to Know:** bit operations (`&`, `|`, `^`, shifts).
-- **⚪ Tier 4 — Low Priority / Specialized:** formal proofs, advanced number theory.
-- **Recommended practice:** annotate short code snippets with complexity; implement iterative and recursive factorial/sum; trace call stacks; solve basic traversal, frequency, reversal, and matrix problems.
-- **Mastery gate:** derive common loop/recursion costs, explain auxiliary versus output space, and identify whether `O(n²)` is plausible from constraints.
+- **Prerequisites:** basic conditionals and loops; learn the small Java essentials alongside the first exercises if needed.
+- **Study order:** [Java reference](#java-for-dsa-interviews-essential-reference) memory items → [§3 foundations](#3-complexity-analysis-and-foundations) → [§4 array/String traversal and matrices](#4-arrays-strings).
+- **🔴 Tier 1 — Must Master:** arrays, String immutability/equality, primitive arithmetic and `long` promotion, pass-by-value/reference mutation, complexity, recursion contracts/base cases, traversal, and simple tests.
+- **🟠 Tier 2 — Very Important:** amortized analysis, recursion-tree reasoning, logarithms, gcd, and basic modular arithmetic.
+- **🟡 Tier 3 — Nice to Know:** bit operations and masks; **⚪ Tier 4:** advanced number theory and formal complexity proofs.
+- **Recommended practice:** derive costs of short loops; scan/reverse an array; compare String contents; trace a recursive sum and an aliased array; handle empty/non-square matrices.
+- **Mastery gate:** write a small Java method from a blank file, explain mutation versus parameter reassignment, promote before overflowing arithmetic, and derive time/auxiliary/output costs from the actual operations.
 
+<a id="phase-2-core-data-structures"></a>
 ### Phase 2 — Core Data Structures
 
-**Learning objectives:** choose storage based on operations and implement safe pointer/container manipulation.
+**Learning objectives:** choose storage from operations and manipulate collections/node links correctly.
 
-- **Prerequisites:** Phase 1; familiarity with classes/references for linked structures.
-- **🔴 Tier 1 — Must Master:** arrays/strings, hash map/set, stack, queue/deque, frequency tables.
-- **🟠 Tier 2 — Very Important:** linked-list reversal, dummy nodes, fast/slow pointers, cycle detection.
-- **🟡 Tier 3 — Nice to Know:** doubly linked lists and LRU structure; `std::map`/`std::set` ordered operations.
-- **⚪ Tier 4 — Low Priority / Specialized:** custom hash-table internals beyond collisions/load factor awareness.
-- **Recommended practice:** build a frequency counter, bracket validator, queue-based simulation, linked-list reversal/merge/cycle exercises, and compare operation tables without notes.
-- **Mastery gate:** justify structure choice, state expected operation costs, manipulate a three-node list without losing links, and avoid front erasure from a `std::vector`.
+- **Prerequisites:** Phase 1; basic classes and object references for linked nodes.
+- **Study order:** [§5 hashing](#5-hashing) → basic [§9 stack/queue/deque](#9-stacks-queues-deques) → [§8 linked lists](#8-linked-lists). Learn `ArrayList` versus primitive arrays as needed.
+- **🔴 Tier 1 — Must Master:** key→index/count/group, `HashMap`/`HashSet`, ordinary LIFO/FIFO operations with `ArrayDeque`, delimiter validation, and equality/null rules.
+- **🟠 Tier 2 — Very Important:** linked-list reversal/merge, dummy nodes, fast/slow pointers, and node identity. Leave monotonic-stack variations for Phase 3.
+- **🟡 Tier 3 — Nice to Know:** detailed doubly linked-list mechanics and occasional ordered-map neighbor APIs. The map plus list LRU design is a **Tier 2** combination to revisit after both components are familiar.
+- **⚪ Tier 4 — Low Priority / Specialized:** implementing hash-table internals beyond collision/equality awareness.
+- **Recommended practice:** frequency counter → Two Sum → grouping; bracket validation; queue simulation; reversal/middle/cycle exercises. Begin one short **untagged mixed exercise** each week as soon as two or three patterns are usable.
+- **Mastery gate:** select list/map/set/deque for a stated operation, retrieve common APIs without autocomplete, explain expected/amortized costs, avoid null-unboxing and identity-equality bugs, and rewire three nodes without losing a link.
 
+<a id="phase-3-core-interview-patterns"></a>
 ### Phase 3 — Core Interview Patterns
 
-**Learning objectives:** turn ordering and contiguity clues into linear or logarithmic scans.
+**Learning objectives:** turn order, contiguity, and dominance into justified scans; learn the greedy/DP distinction before DP.
 
-- **Prerequisites:** Phases 1–2, especially arrays and hashing.
-- **🔴 Tier 1 — Must Master:** prefix sums, two pointers, fixed/variable sliding window, binary search/bounds, sorting as a tool, and standard interval patterns.
-- **🟠 Tier 2 — Very Important:** monotonic stack, binary search on answer, heaps/Top-K, and basic sweep-line event counting.
-- **🟡 Tier 3 — Nice to Know:** difference arrays, monotonic deque, and quickselect.
-- **⚪ Tier 4 — Low Priority / Specialized:** dynamic range-query trees.
-- **Recommended practice:** use a ladder for each pattern: one mechanic, two canonical variations, one mixed problem, then a cold mixed set without topic labels.
-- **Mastery gate:** distinguish window from prefix sum, pointer scan from binary search, and heap from full sorting; implement lower bound with a stated postcondition; explain each invariant.
+- **Prerequisites:** Phases 1–2, especially arrays, hashing, and collection mutation.
+- **Study order:** [§11 library sorting and safe comparators](#11-sorting) → prefix sums → [§6 two pointers](#6-two-pointers) → [§7 windows](#7-sliding-window) → [§10 binary search/bounds](#10-binary-search) → monotonic stack → [§13 heap/Top-K](#13-heaps-priority-queues) → [§16 greedy proof and frontier](#16-greedy-algorithms) plus [§17 intervals](#17-intervals). Study merge/conflicts before selection/resources; study heap basics before heap scheduling.
+- **🔴 Tier 1 — Must Master:** sorting as a tool, safe comparators, prefix sums, pointers, fixed/variable windows, exact/boundary search, and interval merge/insert/conflict detection.
+- **🟠 Tier 2 — Very Important:** monotonic stack, answer search, heaps/Top-K, greedy safe-choice arguments, interval selection, meeting-room resources, and event counting.
+- **🟡 Tier 3 — Nice to Know:** difference arrays, monotonic deque, quickselect, running median; **⚪ Tier 4:** dynamic range-query trees.
+- **Recommended practice:** use the five-step ladder for each pattern. Mix prefix sums with hashing, sorting with pointers, and heaps with interval resources. For a greedy proposal, find a counterexample or explain the exchange/stays-ahead proof.
+- **Mastery gate:** distinguish window from prefix lookup, scan from binary search, and heap from sorting; reconstruct a safe comparator and lower bound; define endpoint semantics; justify a greedy frontier and explain why some choices instead require remembering alternatives.
 
+<a id="phase-4-trees-and-graphs"></a>
 ### Phase 4 — Trees and Graphs
 
-**Learning objectives:** model nodes/edges, traverse without repetition, return useful recursive state, and select shortest-path/connectivity methods.
+**Learning objectives:** model structure, traverse once, return useful subtree state, and choose path/connectivity algorithms.
 
-- **Prerequisites:** recursion, stack, queue, hashing, heap basics.
-- **🔴 Tier 1 — Must Master:** binary-tree recursive DFS/BFS, height/depth, BST invariants, graph adjacency lists, DFS/BFS, components, unweighted shortest paths, and grid-as-graph.
-- **🟠 Tier 2 — Very Important:** iterative tree traversal, LCA, tree construction/serialization, directed/undirected cycle detection, topological sort, bipartite checking, multi-source BFS, DSU, and Dijkstra.
-- **🟡 Tier 3 — Nice to Know:** MST and Bellman–Ford/Floyd–Warshall awareness.
-- **⚪ Tier 4 — Low Priority / Specialized:** strongly connected components, max flow, and other advanced graph algorithms unless targeted.
-- **Recommended practice:** draw each graph; implement adjacency construction; solve paired DFS/BFS versions; practice one subtree-return problem, one level problem, one dependency problem, one DSU problem, and one weighted shortest path.
-- **Mastery gate:** derive `O(V+E)`, mark visited at the right moment, traverse disconnected components, explain why BFS/Dijkstra applies, and define a tree helper's return contract before coding.
+- **Prerequisites:** recursion, stack/queue, hashing, and heap basics. Revisit only the missing prerequisite instead of restarting a whole phase.
+- **Study order:** [§12 tree DFS/BFS and BST](#12-trees) → [§14 graph representation, DFS/BFS, components and grids](#14-graphs) → cycle detection/topological order → multi-source BFS/bipartite checks → DSU → Dijkstra. Add tree construction/serialization after traversal is reliable.
+- **🔴 Tier 1 — Must Master:** tree traversal and subtree contracts, BST search/validation, adjacency lists, graph BFS/DFS, components, grid traversal, and unweighted shortest paths.
+- **🟠 Tier 2 — Very Important:** LCA, tree construction/serialization, directed/undirected cycles, topological sort, multi-source BFS, bipartite checks, DSU, and Dijkstra.
+- **🟡 Tier 3 — Nice to Know:** MST and basic Bellman–Ford/Floyd–Warshall; **⚪ Tier 4:** SCC, max flow, and other advanced graph families unless targeted.
+- **Recommended practice:** draw every graph and label direction/weight assumptions; compare DFS with BFS on a shared input; solve one subtree-return, level, dependency, connectivity, and weighted-path problem. Continue mixed exercises from earlier phases.
+- **Mastery gate:** derive `O(V + E)`, mark visited at discovery, cover disconnected components, explain BFS versus Dijkstra, return exactly the subtree state the parent needs, and replace deep recursion with an appropriate iterative traversal.
 
+<a id="phase-5-recursion-and-backtracking"></a>
 ### Phase 5 — Recursion and Backtracking
 
-**Learning objectives:** represent a choice tree, maintain branch state, eliminate invalid branches, and estimate exponential work.
+**Learning objectives:** represent a choice tree, isolate branch state, prune safely, and count search/output costs.
 
-- **Prerequisites:** recursive contracts and DFS; comfort with mutable collections.
-- **🔴 Tier 1 — Must Master:** recursion mechanics already learned in Phase 1.
-- **🟠 Tier 2 — Very Important:** subsets, permutations, combinations, duplicate handling, constraint search, choose/explore/unchoose, pruning.
-- **🟡 Tier 3 — Nice to Know:** bitmask enumeration and advanced pruning/order heuristics.
-- **⚪ Tier 4 — Low Priority / Specialized:** highly optimized combinatorial search.
-- **Recommended practice:** draw recursion trees for tiny inputs; implement subset/permutation/combination families from blank pages; add duplicate rules and one constraint-placement problem.
-- **Mastery gate:** state path meaning and completion rule, restore state correctly, account for output size, and explain why a prune cannot remove a valid solution.
+- **Prerequisites:** recursion contracts and DFS; mutable list/reference behavior.
+- **Study order:** [§15 recursion-tree reasoning](#15-recursion-backtracking) → subsets → combinations → permutations → duplicate handling → constraint/board search.
+- **🔴 Tier 1 — Must Master:** existing recursion and mutation fundamentals; **🟠 Tier 2:** common enumeration families, choose/explore/unchoose, snapshotting results, and safe pruning.
+- **🟡 Tier 3 — Nice to Know:** bitmask enumeration and advanced pruning heuristics; **⚪ Tier 4:** highly optimized combinatorial search.
+- **Recommended practice:** draw tiny choice trees; implement each basic family from a blank page; add duplicate constraints and one board-search variation; cold revisit with topic labels hidden.
+- **Mastery gate:** define path/state/completion, restore state after each branch, explain shallow versus deeper snapshots, and count unavoidable output separately from auxiliary memory.
 
+<a id="phase-6-dynamic-programming"></a>
 ### Phase 6 — Dynamic Programming
 
-**Learning objectives:** derive state and recurrence from brute-force decisions, cache repeated states, choose an evaluation order, and optimize only valid dimensions.
+**Learning objectives:** derive a state graph from decisions, reuse repeated states, choose evaluation order, and compress only proven dependencies.
 
-- **Prerequisites:** recursion/backtracking, array/matrix indexing, complexity analysis.
-- **🔴 Tier 1 — Must Master:** no separate advanced DP family is promoted to Tier 1; recursion/state fundamentals remain mandatory.
-- **🟠 Tier 2 — Very Important:** recognition, state contract, transition, base cases, memoization, tabulation, 1D DP, grid DP, basic 0/1 knapsack, common subsequence DP, and safe space optimization.
-- **🟡 Tier 3 — Nice to Know:** unbounded knapsack, interval DP, tree DP, and reconstruction of an optimal solution.
-- **⚪ Tier 4 — Low Priority / Specialized:** bitmask DP, contest-style DP optimizations, and high-dimensional exotic states.
-- **Recommended practice:** for every problem write brute-force choices first; draw the recursion DAG; implement memoization; convert to a table; optimize space only after tests pass. Mix counting, feasibility, and optimization objectives.
-- **Mastery gate:** define each state as a sentence, derive rather than copy transitions, calculate states × transition work, convert a standard memo solution to tabulation, and recognize when greedy or graph traversal is simpler.
+- **Prerequisites:** recursion/backtracking, array/matrix indexing, complexity, and the greedy-versus-remembering-alternatives distinction from Phase 3.
+- **Study order:** [§18 recognition and six-part design](#18-dynamic-programming) → worked take/skip recursion/memo/table evolution → 1D and grid DP → basic 0/1 knapsack and minimum Coin Change → common subsequence DP → selected counting/reconstruction/space optimization.
+- **🟠 Tier 2 — Very Important:** core state design, memoization/tabulation, 1D/grid DP, basic 0/1 knapsack, minimum Coin Change and its reusable-item recurrence, common subsequences, and safe space reduction. These need strong standard-form fluency; the breadth of DP does not make every advanced family mandatory.
+- **🟡 Tier 3 — Nice to Know:** further unbounded counting variants, interval/tree DP, and extensive reconstruction variants; **⚪ Tier 4:** bitmask DP and specialized optimization families.
+- **Recommended practice:** derive brute-force choices, state, and transition first. Use memoization to expose repeated states, convert representative examples to tables, and optimize only after correctness tests. Mix feasibility, counting, and optimization; explain why loop order changes 0/1 reuse or combination/permutation counting.
+- **Mastery gate:** define all six design decisions, include every future-relevant dimension, derive states times transition work, convert a standard recurrence to a valid iteration order, and recognize a simpler greedy or graph solution when available.
 
+<a id="phase-7-advanced-interview-patterns"></a>
 ### Phase 7 — Advanced Interview Patterns
 
-**Learning objectives:** round out useful breadth without stealing time from core reliability.
+**Learning objectives:** repair remaining common weaknesses and select useful breadth without making rare material a barrier to interviews.
 
-- **Prerequisites:** mastery gates through Phase 6.
-- **🔴 Tier 1 — Must Master:** continue mixed review of all Tier 1 topics.
-- **🟠 Tier 2 — Very Important:** consolidate interval/greedy/heap/DSU/Dijkstra variants based on weaknesses.
-- **🟡 Tier 3 — Nice to Know:** trie, running median, rolling hash, MST, and selective interval/tree DP.
-- **⚪ Tier 4 — Low Priority / Specialized:** Fenwick/segment trees, KMP in depth, Manacher, advanced graph algorithms, computational geometry.
-- **Recommended practice:** choose topics from actual target-company patterns or repeated mock gaps. Learn one canonical application and one recognition exercise for each selected Tier 3 topic.
-- **Mastery gate:** recognize specialized structures, implement chosen Tier 3 basics, and consciously decline low-return depth without feeling that the roadmap is incomplete.
+- **Prerequisites:** reliable Tier 1 patterns and working common Tier 2 coverage. You may begin interview practice before completing this phase.
+- **First:** consolidate weak interval/greedy/heap/graph/DP combinations from mixed attempts and mocks.
+- **🟡 Tier 3 — Nice to Know:** [§19 trie](#19-tries), running median, rolling hash, basic KMP, MST, and selected interval/tree DP. Pick only topics with a clear gap or target benefit.
+- **⚪ Tier 4 — Low Priority / Specialized:** [§20 range-query trees, advanced graph/DP and geometry](#20-specialized-advanced-topics), Manacher, and specialized algorithm optimizations. Basic KMP remains Tier 3; deep specialization is optional.
+- **Recommended practice:** one canonical application and one recognition/variation exercise for a selected Tier 3 topic; compare the simpler alternative and memory trade-off.
+- **Mastery gate:** recognize the selected structure, implement its chosen basic form, and explain when its extra complexity is justified. Recognition alone is sufficient for unselected Tier 4 material.
 
+<a id="phase-8-interview-practice"></a>
 ### Phase 8 — Interview Practice
 
-**Learning objectives:** integrate recognition, communication, implementation, testing, and recovery under time pressure.
+**Learning objectives:** integrate recognition, explanation, implementation, testing, and recovery under realistic time pressure.
 
-- **Prerequisites:** Tier 1 mastery and working coverage of common Tier 2 topics.
-- **🔴 Tier 1 — Must Master:** mixed unseen problems, verbal framework, complexity, edge-case testing.
-- **🟠 Tier 2 — Very Important:** mock interviews, timed pairs, follow-up optimization, adapting to changing requirements.
-- **🟡 Tier 3 — Nice to Know:** company-specific patterns supported by credible recent evidence.
-- **⚪ Tier 4 — Low Priority / Specialized:** last-minute obscure-topic cramming.
-- **Recommended practice:** alternate timed solo sessions, peer/mentor mocks, and untimed weakness repair. Re-solve mistake-log items; practice without topic labels; include debugging and follow-up questions.
-- **Mastery gate:** consistently reach a correct approach, explain an invariant, produce mostly correct code, test it, and respond constructively to hints within realistic interview time.
+- **Prerequisites:** short mixed practice has already begun in Phase 2; full mocks become useful after core easy and standard medium problems are workable. Increase emphasis as Tier 1 and common Tier 2 gates improve.
+- **Core work:** mixed unseen prompts, the [interview framework](#22-interview-problem-solving-framework), verbal invariants, Java fluency, manual testing, and honest complexity.
+- **Recommended practice:** alternate timed solo attempts, peer/mentor mocks, and untimed repair; include debugging, a changed constraint, or one follow-up optimization. Hide topic tags and keep the final minutes for tracing and complexity.
+- **Specialization:** company-specific topics should follow credible target evidence; last-minute obscure-topic cramming is not a readiness requirement.
+- **Mastery gate:** in several separated mixed sessions, choose and justify an approach, produce correct Java, test actual code, explain costs, and use a hint constructively. Use the [full readiness gate](#full-interview-readiness-gate), not a single successful mock.
 
 ### Ongoing weekly balance
 
-A useful steady-state mix is:
-
-- **40% new or weak patterns**;
-- **30% delayed re-solves and mistake-log review**;
-- **20% mixed timed practice**;
-- **10% explanation, template/API, and complexity drills**.
-
-Shift toward mocks near interviews and toward concept repair when the same error category repeats. Do not count passive watching as practice time.
+A useful steady-state starting mix is **40% new/weak patterns, 30% delayed re-solves and mistake-log review, 20% mixed timed practice, and 10% explanation/API/complexity drills**. Early on, mixed practice is short and limited to learned patterns; near interviews, shift more time toward mocks. Repeated errors call for concept or Java-rule repair before adding volume. Passive watching does not count as an independent retrieval attempt.
 
 ---
 
@@ -8792,6 +8218,16 @@ Use observable evidence. Mark an item only after a delayed, unaided attempt—no
 | Robust | I handle follow-ups, compare alternatives, and recover from bugs under time pressure. |
 
 Tier 1 aims for interview-ready or robust. Tier 2 aims for interview-ready on standard forms. Tier 3 usually aims for working. Tier 4 usually requires only awareness.
+
+### Java interview fluency — 🔴 Tier 1 — Must Master
+
+- [ ] I use arrays, String, `ArrayList`, `HashMap`, `HashSet`, `ArrayDeque`, `PriorityQueue`, sorting, and safe comparators with minimal tooling.
+- [ ] I explain `array.length`, `text.length()`, and `list.size()`; I choose primitive arrays versus boxed collections deliberately.
+- [ ] I distinguish logical equality from object identity and keep hash-key equality fields stable.
+- [ ] I explain pass-by-value, caller-visible mutation, parameter reassignment, aliasing, and shallow snapshots.
+- [ ] I handle null/empty contracts, missing map values, overflow before casting, default min-heap order, and collection mutability limits.
+- [ ] I account for String copying, builder output, list shifting, sorting buffers, amortized growth, and recursion depth.
+- [ ] I state an alphabet/Unicode assumption when indexing characters and know when recursion should become iterative.
 
 ### Foundations — 🔴 Tier 1 — Must Master
 
@@ -8813,7 +8249,7 @@ Tier 1 aims for interview-ready or robust. Tier 2 aims for interview-ready on st
 
 - [ ] I choose set, key→index, key→count, or key→group based on required information.
 - [ ] I write complement and frequency scans in one pass when appropriate.
-- [ ] I handle duplicates, missing keys, and insertion order correctly.
+- [ ] I handle duplicates and missing keys, preserve the first/latest occurrence when required, and do not assume `HashMap` iteration order.
 - [ ] I state expected `O(1)` operations and `O(n)` extra space honestly.
 - [ ] I compare hashing with sorting when order, memory, or worst-case guarantees matter.
 
@@ -8833,7 +8269,9 @@ Tier 1 aims for interview-ready or robust. Tier 2 aims for interview-ready on st
 - [ ] I distinguish node identity from node value.
 - [ ] I test empty, one-node, two-node, and cyclic inputs.
 
-### Stacks, queues, and deques — 🟠 Tier 2 — Very Important
+### Stacks, queues, and deques
+
+**Priorities:** basic LIFO/FIFO use is **🔴 Tier 1**; expression/monotonic-stack patterns are **🟠 Tier 2**; monotonic deque is **🟡 Tier 3**.
 
 - [ ] I select LIFO for nesting/unresolved work and FIFO for layers/arrival order.
 - [ ] I implement parentheses parsing and graph/tree BFS with safe empty checks.
@@ -8848,7 +8286,7 @@ Tier 1 aims for interview-ready or robust. Tier 2 aims for interview-ready on st
 - [ ] I prove a feasibility predicate is monotone before searching an answer.
 - [ ] I include predicate cost in total complexity.
 - [ ] I use comparator sorting, understand stability, and know when sorting enables a simpler scan.
-- [ ] I can explain merge sort and quicksort trade-offs without needing to hand-code every sort.
+- [ ] I explain merge sort/quicksort trade-offs and distinguish primitive-array sorting from stable object/list sorting and its buffer costs.
 
 ### Trees — 🔴 Tier 1 — Must Master
 
@@ -8863,7 +8301,7 @@ Tier 1 aims for interview-ready or robust. Tier 2 aims for interview-ready on st
 
 - [ ] I choose min- or max-orientation from the item that must be removed next.
 - [ ] I solve Top-K and k-way merge patterns.
-- [ ] I compare `O(n log k)` heap processing with `O(n log n)` sorting and static quickselect.
+- [ ] I compare size-`k` heap processing, sorting, and static quickselect; I handle `k = 1` and `k > n` in both contract and complexity.
 - [ ] I handle ties and know that heap storage is not globally sorted.
 - [ ] I explain the two-heap running-median invariant at least conceptually.
 
@@ -8919,151 +8357,166 @@ Tier 1 aims for interview-ready or robust. Tier 2 aims for interview-ready on st
 
 - [ ] On mixed, untagged problems, I form two plausible approaches and choose using constraints.
 - [ ] I communicate the contract, brute force, invariant, and complexity before coding.
-- [ ] I produce clean, interview-friendly C++17 with minimal tooling.
+- [ ] I produce clean Java 17-compatible code with minimal tooling and can explain the relevant Java semantics.
 - [ ] I test normal, minimal, duplicate, boundary, and no-solution cases.
 - [ ] I can absorb a hint, revise the model, and continue without defensiveness.
-- [ ] My mistake log shows fewer repeated categories and successful delayed re-solves.
+- [ ] My mistake log shows fewer repeated categories, at least two delayed successful attempts for weak core patterns, and transfer to untagged variations.
 
 ---
 
 ## 29. DSA Interview Cheat Sheet
 
+Use this for retrieval before practice. Detailed syntax belongs in the [Java reference](#java-for-dsa-interviews-essential-reference), pattern discriminators in [§21](#21-dsa-pattern-recognition), and canonical implementation links in [§24](#24-code-templates).
+
 ### Complexity growth
 
-| Complexity | Typical example | Interview interpretation |
+| Complexity | Typical example | Interpretation |
 |---|---|---|
-| `O(1)` | Array index, hash lookup expected | Independent of input size |
-| `O(log n)` | Binary search, balanced-tree operation | Repeatedly discard a constant fraction |
-| `O(n)` | One scan, tree/graph vertices plus edges | Usually ideal for large flat input |
-| `O(n log n)` | Comparison sort, `n` heap operations | Common acceptable bound for large input |
-| `O(n²)` | All pairs, 2D DP | Plausible for hundreds or low thousands, not usually `10^5` |
-| `O(2^n)` | Subsets, binary choices | Only for small `n`; pruning may help constants |
-| `O(n!)` | All permutations | Only for very small `n` |
+| `O(1)` | Array index; expected constant-cost hash lookup | Cost does not grow with element count under the stated assumptions |
+| `O(log n)` | Binary search, balanced-tree update | Repeatedly discard a constant fraction |
+| `O(n)` | One flat scan | Account for any hidden operation inside the scan |
+| `O(n log n)` | Comparison sorting, repeated heap updates | Common bound when order is needed |
+| `O(n^2)` | Enumerating all two-index choices, 2D DP | Check input scale and transition cost |
+| `O(2^n)` | Binary-choice search | Small `n`; output copying can add an `n` factor |
+| `O(n!)` | Permutation search | Very small `n`; include output cost |
 
-**Derive quickly:** sequential blocks add and keep the dominant term; nested dependent work usually sums; recursion is number of calls × work per call; graph traversal is `O(V+E)` with adjacency lists; DP is states × transitions; sorting contributes `O(n log n)` unless a stronger bound dominates.
+**Derive:** sequential blocks add; nested dependent work is a sum; recursion uses the number of calls and each call's own work; adjacency-list traversal is `O(V + E)`; DP is states times work per state. Peak live state determines auxiliary space. Separate output from auxiliary storage and qualify expected, amortized, and worst-case claims.
 
 ### Common operation costs
 
-| Structure / operation | Typical time | Important qualification |
+Unless specified otherwise, primitive/key/comparator work is constant. String and custom-object hashing/comparison may scale with key length.
+
+| Java structure / operation | Time | Qualification |
 |---|---:|---|
-| `std::vector` index/update | `O(1)` | Middle insert/erase is `O(n)` and may invalidate iterators/references |
-| `std::vector::push_back` | `O(1)` amortized | A reallocation is individually `O(n)` |
-| `std::unordered_map` / `std::unordered_set` lookup/insert/erase | `O(1)` expected | Worst case can degrade; rehashing invalidates iterators |
-| Linked-list known-node insert/delete | `O(1)` | Finding the node is `O(n)` |
-| `std::stack` push/pop/top | `O(1)` | Check `empty()` before `top()` or `pop()` |
-| `std::queue` / `std::deque` end operations | `O(1)` | Do not emulate FIFO with front erasure from a vector |
-| `std::priority_queue::top` | `O(1)` | Only the root is guaranteed extreme |
-| `std::priority_queue` push/pop | `O(log n)` | `std::make_heap` over a full range is `O(n)` |
-| `std::map` / `std::set` | `O(log n)` | Maintains key order; unlike unordered containers |
-| Trie insert/search | `O(L)` | `L` is key length; memory constants are high |
-| Union-Find operation | `O(α(n))` amortized | With compression and union by size/rank |
+| `int[]` index/update | `O(1)` | New/copy/fill of `n` entries is `O(n)` time; a new array uses `O(n)` space |
+| `ArrayList.get/set` | `O(1)` | Indexed access does not imply cheap middle removal |
+| `ArrayList.add(value)` | Amortized `O(1)` | One resize can take `O(n)`; indexed insertion/removal can shift `O(n)` entries |
+| `HashMap`/`HashSet` lookup/update | Expected `O(1)`; growth amortized | Good hash dispersion and constant-cost keys assumed; no sorted order; iteration costs size plus backing capacity |
+| `TreeMap`/`TreeSet` lookup/update/bounds | `O(log n)` | Maintains comparator order; comparator/equality choices affect key uniqueness |
+| `ArrayDeque` end operations | Insertion amortized `O(1)`; peek/removal `O(1)` | Rejects null; arbitrary search/removal is `O(n)` |
+| `PriorityQueue.peek` | `O(1)` | Minimum under its comparator; empty returns null |
+| `PriorityQueue.offer/poll` | `O(log n)` (usual amortized insertion analysis) | `contains`/`remove(Object)` are `O(n)`; polling is ordered, iteration is not |
+| `String.length/charAt` | `O(1)` | Indices count UTF-16 code units; strings are immutable |
+| Proper `String.substring` of length `k` | `O(k)` time/space | Modern Java copies the selected contents; whole/empty slices may reuse existing values |
+| `String.equals/compareTo` | Up to `O(min(n, m))` character work | Equality can stop early on a length mismatch; comparisons can stop at the first difference |
+| `StringBuilder.append` | Amortized proportional to appended content | Building `L` characters is `O(L)` total; `toString()` copies the final contents |
+| `Arrays.sort(int[])` | `O(n log n)` for the documented Java implementation | Mutates the primitive array; auxiliary memory is implementation-dependent, so do not infer `O(1)` from the API |
+| Object-array `Arrays.sort`, `List.sort`, `Collections.sort` | `O(n log n)` worst-case comparisons | Stable; comparator cost matters; budget `O(n)` worst-case auxiliary buffer for the ordinary object/array-list paths |
+| Custom linked-node link update | `O(1)` once required references are known | Finding a node/predecessor can cost `O(n)`; `LinkedList.get(i)` requires traversal |
+| Trie insert/search | `O(L)` fixed alphabet; expected with hash children | Memory depends on created prefixes and child representation |
+| DSU merge/find | `O(alpha(n))` amortized | Requires path compression/halving and union by size/rank; initialization is `O(n)` |
+
+API details: [ArrayList](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/ArrayList.html), [HashMap](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/HashMap.html), [ArrayDeque](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/ArrayDeque.html), [PriorityQueue](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/PriorityQueue.html), [Arrays](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Arrays.html), and [List](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/List.html). These are implementation/API qualifications, not permission to ignore the algorithm's own copies or output.
 
 ### Choose a data structure
 
 | Need | Consider | Ask before committing |
 |---|---|---|
-| Fast membership | `std::unordered_set` | Is ordering or multiplicity needed? |
-| Key → value/count/index | `std::unordered_map` | Which occurrence must be stored? |
-| Contiguous indexed data | `std::vector` / `std::string` | May I mutate it? |
-| LIFO / nested scopes | `std::stack` | What does each stack entry represent? |
-| FIFO / level order | `std::queue` | When is an item marked discovered? |
-| Both ends / window extrema | `std::deque` | Must it remain monotone? |
-| Repeated min/max | `std::priority_queue` | Which item should be at the root? |
-| Sorted keys and ordered queries | `std::map`, `std::set`, or sorted vector | Are updates frequent? |
-| Prefix lookup | Trie | Does prefix volume justify memory? |
-| Undirected connectivity merges | Union-Find | Are paths/directions also required? |
-| Hierarchy | Tree | What state flows from child to parent? |
-| General relationships | Graph adjacency list | Directed? weighted? disconnected? |
+| Fast membership | `HashSet` | Is multiplicity, logical key equality, or sorted order needed? |
+| Key → value/count/index/group | `HashMap` | Which occurrence/state must survive? |
+| Dense indexed numeric state | Primitive array | Fixed size? Mutation allowed? Could `long` be needed? |
+| Resizable indexed sequence | `ArrayList` | Are primitive boxing and shifting costs acceptable? |
+| Text read/build/mutate | `String` / `StringBuilder` / `char[]` | What is the alphabet, and which operations copy? |
+| LIFO / nested work | `Deque<T>` with `ArrayDeque` | What exactly does each entry represent? |
+| FIFO / level order | `Queue<T>` or `Deque<T>` with `ArrayDeque` | When is the state marked discovered? |
+| Both ends / window extrema | `ArrayDeque` | Which entries expire and which are dominated? |
+| Repeated min/max | `PriorityQueue` | Which item belongs at the root? |
+| Sorted keys and neighbors | `TreeMap`, `TreeSet`, or sorted array | Are updates frequent, or is one sort enough? |
+| Prefix lookup | Trie | Does prefix workload justify node memory? |
+| Undirected connectivity merges | DSU | Are direction or actual paths also required? |
+| Hierarchy / arbitrary relations | Tree / graph adjacency list | What state flows between nodes? Are edges directed/weighted? |
 
 ### Clue → pattern
 
 | Clue | First candidates |
 |---|---|
 | Complement, membership, frequency | Hash map/set |
-| Sorted pair/triple | Two pointers |
+| Sorted condition involving two or three values | Two pointers |
 | Sorted boundary or monotone predicate | Binary search |
-| Contiguous, maintainable validity | Sliding window |
+| Contiguous, incrementally maintainable validity | Sliding window |
 | Contiguous exact sum with negatives | Prefix sum + map |
-| Repeated range query | Prefix sum; dynamic queries may need specialized tree |
+| Repeated static range query | Prefix sum; changing values may need a specialized structure |
 | Next greater/smaller | Monotonic stack |
-| Top/Kth/repeated extreme | Heap, sorting, or quickselect |
-| Overlapping schedules | Sort intervals; heap or sweep events |
+| Top/kth/repeated extreme | Heap, sorting, or quickselect |
+| Overlapping schedules | Sort intervals; heap or event sweep for resource counts |
 | Tree subtree property | DFS/postorder |
-| Tree/graph levels or unweighted shortest path | BFS |
-| Connectivity/components | DFS/BFS; DSU for repeated undirected unions |
+| Levels or unweighted shortest path | BFS |
+| Components/connectivity | DFS/BFS; DSU for repeated undirected merges |
 | Dependencies | Topological sort |
 | Nonnegative weighted shortest path | Dijkstra |
-| All combinations | Backtracking |
-| Repeated decision state | Dynamic programming |
+| All configurations | Backtracking |
+| Repeated decision state | DP |
+| Locally safe dominant choice | Greedy with a correctness argument |
 | Prefix dictionary | Trie |
 
 ### Key algorithm costs
 
-| Algorithm | Time | Auxiliary space |
+| Algorithm | Time | Auxiliary space, excluding input/output |
 |---|---:|---:|
-| Two pointers / sliding window | Usually `O(n)` | `O(1)` to `O(n)` state |
-| Binary search | `O(log n)` | `O(1)` iterative |
-| Comparison sorting | `O(n log n)` typical/guaranteed by algorithm | Implementation dependent |
-| Tree traversal | `O(n)` | `O(h)` DFS or `O(w)` BFS |
-| Graph BFS/DFS, adjacency list | `O(V+E)` | `O(V)` excluding graph |
-| Topological sort | `O(V+E)` | `O(V)` excluding graph |
-| Dijkstra, duplicate-entry binary heap | `O((V+E) log E)` general; `O((V+E) log V)` for simple graphs | `O(V+E)` including graph; heap can hold `O(E)` entries |
-| Top-K size-`k` heap | `O(n log k)` | `O(k)` |
-| Backtracking | Output/search dependent, often exponential | Path + recursion + output |
-| DP | states × work per state | Number of stored states |
+| Two pointers / sliding window | Usually `O(n)`; hash-backed state expected | `O(1)` to `O(n)` state |
+| Iterative binary search | `O(log n)` constant-cost indexed comparisons | `O(1)` |
+| Binary search on answer | Feasibility cost times `O(log(domainSize + 1))` | Feasibility helper's state |
+| Tree traversal | `O(n)` | `O(h)` DFS stack or `O(w)` BFS frontier |
+| Graph BFS/DFS, adjacency list | `O(V + E)` | `O(V)` for the usual marked-on-discovery traversal |
+| Kahn topological order | `O(V + E)` | `O(V)` excluding graph and returned order |
+| Dijkstra, duplicate-entry heap | `O(V + E log(E + 1))`; commonly `O((V + E) log(V + 1))` on simple graphs | `O(V + E)`; heap may retain `O(E)` entries |
+| Top-K with positive `k`, `m = min(k, n)` | `O(n log(m + 1))` | `O(m)` |
+| K-way merge of `N` items | `O(N log(k + 1))` | `O(k)` frontier |
+| Enumerate all subsets | `O(n * 2^n)` including snapshots | `O(n)` path/stack; `O(n * 2^n)` output is additional |
+| DP | Distinct states times transition work | Stored states plus recursion when used |
 
 ### Boundary conventions worth stating
 
-- Half-open indexed range `[left, right)` has length `right - left`; C++ iterator ranges use the same convention.
-- Inclusive window: `[left, right]` has length `right - left + 1`.
-- Binary search: never mix `[left, right]` and `[left, right)` update rules.
-- Intervals: clarify whether `[a,b]` overlaps `[b,c]`; scheduling often behaves like half-open `[start,end)`.
-- Tree height: say whether measured in nodes or edges.
-- Graph labels: confirm zero/one-based and whether isolated nodes are listed.
+- Half-open `[left, right)` has length `right - left`; Java substring and many array range APIs use an exclusive end.
+- Inclusive `[left, right]` has length `right - left + 1`.
+- Binary-search insertion boundaries may equal `n`; do not index that sentinel.
+- Intervals: clarify whether `[a, b]` overlaps `[b, c]`; scheduling often uses half-open `[start, end)`.
+- Tree height: state nodes versus edges; graph labels: state zero/one-based and isolated-node handling.
+- Object identity and logical equality are different contracts; choose deliberately.
 
 ### Interview workflow: U-B-A-P-E-C-T
 
-1. **Understand:** restate contract, constraints, assumptions, example.
-2. **Brute force:** establish a correct baseline.
-3. **Analyze:** derive time and space; compare with constraints.
-4. **Pattern:** exploit lookup, order, contiguity, structure, monotonicity, or repeated state.
-5. **Explain:** data structure, invariant, algorithm, correctness idea, complexity.
-6. **Code:** simple names, consistent boundaries, forward progress.
-7. **Test:** normal, minimum, duplicates, boundaries, no solution, structure-specific hazards.
+1. **Understand:** contract → examples → constraints; state null/empty/mutation assumptions.
+2. **Brute force:** give a correct baseline and identify its bottleneck.
+3. **Analyze:** derive time/space from actual operations and compare with constraints.
+4. **Pattern:** clues → candidates → invariant/state; reject invalid assumptions.
+5. **Explain:** algorithm, correctness idea, update order, and complexity.
+6. **Code:** clear Java, safe arithmetic, consistent boundaries, and progress.
+7. **Test:** trace actual code on normal and adversarial cases; then discuss a meaningful follow-up optimization.
 
 ### Pre-code questions
 
 - What exactly does my helper/window/table entry represent?
 - Why is it safe to discard this element/state/branch?
 - Does every loop or recursion make progress?
-- Could duplicates, negative values, direction, or weights invalidate the idea?
+- Could duplicates, negatives, direction, or weights invalidate the idea?
 - What is the simplest counterexample to my greedy rule?
-- Which operations dominate time? What remains simultaneously in memory?
+- Which Java operations dominate time, and what remains live simultaneously?
 
 ### High-frequency edge cases
 
-- empty input and `nullptr` root/head;
-- one or two elements/nodes;
-- duplicates and all-equal values;
-- negative, zero, and very large values;
-- target absent or multiple valid answers;
-- already sorted and reverse sorted;
-- skewed tree and maximum recursion depth;
-- disconnected graph, self-loop, parallel edge, and cycle;
-- empty row/grid and non-square dimensions;
-- touching, nested, or zero-length intervals.
+- empty input and `null` root/head when allowed;
+- one/two elements, duplicates, and all-equal values;
+- separately allocated objects with equal logical values;
+- negative/zero/large values and overflow before assignment to `long`;
+- target absent, `k = 0/1/n`, `k > n`, or multiple answers;
+- sorted/reverse-sorted data, skewed trees, and deep recursion;
+- disconnected graph, self-loop, parallel edges, and cycles;
+- empty/non-square/ragged grids according to the contract;
+- touching/nested/zero-length intervals;
+- shared array rows or result lists accidentally aliased.
 
 ### Final reminders
 
-- Correctness before cleverness; brute force before optimization.
-- Explain the invariant, not just the pattern name.
-- Expected hash `O(1)` is not ordered behavior.
-- BFS gives shortest paths only for equal/unweighted edges.
-- Dijkstra requires nonnegative weights.
-- A heap is partially ordered, not a sorted list.
+- Correctness before cleverness; state the invariant before typing.
+- Expected hash speed does not imply sorted order or free key hashing.
+- Java is pass-by-value; object references can still point to shared mutable state.
+- `String` is immutable, `PriorityQueue` is a min-heap by default, and `ArrayDeque` rejects null.
+- BFS requires equal/unweighted edges; Dijkstra requires nonnegative weights.
+- A heap exposes one extreme; its iteration order is not sorted.
 - Greedy needs a safe-choice argument; DP needs a complete state.
-- Count recursion stack in space.
-- Re-solve missed problems; acceptance is not mastery.
+- Count recursion, copies, sorting buffers, and output accurately.
+- Re-solve after a delay and test transfer; acceptance is not mastery.
 
 ---
 
