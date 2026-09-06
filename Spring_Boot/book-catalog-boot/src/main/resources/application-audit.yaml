@@ -1,0 +1,4 @@
+catalog:
+  report-title: report title from AUDIT
+  low-stock-threshold: 0
+  import-enabled: false
