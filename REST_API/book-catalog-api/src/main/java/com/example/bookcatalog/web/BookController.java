@@ -72,8 +72,38 @@ public class BookController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "ISBN already exists");
         }
     }
-    
 
+    @PutMapping(path = "/{id}", consumes = "application/json", produces = "application/json" )
+    public BookResponse replace (@PathVariable("id") long id, @RequestBody BookRequest request)
+    {
+        checkId(id);
+        checkBook(request);
+
+        try {
+            return BookResponse.from(bookService.replace(id, request.isbn(), request.title(), request.author(), request.price(), request.stock()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found")));
+        } catch (DuplicateKeyException e)
+        {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "ISBN already exists");
+        }
+    }
+
+    @PatchMapping(path = "/{id}", consumes = "application/json", produces = "application/json")
+    public BookResponse  setStock (@PathVariable("id") long id, @RequestBody StockRequest stockRequest)
+    {
+        checkId(id);
+        checkStock(stockRequest.stock());
+        return BookResponse.from(bookService.setStock(id, stockRequest.stock()).orElseThrow(BookController::notFound));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete (@PathVariable("id") long id)
+    {
+        if (!bookService.delete(id))
+        {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.noContent().build();
+    }
 
 
 

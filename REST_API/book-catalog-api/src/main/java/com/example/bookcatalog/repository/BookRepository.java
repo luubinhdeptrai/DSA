@@ -47,4 +47,29 @@ public class BookRepository {
     {
         return jdbcTemplate.query("INSERT INTO books (isbn, title, author, price, stock) VALUES (?,?,?,?,?) RETURNING id, isbn, title, author, price, stock", ROW_MAPPER, isbn, title, author, price, stock).get(0);
     }
+
+    public Optional<Book> replace (long id, String isbn, String title, String author, BigDecimal price, int stock)
+    {
+        return jdbcTemplate.query("UPDATE books SET isbn = ?, title = ?, author = ?, price = ?, stock = ? WHERE id = ? RETURNING id, isbn, title, author, price, stock",
+                                    ROW_MAPPER,
+                                    isbn,
+                                    title,
+                                    author,
+                                    price,
+                                    stock,
+                                    id).stream().findFirst();
+    }
+
+    public Optional<Book> setStock(long id, Integer stock)
+    {
+        return jdbcTemplate.query("UPDATE books SET stock = ? WHERE id = ? RETURNING id, isbn, title, author, price, stock", 
+                                    ROW_MAPPER,
+                                    stock,
+                                    id).stream().findFirst();
+    }
+
+    public boolean delete (long id)
+    {
+        return jdbcTemplate.update("DELETE FROM books WHERE id = ?", id) == 1;
+    }
 }

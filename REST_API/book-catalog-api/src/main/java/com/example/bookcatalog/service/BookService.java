@@ -31,4 +31,20 @@ public class BookService {
     {
         return bookRepository.insert(isbn, title, author, price, stock);
     }
+
+    public Optional<Book> replace (long id, String isbn, String title, String author, BigDecimal price, int stock)
+    {
+        return bookRepository.replace(id, isbn, title, author, price, stock);
+    }
+
+    public Optional<Book> setStock (long id, Integer stock)
+    {
+        return bookRepository.setStock(id, stock);
+    }
+
+    public boolean delete(long id)
+    {
+        return bookRepository.delete(id);
+    }
 }
+
