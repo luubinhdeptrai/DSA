@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: book-catalog-api
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5433/book_catalog
+    username: book_app
+    password: replace-with-a-local-practice-password
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 2
+  sql:
+    init:
+      mode: always
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+      accept-float-as-int: false
+server:
+  address: 127.0.0.1
+  port: 8080
