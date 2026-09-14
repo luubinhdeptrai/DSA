@@ -35,18 +35,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static final String REQUEST_ERROR = "_request";
 
     @Override
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            MethodArgumentNotValidException exception,
-            HttpHeaders headers,
-            HttpStatusCode status,
-            WebRequest request) {
+    protected ResponseEntity<Object> handleMethodArgumentNotValid (
+            MethodArgumentNotValidException exception, 
+            HttpHeaders headers, 
+            HttpStatusCode status, 
+            WebRequest request)
+    {
         Map<String, List<String>> fieldErrors = new LinkedHashMap<>();
+        
         addFieldErrors(fieldErrors, exception.getBindingResult().getFieldErrors());
         addGlobalErrors(fieldErrors, exception.getBindingResult().getGlobalErrors());
 
         ProblemDetail problem = validationProblem(status, fieldErrors);
-        return handleExceptionInternal(
-                exception, problem, headers, status, request);
+
+        return handleExceptionInternal(exception, problem, headers, status, request);
     }
 
     @Override
@@ -94,60 +96,46 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             HttpMessageNotReadableException exception,
             HttpHeaders headers,
             HttpStatusCode status,
-            WebRequest request) {
-        ProblemDetail problem = problem(
-                status,
-                "Unreadable request body",
-                "The request body is missing, malformed, or contains an incompatible JSON value.");
-        return handleExceptionInternal(
-                exception, problem, headers, status, request);
+            WebRequest request
+    )
+    {
+        ProblemDetail problem = problem(status, "Unreadable request body", "The request body is missing, malformed, or contains an incompatible JSON value.");
+        return handleExceptionInternal(exception, problem, headers, status, request);
     }
 
+    
     @Override
-    protected ResponseEntity<Object> handleTypeMismatch(
-            TypeMismatchException exception,
-            HttpHeaders headers,
-            HttpStatusCode status,
-            WebRequest request) {
-        ProblemDetail problem = problem(
-                status,
-                "Invalid parameter",
-                "A path or query parameter has an incompatible value.");
-        return handleExceptionInternal(
-                exception, problem, headers, status, request);
+    protected ResponseEntity<Object> handleTypeMismatch (
+        TypeMismatchException exception,
+        HttpHeaders headers,
+        HttpStatusCode status,
+        WebRequest request
+    )
+    {
+        ProblemDetail problem = problem(status, "Invalid parameter", "A path or query parameter has an incompatible value." );
+        return handleExceptionInternal(exception, problem, headers, status, request);
     }
 
     @ExceptionHandler(BookNotFoundException.class)
     public ResponseEntity<Object> handleBookNotFound(
-            BookNotFoundException exception,
-            WebRequest request) {
-        ProblemDetail problem = problem(
-                HttpStatus.NOT_FOUND,
-                "Book not found",
-                exception.getMessage());
-        return handleExceptionInternal(
-                exception,
-                problem,
-                new HttpHeaders(),
-                HttpStatus.NOT_FOUND,
-                request);
+        BookNotFoundException exception,
+        WebRequest request
+    )
+    {
+        ProblemDetail problem = problem(HttpStatus.NOT_FOUND, "Book not found", exception.getMessage());
+        return handleExceptionInternal(exception, problem, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
     }
 
     @ExceptionHandler(DuplicateIsbnException.class)
     public ResponseEntity<Object> handleDuplicateIsbn(
-            DuplicateIsbnException exception,
-            WebRequest request) {
-        ProblemDetail problem = problem(
-                HttpStatus.CONFLICT,
-                "ISBN conflict",
-                exception.getMessage());
-        return handleExceptionInternal(
-                exception,
-                problem,
-                new HttpHeaders(),
-                HttpStatus.CONFLICT,
-                request);
+        DuplicateIsbnException exception,
+        WebRequest request
+    )
+    {
+        ProblemDetail problem = problem(HttpStatus.CONFLICT,"ISBN conflict", exception.getMessage());
+        return handleExceptionInternal(exception, problem, new HttpHeaders(), HttpStatus.CONFLICT, request);
     }
+
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleUnexpected(
@@ -178,12 +166,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static ProblemDetail validationProblem(
             HttpStatusCode status,
             Map<String, List<String>> fieldErrors) {
-        ProblemDetail problem = problem(
-                status,
-                "Validation failed",
-                "One or more request values are invalid.");
+        ProblemDetail problem = problem(status, "some fields failed (title)", "some field failed (detail)");
         problem.setProperty("fieldErrors", fieldErrors);
         return problem;
+        
     }
 
     private static ProblemDetail problem(
@@ -198,33 +184,40 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static void addFieldErrors(
             Map<String, List<String>> fieldErrors,
             List<FieldError> errors) {
-        for (FieldError error : errors) {
+        for (FieldError error : errors)
+        {
             addError(fieldErrors, error.getField(), message(error));
         }
+
     }
 
     private static void addGlobalErrors(
             Map<String, List<String>> fieldErrors,
             List<ObjectError> errors) {
-        for (ObjectError error : errors) {
+        for (ObjectError error : errors)
+        {
             addError(fieldErrors, REQUEST_ERROR, message(error));
         }
+
     }
 
     private static void addError(
             Map<String, List<String>> fieldErrors,
             String field,
             String message) {
-        List<String> messages = fieldErrors.computeIfAbsent(
-                field, ignored -> new ArrayList<>());
-        if (!messages.contains(message)) {
-            messages.add(message);
+        List<String> messageList = new ArrayList<>();
+        messageList = fieldErrors.computeIfAbsent(field, ignored -> new ArrayList<>());
+        if (!messageList.contains(message))
+        {
+            messageList.add(message);
         }
+
     }
 
     private static String message(MessageSourceResolvable error) {
-        String message = error.getDefaultMessage();
-        return message == null ? "is invalid" : message;
+        String msg = error.getDefaultMessage();
+        return (msg == null ? "is invalid (default message when error.getDefaultMessage() == null" : msg);
+
     }
 
     private static String parameterName(ParameterValidationResult result) {

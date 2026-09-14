@@ -1,8 +1,11 @@
 D:\DSA-new\DSA\personal\book-catalog-api\src\main\java\com\example\bookcatalog\dto\BookRequest.java
+D:\DSA-new\DSA\personal\book-catalog-api\src\main\java\com\example\bookcatalog\exception\DuplicateIsbnException.java
 D:\DSA-new\DSA\personal\book-catalog-api\src\main\java\com\example\bookcatalog\repository\BookRepository.java
+D:\DSA-new\DSA\personal\book-catalog-api\src\main\java\com\example\bookcatalog\exception\BookNotFoundException.java
 D:\DSA-new\DSA\personal\book-catalog-api\src\main\java\com\example\bookcatalog\service\BookService.java
 D:\DSA-new\DSA\personal\book-catalog-api\src\main\java\com\example\bookcatalog\web\BookController.java
 D:\DSA-new\DSA\personal\book-catalog-api\src\main\java\com\example\bookcatalog\Application.java
 D:\DSA-new\DSA\personal\book-catalog-api\src\main\java\com\example\bookcatalog\dto\StockRequest.java
 D:\DSA-new\DSA\personal\book-catalog-api\src\main\java\com\example\bookcatalog\dto\BookResponse.java
 D:\DSA-new\DSA\personal\book-catalog-api\src\main\java\com\example\bookcatalog\model\Book.java
+D:\DSA-new\DSA\personal\book-catalog-api\src\main\java\com\example\bookcatalog\web\GlobalExceptionHandler.java
