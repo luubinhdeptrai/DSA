@@ -1,0 +1,11 @@
+com\example\bookcatalog\web\BookController.class
+com\example\bookcatalog\exception\DuplicateIsbnException.class
+com\example\bookcatalog\web\GlobalExceptionHandler.class
+com\example\bookcatalog\model\Book.class
+com\example\bookcatalog\dto\BookResponse.class
+com\example\bookcatalog\dto\StockRequest.class
+com\example\bookcatalog\repository\BookRepository.class
+com\example\bookcatalog\exception\BookNotFoundException.class
+com\example\bookcatalog\service\BookService.class
+com\example\bookcatalog\Application.class
+com\example\bookcatalog\dto\BookRequest.class
