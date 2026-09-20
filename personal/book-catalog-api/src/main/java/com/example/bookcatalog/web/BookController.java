@@ -3,6 +3,7 @@ package com.example.bookcatalog.web;
 import com.example.bookcatalog.dto.BookRequest;
 import com.example.bookcatalog.dto.BookResponse;
 import com.example.bookcatalog.dto.StockRequest;
+import com.example.bookcatalog.exception.TransactionLabCheckedException;
 import com.example.bookcatalog.model.Book;
 import com.example.bookcatalog.service.BookService;
 import java.math.BigDecimal;
@@ -116,7 +117,7 @@ public class BookController {
     }
 
     @DeleteMapping ("/{id}")
-    public ResponseEntity<Void> delete (@Positive(message = "id must be positive") @PathVariable("id") long id)
+    public ResponseEntity<Void> delete (@Positive(message = "id must be positive") @PathVariable("id") long id) throws TransactionLabCheckedException
     {
         bookService.delete(id);
         return ResponseEntity.noContent().build();

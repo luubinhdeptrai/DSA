@@ -2,6 +2,8 @@ package com.example.bookcatalog.web;
 
 import com.example.bookcatalog.exception.BookNotFoundException;
 import com.example.bookcatalog.exception.DuplicateIsbnException;
+import com.example.bookcatalog.exception.TransactionLabCheckedException;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,6 +17,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.validation.method.ParameterErrors;
@@ -134,6 +137,36 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     {
         ProblemDetail problem = problem(HttpStatus.CONFLICT,"ISBN conflict", exception.getMessage());
         return handleExceptionInternal(exception, problem, new HttpHeaders(), HttpStatus.CONFLICT, request);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Object> handleIllegalState(
+        IllegalStateException exception,
+        WebRequest request
+    )
+    {
+        ProblemDetail problem = problem(HttpStatus.INTERNAL_SERVER_ERROR,"Test Transaction", exception.getMessage());
+        return handleExceptionInternal(exception, problem, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, request);
+    }
+
+    @ExceptionHandler(TransactionLabCheckedException.class)
+    public ResponseEntity<Object> handleTransactionLabChecked(
+        TransactionLabCheckedException  exception,
+        WebRequest request
+    )
+    {
+        ProblemDetail problem = problem(HttpStatus.INTERNAL_SERVER_ERROR,"Test checked Exception", exception.getMessage());
+        return handleExceptionInternal(exception, problem, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, request);
+    }
+
+    @ExceptionHandler(UnexpectedRollbackException.class)
+    public ResponseEntity<Object> handleUnexpectedRollback(
+        UnexpectedRollbackException exception,
+        WebRequest request
+    )
+    {
+        ProblemDetail problem = problem(HttpStatus.INTERNAL_SERVER_ERROR,"Test Unexpected Rollback Exception", exception.getMessage());
+        return handleExceptionInternal(exception, problem, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, request);
     }
 
 

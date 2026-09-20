@@ -23,6 +23,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.lang.IllegalStateException;
+
+import com.example.bookcatalog.exception.TransactionLabCheckedException ;
+
 
 
 @Service
@@ -111,10 +115,13 @@ public class BookService {
         return book;
     }
 
-    @Transactional
-    public void delete (long id)
+    @Transactional(rollbackFor = TransactionLabCheckedException.class)
+    public void delete (long id) throws TransactionLabCheckedException 
     {
         Book book = repo.findById(id).orElseThrow(() -> new BookNotFoundException(id));
         repo.delete(book);
+
+        repo.flush();
+                throw new TransactionLabCheckedException ("Intentional failure after flush");
     }
 }

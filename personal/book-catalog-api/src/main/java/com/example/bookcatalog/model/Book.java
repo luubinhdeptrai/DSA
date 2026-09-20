@@ -8,6 +8,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
+import jakarta.persistence.Version;
+
 
 
 @Entity
@@ -32,6 +34,10 @@ public class Book {
 
     @Column
     private Integer stock;
+
+    @Version
+    @Column
+    private Long version;
 
     protected Book()
     {
