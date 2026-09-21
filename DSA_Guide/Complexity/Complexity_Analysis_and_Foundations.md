@@ -3,6 +3,8 @@
 > **Goal:** Learn to analyze the time and space complexity of Java solutions well enough to explain them confidently in LeetCode and software-engineering interviews.
 >
 > **Assumptions:** Java 17+, standard JDK collections, and ordinary RAM-model analysis unless stated otherwise.
+>
+> **Teaching cost model:** To keep examples focused on algorithm structure, printing or consuming one fixed-width primitive value is treated as `O(1)`. Real console I/O, number-to-text conversion, buffering, and output length have costs of their own; include them when output behavior is part of the problem.
 
 ## How to use this guide
 
@@ -515,6 +517,16 @@ Classic example:
 Merge sort
 ```
 
+A Java library example is sorting an array:
+
+```java
+static void sort(int[] nums) {
+    Arrays.sort(nums);
+}
+```
+
+For Java 17+ interview analysis, treat this call as `O(n log n)` time. Section 15 explains why exact algorithms and auxiliary-space details depend on the overload and JDK implementation.
+
 At each recursive level, all `n` elements participate in merging.
 
 There are approximately `log n` levels.
@@ -633,6 +645,34 @@ For `n` distinct elements:
 ```text
 number of permutations = n!
 ```
+
+This Java routine explores every ordering while only counting them:
+
+```java
+static long countOrders(int[] nums, int index) {
+    if (index == nums.length) {
+        return 1;
+    }
+
+    long count = 0;
+
+    for (int i = index; i < nums.length; i++) {
+        swap(nums, index, i);
+        count += countOrders(nums, index + 1);
+        swap(nums, index, i);
+    }
+
+    return count;
+}
+
+static void swap(int[] nums, int left, int right) {
+    int temporary = nums[left];
+    nums[left] = nums[right];
+    nums[right] = temporary;
+}
+```
+
+The search tree contains `Θ(n!)` nodes, so counting takes `Θ(n!)` time and `Θ(n)` recursion-stack space. If you **materialize** every permutation by copying all `n` elements at each leaf, the output itself requires `Θ(n × n!)` time and space. This output-cost distinction is interview-important.
 
 Example growth:
 
@@ -1102,6 +1142,28 @@ O(n + m)
 ```
 
 Do not simplify this to `O(n)` unless you have a stated relationship such as `m = n`.
+
+The same rule applies to any number of independent inputs:
+
+```java
+static long sumAll(int[] a, int[] b, int[] c) {
+    long total = 0;
+
+    for (int value : a) {
+        total += value;
+    }
+    for (int value : b) {
+        total += value;
+    }
+    for (int value : c) {
+        total += value;
+    }
+
+    return total;
+}
+```
+
+If `n = a.length`, `m = b.length`, and `k = c.length`, the time is `O(n + m + k)`. None of the three variables may be discarded without a stated relationship. If the three traversals were fully nested instead, the time would be `O(n × m × k)`.
 
 ---
 
@@ -1630,6 +1692,8 @@ O(n) × O(log n)
 ---
 
 ### 10.2 Why efficient comparison sorting often appears here
+
+**💡 NICE TO KNOW**
 
 Comparison sorting asks questions like:
 
@@ -2256,10 +2320,10 @@ This distinction is interview-important.
 | Access `arr[i]` | `O(1)` | Direct index |
 | Update `arr[i] = x` | `O(1)` | Direct index |
 | Search unsorted | `O(n)` | May inspect all elements |
-| Insert at arbitrary position | `O(n)` | Elements may need shifting |
-| Delete at arbitrary position | `O(n)` | Elements may need shifting |
+| Simulated ordered insert | `O(n)` | Shift/copy elements into available or new storage |
+| Simulated ordered delete | `O(n)` | Shift elements to close the gap |
 
-Java arrays have fixed length.
+Java arrays have fixed length: they expose no size-changing `insert` or `delete` operation. The table describes the work needed to preserve order when you shift elements within an array or create a replacement array.
 
 ---
 
@@ -2271,7 +2335,8 @@ Java arrays have fixed length.
 | `set(i, x)` | `O(1)` | Direct indexed replacement |
 | `add(x)` | amortized `O(1)` | Resize may make one append `O(n)` |
 | `add(i, x)` | `O(n)` | Shift elements |
-| `remove(i)` | `O(n)` | Shift following elements |
+| `remove(i)` | `O(n)` in general | Shift following elements; removing the last is `O(1)` |
+| `remove(Object)` | `O(n)` | Search, then possibly shift elements |
 | `contains(x)` | `O(n)` | Linear scan |
 | `indexOf(x)` | `O(n)` | Linear scan |
 
@@ -2300,7 +2365,7 @@ A common mistake is saying:
 
 > “Insertion into a linked list is always `O(1)`.”
 
-Insertion is `O(1)` **if you already have the relevant node/position reference**. Finding the position by index may require `O(n)` traversal.
+Insertion or removal is `O(1)` **when a `ListIterator` is already positioned correctly**. Ordinary indexed methods must first locate that position, which may require `O(n)` traversal. Java callers do not receive `LinkedList`'s private internal node objects.
 
 ---
 
@@ -2310,7 +2375,7 @@ Insertion is `O(1)` **if you already have the relevant node/position reference**
 
 | Operation | Expected/Average | Worst-case discussion |
 |---|---:|---|
-| `put(k, v)` | `O(1)` | Worse under severe collisions/resizing |
+| `put(k, v)` | amortized `O(1)` | A resize or severe collisions can make one call slower |
 | `get(k)` | `O(1)` | Worse under severe collisions |
 | `containsKey(k)` | `O(1)` | Same lookup behavior |
 | `remove(k)` | `O(1)` | Same lookup behavior |
@@ -2324,6 +2389,8 @@ Worst/pathological: worse than O(1)
 
 If a simple worst-case answer is required, `O(n)` is a safe general upper-bound description for pathological hashing scenarios.
 
+These bounds normally assume that computing the key's `hashCode()` and comparing keys with `equals()` take `O(1)`. If those methods inspect data of length `k`, include that cost in the analysis.
+
 > **🌐 JAVA/BACKEND NOTE**
 >
 > `HashMap` appears everywhere in Java services: caches, grouping, request processing, lookup tables, aggregation, DTO transformation, and indexing.
@@ -2336,7 +2403,7 @@ If a simple worst-case answer is required, `O(n)` is a safe general upper-bound 
 
 | Operation | Expected/Average | Worst-case discussion |
 |---|---:|---|
-| `add(x)` | `O(1)` | Worse with pathological collisions |
+| `add(x)` | amortized `O(1)` | A resize or pathological collisions can make one call slower |
 | `contains(x)` | `O(1)` | Worse with pathological collisions |
 | `remove(x)` | `O(1)` | Worse with pathological collisions |
 
@@ -2354,13 +2421,16 @@ Java `TreeMap` uses a Red-Black tree.
 | `get(k)` | `O(log n)` |
 | `containsKey(k)` | `O(log n)` |
 | `remove(k)` | `O(log n)` |
-| min/max navigation | `O(log n)` or better for some endpoint access patterns |
+| first/last/floor/ceiling navigation | `O(log n)` |
+| Full ordered iteration | `O(n)` |
 
 Main advantage over `HashMap`:
 
 ```text
 keys remain ordered
 ```
+
+These operation bounds assume each key comparison is `O(1)`. Include comparator cost when comparing keys itself takes non-constant work.
 
 ---
 
@@ -2374,6 +2444,8 @@ keys remain ordered
 | `contains(x)` | `O(log n)` |
 | `remove(x)` | `O(log n)` |
 
+As with `TreeMap`, these bounds assume each natural-order or comparator comparison is `O(1)`.
+
 Use it when you need both:
 
 - uniqueness
@@ -2385,9 +2457,11 @@ Use it when you need both:
 
 Java `PriorityQueue` is a heap.
 
+The bounds below assume that each natural-order or comparator comparison takes `O(1)`.
+
 | Operation | Complexity |
 |---|---:|
-| `offer(x)` / `add(x)` | `O(log n)` |
+| `offer(x)` / `add(x)` | amortized `O(log n)`; one growth can be `O(n)` |
 | `peek()` | `O(1)` |
 | `poll()` | `O(log n)` |
 | `contains(x)` | `O(n)` |
@@ -2400,6 +2474,8 @@ PriorityQueue is not a fully sorted list.
 ```
 
 It efficiently exposes the highest-priority element.
+
+The queue uses a resizable backing array. The documented heap work for `offer` is `O(log n)`, but an individual growth-triggering insertion can additionally copy `O(n)` references. Across many insertions, that resize cost is amortized. Iterating a `PriorityQueue` does **not** visit elements in priority order.
 
 ---
 
@@ -2416,6 +2492,7 @@ It efficiently exposes the highest-priority element.
 | `peekFirst()` | `O(1)` |
 | `peekLast()` | `O(1)` |
 | `contains(x)` | `O(n)` |
+| `removeFirstOccurrence(x)` | `O(n)` |
 
 For stack/queue behavior, `ArrayDeque` is usually preferred over legacy `Stack`.
 
@@ -2426,7 +2503,7 @@ For stack/queue behavior, `ArrayDeque` is usually preferred over legacy `Stack`.
 Stack operations are conceptually:
 
 ```text
-push → O(1)
+push → amortized O(1) with ArrayDeque
 pop  → O(1)
 peek → O(1)
 ```
@@ -2456,11 +2533,11 @@ int value = stack.pop();
 | Array | `O(1)` | `O(n)` | `O(n)` arbitrary position | `O(n)` arbitrary position |
 | `ArrayList` | `O(1)` | `O(n)` | append amortized `O(1)`, indexed `O(n)` | indexed `O(n)` |
 | `LinkedList` | `O(n)` indexed | `O(n)` | endpoints `O(1)`, indexed `O(n)` | endpoints `O(1)`, indexed `O(n)` |
-| `HashMap` | — | expected `O(1)` by key | expected `O(1)` | expected `O(1)` |
-| `HashSet` | — | expected `O(1)` | expected `O(1)` | expected `O(1)` |
+| `HashMap` | — | expected `O(1)` by key | expected amortized `O(1)` | expected `O(1)` |
+| `HashSet` | — | expected `O(1)` | expected amortized `O(1)` | expected `O(1)` |
 | `TreeMap` | — | `O(log n)` by key | `O(log n)` | `O(log n)` |
 | `TreeSet` | — | `O(log n)` | `O(log n)` | `O(log n)` |
-| `PriorityQueue` | top `O(1)` | `O(n)` general | `O(log n)` | top `O(log n)` |
+| `PriorityQueue` | top `O(1)` | `O(n)` general | amortized `O(log n)`, one growth `O(n)` | top `O(log n)` |
 | `ArrayDeque` | ends `O(1)` | `O(n)` | ends amortized `O(1)` | ends `O(1)` |
 
 ---
@@ -2499,7 +2576,7 @@ O(1)
 
 ### 15.3 `String.substring(...)`
 
-For modern Java versions, creating a substring copies the requested range into a new string representation.
+For a general substring in modern Java versions, creating the result copies the requested range into a new string representation.
 
 If substring length is `k`:
 
@@ -2509,6 +2586,8 @@ Space: O(k)
 ```
 
 Do not assume substring is `O(1)` based on old Java implementation behavior.
+
+There are implementation shortcuts for special cases: requesting the whole string can return the original object, and requesting an empty range can return a shared empty string. Those cases may be `O(1)`; use `O(k)` for the normal length-`k` case.
 
 ---
 
@@ -2528,10 +2607,10 @@ Appending a string of length `k` requires copying those characters:
 O(k)
 ```
 
-Building a result containing `n` characters using `StringBuilder` is normally:
+If the final result contains `L` characters, building it using `StringBuilder` is normally:
 
 ```text
-O(n)
+O(L)
 ```
 
 overall.
@@ -2556,7 +2635,7 @@ Strings are immutable.
 
 Each concatenation can create a new string and copy the previous content.
 
-If you append one character at a time `n` times, the copied work resembles:
+Let `L` be the total number of characters in the final result. If you append one character at a time, then `L = n`, and the copied work resembles:
 
 ```text
 1 + 2 + 3 + ... + n
@@ -2565,8 +2644,10 @@ If you append one character at a time `n` times, the copied work resembles:
 which is:
 
 ```text
-O(n²)
+O(L²)
 ```
+
+More generally, repeated immutable concatenation costs the sum of all intermediate prefix lengths. `O(L²)` is the common worst case for many small appends. Peak live/result space is normally `O(L)`, even though the cumulative amount allocated over the whole loop can be `O(L²)`.
 
 Use:
 
@@ -2580,7 +2661,7 @@ for (String value : values) {
 String result = builder.toString();
 ```
 
-This normally reduces total building cost to roughly linear in the total number of appended characters.
+This normally reduces total building cost to `O(L)`: amortized appends plus the final `toString()` copy. Space for the builder and final result is also `O(L)`.
 
 > **🌐 JAVA/BACKEND NOTE**
 >
@@ -2590,7 +2671,7 @@ This normally reduces total building cost to roughly linear in the total number 
 
 ### 15.6 `Arrays.sort()`
 
-Complexity depends on array type and JDK implementation.
+Complexity depends on the array type and JDK implementation. The guarantees below describe Java 17/21 behavior; always separate interview-level analysis from implementation details that could change in another JDK.
 
 For Java 17:
 
@@ -2601,13 +2682,13 @@ int[] nums;
 Arrays.sort(nums);
 ```
 
-The JDK uses specialized primitive sorting implementations. For common interview reasoning, sorting is generally treated as:
+The JDK uses specialized primitive sorting implementations. Java 17/21 documentation describes them as offering:
 
 ```text
-O(n log n)
+O(n log n) time on all data sets
 ```
 
-average/typical order, while implementation-specific worst-case details can differ.
+Auxiliary space depends on the primitive type, input, and implementation path. Do not promise universal `O(1)` space: modern JDK implementations may allocate a linear-size temporary buffer on some paths.
 
 #### Object arrays
 
@@ -2619,8 +2700,11 @@ Arrays.sort(nums);
 Object sorting is stable and uses comparison-based algorithms with worst-case order:
 
 ```text
-O(n log n)
+Time:  O(n log n)
+Space: O(n) temporary references in the worst case
 ```
+
+The time bound assumes `compareTo()` or the supplied comparator takes `O(1)` per comparison. If one comparison costs `O(k)`, the comparison work can become `O(k × n log n)`.
 
 For LeetCode/interview discussion, unless an implementation detail is central, saying:
 
@@ -2641,10 +2725,11 @@ Collections.sort(list);
 For ordinary comparison sorting of `n` list elements, reason as:
 
 ```text
-O(n log n)
+Time:  O(n log n)
+Space: O(n) for standard JDK implementations
 ```
 
-assuming normal comparator cost.
+The sort is stable and `Collections.sort(list)` delegates to `list.sort(...)`. These bounds assume each comparison takes `O(1)`.
 
 Important hidden cost:
 
@@ -2653,7 +2738,10 @@ If your comparator itself performs expensive work, total complexity includes tha
 Example:
 
 ```java
-list.sort((a, b) -> expensiveScore(a) - expensiveScore(b));
+list.sort((a, b) -> Integer.compare(
+        expensiveScore(a),
+        expensiveScore(b)
+));
 ```
 
 If `expensiveScore()` is `O(k)`, then comparator calls are not `O(1)`.
@@ -2673,6 +2761,8 @@ Time:  O(n)
 Space: O(n)
 ```
 
+In general, `Arrays.copyOf(original, newLength)` takes `O(newLength)` time and space: it copies `min(original.length, newLength)` values and initializes any remaining positions in the newly allocated array. For object arrays, the references are copied; the referenced objects are not deeply cloned.
+
 ---
 
 ### 15.9 `System.arraycopy()`
@@ -2684,10 +2774,11 @@ System.arraycopy(src, 0, dst, 0, k);
 Copies `k` elements.
 
 ```text
-O(k)
+Time:            O(k)
+Auxiliary space: O(1)
 ```
 
-It may be highly optimized natively, but asymptotically it is still linear in the number of copied elements.
+The destination array must already exist; `arraycopy` does not allocate it. Overlapping source and destination ranges are supported. The JVM may optimize the copy intrinsically, but that changes constants rather than its linear dependence on `k`.
 
 ---
 
@@ -2833,10 +2924,10 @@ n ≤ 10
 permutation backtracking:
 
 ```text
-O(n!)
+O(n!) search states
 ```
 
-may be intended.
+may be intended. Materializing every length-`n` permutation adds the cost of copying each result, producing `Θ(n × n!)` time and output space.
 
 This is one reason experienced problem solvers read constraints **before coding**.
 
@@ -2868,7 +2959,7 @@ Only constant work.
 
 Nothing meaningful.
 
-#### Final
+#### 5–6. Final time and space
 
 ```text
 Time:  O(1)
@@ -2891,7 +2982,7 @@ static int sum(int[] nums) {
 }
 ```
 
-#### Repeated operation
+#### 1. What repeats?
 
 ```text
 total += num
@@ -2899,13 +2990,21 @@ total += num
 
 runs once per element.
 
-#### Count
+#### 2. How many times?
 
 ```text
 n
 ```
 
-#### Final
+#### 3. How are operations combined?
+
+There is one pass with constant work per element, so the work is `n × O(1)`.
+
+#### 4. What can be removed?
+
+There are no constants or lower-order terms to remove.
+
+#### 5–6. Final time and space
 
 ```text
 Time:  O(n)
@@ -2929,6 +3028,12 @@ static int countHalves(int n) {
 }
 ```
 
+#### 1. What repeats?
+
+The comparison, integer division, assignment, and increment repeat. Each iteration does `O(1)` work.
+
+#### 2. How many times?
+
 Each iteration halves `n`.
 
 After `k` iterations:
@@ -2943,7 +3048,15 @@ So:
 k ≈ log₂ n
 ```
 
-Final:
+#### 3. How are operations combined?
+
+`O(1)` work per iteration multiplied by `O(log₂ n)` iterations gives `O(log₂ n)`.
+
+#### 4. What can be removed?
+
+The logarithm base contributes only a constant factor, so `O(log₂ n)` becomes `O(log n)`.
+
+#### 5–6. Final time and space
 
 ```text
 Time:  O(log n)
@@ -2970,25 +3083,33 @@ static int countEqualPairs(int[] nums) {
 }
 ```
 
-Outer iterations:
+#### 1–2. What repeats, and how many times?
+
+The outer loop runs:
 
 ```text
 n
 ```
 
-Inner iterations per outer iteration:
+The inner loop runs this many times for each outer iteration:
 
 ```text
 n
 ```
 
-Combined:
+#### 3. How are operations combined?
+
+The loops are nested, so their counts multiply:
 
 ```text
 n × n = n²
 ```
 
-Final:
+#### 4. What can be removed?
+
+There are no lower-order terms. The product is already `n²`.
+
+#### 5–6. Final time and space
 
 ```text
 Time:  O(n²)
@@ -3011,28 +3132,37 @@ static void process(int[] nums) {
 }
 ```
 
-Outer loop:
+#### 1–2. What repeats, and how many times?
+
+The outer loop visits all `n` elements:
 
 ```text
 O(n)
 ```
 
-Inner loop:
+For each visit, the inner loop halves `x` until it reaches `1`:
 
 ```text
 O(log n)
 ```
 
-Nested:
+#### 3. How are operations combined?
+
+The logarithmic work occurs inside every outer iteration, so multiply:
 
 ```text
 O(n log n)
 ```
 
-Space:
+#### 4. What can be removed?
+
+No lower-order term remains. The logarithm base is ignored as a constant factor.
+
+#### 5–6. Final time and space
 
 ```text
-O(1)
+Time:  O(n log n)
+Space: O(1)
 ```
 
 ---
@@ -3051,28 +3181,37 @@ static void printBoth(int[] a, int[] b) {
 }
 ```
 
-First loop:
+#### 1–2. What repeats, and how many times?
+
+The first loop performs constant work `n` times:
 
 ```text
 O(n)
 ```
 
-Second loop:
+The second loop performs constant work `m` times:
 
 ```text
 O(m)
 ```
 
-Consecutive work is added:
+#### 3. How are operations combined?
+
+The loops are consecutive, so add their costs:
 
 ```text
 O(n + m)
 ```
 
-Space:
+#### 4. What can be removed?
+
+Neither independent variable may be removed unless a relationship between `n` and `m` is given.
+
+#### 5–6. Final time and space
 
 ```text
-O(1)
+Time:  O(n + m)
+Space: O(1)
 ```
 
 ignoring output system buffering.
@@ -3097,28 +3236,37 @@ static int countMatches(int[] a, int[] b) {
 }
 ```
 
-Outer:
+#### 1–2. What repeats, and how many times?
+
+The outer loop runs `n` times:
 
 ```text
 n
 ```
 
-Inner:
+For each outer iteration, the inner loop runs `m` times:
 
 ```text
 m
 ```
 
-Total:
+#### 3. How are operations combined?
+
+The loops are nested, so multiply their counts:
 
 ```text
 O(nm)
 ```
 
-Space:
+#### 4. What can be removed?
+
+Neither independent variable may be removed unless their relationship is known.
+
+#### 5–6. Final time and space
 
 ```text
-O(1)
+Time:  O(nm)
+Space: O(1)
 ```
 
 ---
@@ -3139,28 +3287,37 @@ static boolean repeatedContains(List<Integer> values) {
 
 Suppose `values` is an `ArrayList` with `n` elements.
 
-Outer enhanced-for loop:
+#### 1–2. What repeats, and how many times?
+
+The enhanced-for loop can visit all `n` elements:
 
 ```text
 O(n)
 ```
 
-`contains()`:
+Each `ArrayList.contains()` call can scan all `n` elements:
 
 ```text
 O(n)
 ```
 
-Total worst-case:
+#### 3. How are operations combined?
+
+The linear lookup occurs inside the linear traversal, so multiply in the worst case:
 
 ```text
 O(n²)
 ```
 
-Space:
+#### 4. What can be removed?
+
+No lower-order term remains; `n × n` is `n²`.
+
+#### 5–6. Final worst-case time and space
 
 ```text
-O(1)
+Time:  O(n²)
+Space: O(1)
 ```
 
 ---
@@ -3177,31 +3334,34 @@ static int branches(int n) {
 }
 ```
 
-Each call creates two new calls until depth `n`.
+#### 1. What repeats?
 
-Number of nodes in recursion tree:
+Each non-base call performs constant local work and creates two recursive calls.
 
-```text
-O(2^n)
-```
+#### 2. How many times?
 
-Time:
+The recursion tree doubles at each level and has depth `n`, so its node count is:
 
 ```text
-O(2^n)
+Θ(2^n)
 ```
 
-Maximum call depth:
+#### 3. How are operations combined?
+
+Constant work across all tree nodes gives `Θ(2^n)` total work.
+
+#### 4. What can be removed?
+
+There are no lower-order terms that change the exponential result.
+
+#### 5–6. Final time and space
 
 ```text
-O(n)
+Time:  Θ(2^n)
+Space: O(n) maximum active call stack
 ```
 
-Space:
-
-```text
-O(n)
-```
+The number of calls is exponential, but calls from both branches are not all simultaneously active; maximum recursion depth is only linear.
 
 ---
 
@@ -3221,31 +3381,44 @@ static boolean hasAdjacentDuplicate(int[] nums) {
 }
 ```
 
-Sorting:
+#### 1–2. What repeats, and how many times?
+
+Sorting processes `n` elements in `O(n log n)` time:
 
 ```text
 O(n log n)
 ```
 
-Scan:
+The following loop performs at most `n - 1` comparisons:
 
 ```text
 O(n)
 ```
 
-Sequential combination:
+#### 3. How are operations combined?
+
+Sorting and scanning are consecutive phases, so add them:
 
 ```text
 O(n log n + n)
 ```
 
-Drop lower-order term:
+#### 4. What can be removed?
+
+Drop the dominated linear term:
 
 ```text
 O(n log n)
 ```
 
-Space depends on the exact sort implementation and array type. For interview purposes, state your assumptions rather than blindly claiming `O(1)`.
+#### 5–6. Final time and space
+
+```text
+Time:  O(n log n)
+Space: O(n) conservative worst-case auxiliary bound for Java 17/21
+```
+
+Some primitive-sort implementation paths use less space. In an interview, state the sorting-space assumption rather than blindly claiming `O(1)`.
 
 ---
 
@@ -4258,7 +4431,7 @@ Space: O(n)
 
 The array is scanned once.
 
-Each `HashSet.add()` is expected `O(1)`.
+Each `HashSet.add()` is expected amortized `O(1)`.
 
 Expected time:
 
@@ -4310,7 +4483,7 @@ O(n log n + n)
 = O(n log n)
 ```
 
-Auxiliary sorting space depends on the array type and actual JDK sorting implementation.
+For this primitive-array call, auxiliary sorting space is implementation-dependent. With Java 17/21 implementations, a conservative worst-case answer is `O(n)` because some sorting paths may allocate a linear temporary buffer. If an interviewer asks you to treat the chosen sort as in-place, state that assumption explicitly.
 
 ---
 
@@ -4431,10 +4604,11 @@ Total copied work:
 So:
 
 ```text
-Time: O(n²)
+Time:      O(n²)
+Peak space: O(n)
 ```
 
-The final string contains `n` characters, so required output storage is `O(n)`. Temporary allocation volume across the loop can be much larger even though not all old strings remain live simultaneously.
+The final string contains `n` characters, so required output storage is `O(n)`. Temporary allocation volume across the loop is `O(n²)`, but space complexity normally measures the maximum simultaneously live memory, not every byte allocated over time.
 
 Prefer `StringBuilder`.
 
@@ -4716,12 +4890,15 @@ O(nm)
 | `ArrayList.contains()` | `O(n)` |
 | `LinkedList.get(index)` | `O(n)` |
 | `LinkedList.addFirst/addLast` | `O(1)` |
-| `HashMap.get/put` | expected `O(1)` |
-| `HashSet.add/contains` | expected `O(1)` |
+| `HashMap.get` | expected `O(1)` |
+| `HashMap.put` | expected amortized `O(1)` |
+| `HashSet.contains` | expected `O(1)` |
+| `HashSet.add` | expected amortized `O(1)` |
 | `TreeMap` operations | `O(log n)` |
 | `TreeSet` operations | `O(log n)` |
 | `PriorityQueue.peek()` | `O(1)` |
-| `PriorityQueue.offer/poll()` | `O(log n)` |
+| `PriorityQueue.offer()` | amortized `O(log n)`; one growth can be `O(n)` |
+| `PriorityQueue.poll()` | `O(log n)` |
 | `ArrayDeque` end operations | amortized/typical `O(1)` |
 
 ---
@@ -4821,7 +4998,8 @@ recursion depth log n → O(log n)
 
 ```text
 ArrayList.contains()    is O(n), not O(1)
-HashMap operations      are expected O(1), not guaranteed strict O(1)
+HashMap lookup          is expected O(1), not guaranteed strict O(1)
+HashMap put             is expected amortized O(1); resizing can be O(n)
 ArrayList.add()         is amortized O(1), not always strict O(1)
 String.substring(k)     is O(k) in modern Java
 Arrays.copyOf(n)        is O(n)
@@ -4868,7 +5046,7 @@ Before giving your final answer, mentally ask:
 
 ---
 
-## Final mental model
+### Final mental model
 
 Do not memorize complexity as a disconnected table.
 
