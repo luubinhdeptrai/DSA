@@ -2,15 +2,24 @@ spring:
   application:
     name: book-catalog-api
   datasource:
-    url: jdbc:postgresql://127.0.0.1:5433/book_catalog
+    url: jdbc:postgresql://127.0.0.1:5434/book_catalog_flyway
     username: book_app
     password: replace-with-a-local-practice-password
     hikari:
       maximum-pool-size: 5
       minimum-idle: 2
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    validate-migration-naming: true
+    baseline-on-migrate: false
+    out-of-order: false
+    clean-disabled: false
   sql:
     init:
-      mode: always
+      mode: never
   jackson:
     deserialization:
       fail-on-unknown-properties: true

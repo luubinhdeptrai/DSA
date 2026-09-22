@@ -39,6 +39,8 @@ public class Book {
     @Column
     private Long version;
 
+
+
     protected Book()
     {
 
