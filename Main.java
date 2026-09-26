@@ -1,43 +1,38 @@
-import java.util.Scanner;
-import java.util.ArrayList;
+import java.util.*;
 
 public class Main {
     public static void main (String[] args)
     {
-        Scanner input = new Scanner(System.in);
+      int[] input = {0,3,2,4,6,1,1};
+      System.out.println(checkTarget(input, 1));
 
-        ArrayList<Integer> nums = new ArrayList<Integer>();
+    }
 
-        int n = input.nextInt();
+    private static boolean checkTarget(int[] nums, int target)
+    {
+        Arrays.sort(nums);
+        int left = 0;
+        int right = nums.length - 1;
+        int mid;
 
-        for (int i=0; i<n; i++)
+        while (left <= right)
         {
-            int num = input.nextInt();
-            nums.add(num);
-        }
-
-        if (n==0)
-        {
-            System.out.println("No element");
-        }
-        else if (n==1)
-        {
-            System.out.println(nums.get(0));
-        }
-        else
-        {
-            int max = nums.get(0);
-            for (int i=1; i<n; i++)
+            mid = (left + right)/2;
+            if (nums[mid] == target)
             {
-                if (max < nums.get(i))
-                {
-                    max = nums.get(i);
-                }
+                return true;
             }
-            System.out.println(max);
+
+            if (nums[mid] < target)
+            {
+                left = mid + 1;
+            }
+
+            else
+            {
+                right = mid - 1;
+            }
         }
-
-    
-
+        return false;
     }
 }
