@@ -24,6 +24,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.lang.IllegalStateException;
+import org.springframework.security.access.prepost.PreAuthorize;
+
 
 import com.example.bookcatalog.exception.TransactionLabCheckedException ;
 
@@ -107,6 +109,7 @@ public class BookService {
         // }
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Book setStock (long id, Integer stock)
     {

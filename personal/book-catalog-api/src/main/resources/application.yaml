@@ -2,7 +2,7 @@ spring:
   application:
     name: book-catalog-api
   datasource:
-    url: jdbc:postgresql://127.0.0.1:5434/book_catalog_flyway
+    url: jdbc:postgresql://127.0.0.1:5432/book_catalog_flyway
     username: book_app
     password: replace-with-a-local-practice-password
     hikari:

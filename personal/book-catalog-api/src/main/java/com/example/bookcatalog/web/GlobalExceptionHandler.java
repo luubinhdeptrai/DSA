@@ -31,6 +31,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.security.access.AccessDeniedException;
+
+
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
@@ -106,7 +109,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(exception, problem, headers, status, request);
     }
 
-    
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Object> handleMethodAccessDenied(
+            AccessDeniedException exception,
+            WebRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN, "This request is not permitted.");
+        problem.setTitle("Forbidden");
+        return handleExceptionInternal(exception, problem,
+                new HttpHeaders(), HttpStatus.FORBIDDEN, request);
+    }
+        
     @Override
     protected ResponseEntity<Object> handleTypeMismatch (
         TypeMismatchException exception,
