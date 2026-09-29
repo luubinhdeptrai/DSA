@@ -1,0 +1,12 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    clean-disabled: true
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    org.springframework.transaction: WARN
+    org.springframework.security: WARN

@@ -1,1 +1,11 @@
-com\example\AppTest.class
+com\example\bookcatalog\security\BookServiceMethodSecurityIntegrationTest.class
+com\example\bookcatalog\service\RegistrationServiceTest.class
+com\example\bookcatalog\support\TestPostgresConfiguration.class
+com\example\bookcatalog\integration\TransactionBehaviorIntegrationTest.class
+com\example\bookcatalog\web\BookControllerWebMvcTest.class
+com\example\bookcatalog\dto\BookRequestTest.class
+com\example\bookcatalog\repository\RepositoryPostgresIntegrationTest.class
+com\example\bookcatalog\security\AppUserDetailsServiceTest.class
+com\example\bookcatalog\security\SecurityPolicyWebMvcTest.class
+com\example\bookcatalog\integration\AuthenticationFlowIntegrationTest$CsrfData.class
+com\example\bookcatalog\integration\AuthenticationFlowIntegrationTest.class

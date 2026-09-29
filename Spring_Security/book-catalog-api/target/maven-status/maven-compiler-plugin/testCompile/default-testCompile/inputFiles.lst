@@ -1,1 +1,10 @@
-D:\DSA-new\DSA\personal\book-catalog-api\src\test\java\com\example\AppTest.java
+D:\DSA-new\DSA\Spring_Security\book-catalog-api\src\reference-test\java\com\example\bookcatalog\dto\BookRequestTest.java
+D:\DSA-new\DSA\Spring_Security\book-catalog-api\src\reference-test\java\com\example\bookcatalog\integration\AuthenticationFlowIntegrationTest.java
+D:\DSA-new\DSA\Spring_Security\book-catalog-api\src\reference-test\java\com\example\bookcatalog\integration\TransactionBehaviorIntegrationTest.java
+D:\DSA-new\DSA\Spring_Security\book-catalog-api\src\reference-test\java\com\example\bookcatalog\repository\RepositoryPostgresIntegrationTest.java
+D:\DSA-new\DSA\Spring_Security\book-catalog-api\src\reference-test\java\com\example\bookcatalog\security\AppUserDetailsServiceTest.java
+D:\DSA-new\DSA\Spring_Security\book-catalog-api\src\reference-test\java\com\example\bookcatalog\security\BookServiceMethodSecurityIntegrationTest.java
+D:\DSA-new\DSA\Spring_Security\book-catalog-api\src\reference-test\java\com\example\bookcatalog\security\SecurityPolicyWebMvcTest.java
+D:\DSA-new\DSA\Spring_Security\book-catalog-api\src\reference-test\java\com\example\bookcatalog\service\RegistrationServiceTest.java
+D:\DSA-new\DSA\Spring_Security\book-catalog-api\src\reference-test\java\com\example\bookcatalog\support\TestPostgresConfiguration.java
+D:\DSA-new\DSA\Spring_Security\book-catalog-api\src\reference-test\java\com\example\bookcatalog\web\BookControllerWebMvcTest.java
