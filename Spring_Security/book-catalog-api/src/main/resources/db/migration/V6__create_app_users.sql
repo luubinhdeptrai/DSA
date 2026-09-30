@@ -1,7 +1,0 @@
-CREATE TABLE app_users (
-    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    username VARCHAR(80) NOT NULL UNIQUE,
-    password_hash VARCHAR(100) NOT NULL,
-    role VARCHAR(16) NOT NULL,
-    CONSTRAINT ck_app_users_role CHECK (role IN ('USER', 'ADMIN'))
-);
