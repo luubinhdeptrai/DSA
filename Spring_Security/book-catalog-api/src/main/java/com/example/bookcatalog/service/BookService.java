@@ -1,14 +1,5 @@
 package com.example.bookcatalog.service;
 
-// import com.example.bookcatalog.exception.BookNotFoundException;
-// import com.example.bookcatalog.exception.DuplicateIsbnException;
-// import com.example.bookcatalog.model.Book;
-// import com.example.bookcatalog.repository.BookRepository;
-// import java.math.BigDecimal;
-// import java.util.List;
-// import java.util.Optional;
-// import org.springframework.stereotype.Service;
-// import org.springframework.dao.DuplicateKeyException;
 
 import com.example.bookcatalog.exception.BookNotFoundException;
 import com.example.bookcatalog.exception.DuplicateIsbnException;
