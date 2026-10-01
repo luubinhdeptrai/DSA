@@ -33,3 +33,7 @@ logging:
     org.springframework.transaction: TRACE
     org.springframework.orm.jpa.JpaTransactionManager: DEBUG
     org.hibernate.SQL: DEBUG
+
+server:
+  address: 127.0.0.1
+  port: 8080
