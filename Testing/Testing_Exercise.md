@@ -1,5 +1,7 @@
 # Testing Exercise
 
+Read the [concepts](Testing_Essential_Concepts.md) first. Attempt each task manually before opening its matching [solution](Testing_Solution.md). This document contains **19 tasks: W1–W3 plus the original Tasks 1–16**, whose identifiers and core scenarios are preserved.
+
 ## Existing project
 
 This exercise extends the checked-in application only:
@@ -15,12 +17,12 @@ Do not create a second application, replace PostgreSQL with H2, bypass Flyway, o
 | Inspected fact | Consequence for this exercise |
 |---|---|
 | Java 21, Spring Boot 4.1.1 | Use Boot 4.1 packages and dependency management. |
-| Spring Framework 7.0.9 | Use `@MockitoBean`, not deprecated `@MockBean`. |
+| Spring Framework 7.0.9 | Use `@MockitoBean`, not the old Boot `@MockBean` (removed in Boot 4). |
 | Spring Security 7.1.1 | Add Boot's modular Security test starter. |
 | Direct JUnit 4.11 and generated `assertTrue(true)` test | Remove both and migrate to JUnit Jupiter 6.0.3. |
 | POM pins Surefire 2.22.1 | Remove stale plugin pins; use Boot-managed Surefire 3.5.6. |
 | PostgreSQL 17 in Compose | Match it with `postgres:17` in Testcontainers. |
-| Flyway 12.4.0, migrations V1–V6 | Start test PostgreSQL empty and apply the real history. |
+| Flyway 12.4.0; V1–V6 SQL found only in tracked build output | Source migrations are missing; see the prerequisite below before database execution. |
 | Hibernate `ddl-auto: validate` | Keep Hibernate as validator, never schema creator. |
 | HikariCP is the application `DataSource` | Full DB tests still use the real pool and pgJDBC. |
 | `GET /books` is public; book writes and transaction lab require ADMIN | Security tests must preserve the actual matrix. |
@@ -29,9 +31,31 @@ Do not create a second application, replace PostgreSQL with H2, bypass Flyway, o
 | `BookService.delete` intentionally flushes, throws, and rolls back | Test 500/exception plus row survival; do not expect normal deletion. |
 | `StockRequest` has no constraints | Do not invent a negative-stock MVC 400 test. |
 | validation advice has placeholder title/detail | Assert the checked-in response, even if its wording should later improve. |
-| `.env.example` is empty | Tests must not read `.env` or local credentials. |
+| No test-specific source profile or container support is present | Add it manually as an exercise; do not depend on stale `target/test-classes`. |
 
-The inspected local JVM zone is the legacy ID `Asia/Saigon`, which PostgreSQL 17 rejects as a startup `TimeZone` parameter. The reference suite sets the **test JVM** to UTC through versionless Surefire configuration. This creates deterministic tests and leaves production behavior unchanged.
+The dependency versions above were checked against the locally resolved Boot 4.1.1 dependency-management POM, not inferred from a newer tutorial. It also manages Mockito 5.23.0, Testcontainers 2.0.5, pgJDBC 42.7.13, Hibernate 7.4.5.Final and HikariCP 7.0.2. The direct JUnit dependency overrides Boot until Task 2 is completed.
+
+The reference configures the test JVM to UTC for deterministic time behavior. The previous material reported a PostgreSQL startup failure with the legacy zone `Asia/Saigon`; that specific failure was not reproduced in this review. Treat it as a possible environment diagnosis, not a universal PostgreSQL claim.
+
+### Source-migration prerequisite and current execution status
+
+On review, `src/main/resources/db` is empty. Six SQL files (V1–V6) exist under tracked `target/classes/db/migration` only. They describe books, optimistic versioning, audits, author indexes and users/role checks. They are build artifacts, not a reliable source migration history. A clean build cannot regenerate them, and an empty database will fail Hibernate schema validation.
+
+Before executing database Tasks 9–15, the project owner must restore the authoritative unchanged migration files to the application's source migration location in a separate maintenance change. This documentation update does not create, copy, rewrite or repair production migrations. Do not use `ddl-auto=create`, skip Flyway, or rely on stale `target` files to conceal the issue. You can still complete design work and the non-database exercises.
+
+The reviewed Docker CLI could not reach its daemon. Database runtime results are therefore unverified here. Old tracked test reports/classes are historical artifacts and do not establish that this source checkout can reproduce them. The solution's verification notes distinguish compilation from execution.
+
+### Existing limitations to observe
+
+| Source observation | Testing implication |
+|---|---|
+| `BookRequest.price` has no `@Digits`; the old `checkBook` helper is never called | Do not invent a two-decimal-place MVC rejection. Database numeric conversion is a separate boundary. |
+| `StockRequest` has no constraints; inspected SQL has no nonnegative stock check | Do not expect a negative PATCH stock value to fail Bean Validation. Record the gap rather than adding a rule. |
+| `@Max(1000)` on list size uses the message `size must be at least 1000` | Assert the real upper limit and identify the misleading wording as a limitation. |
+| Book create/replace catch every `DataIntegrityViolationException` as duplicate ISBN; registration maps every such failure to username conflict | A translation test proves the current broad mapping, not that every possible integrity failure really is a duplicate. |
+| Registration checks UTF-8 bytes separately from the DTO's character limit | Include multibyte passwords; a character-only test misses this service guard. |
+
+These observations are characterization targets or documented gaps, not authorization to modify production behavior during the exercises. The intentional delete/transaction failures are teaching behavior, not defects to fix to obtain green tests.
 
 ## Objective
 
@@ -55,7 +79,7 @@ By the end, you will be able to:
 - all transaction-lab scenarios and intentional failures;
 - `compose.yaml`, `.env`, and local developer database state.
 
-The exercise changes only the test dependencies, test runner configuration, and `src/test` content.
+The learner may manually change test dependencies, runner configuration and `src/test` while doing these exercises. This documentation update applies none of those changes. All sample files are proposed reference implementations, not the checked-in test suite.
 
 ## Learning contract
 
@@ -68,21 +92,21 @@ For every task:
 5. Run the narrowest relevant Maven command.
 6. Explain what the test still cannot prove.
 
-Every core task contains exactly this rhythm:
+Each task uses the same twelve fields. Fill in a matrix before coding when requested:
 
 ```text
-Objective
-Concept
-What to implement
-Starter code
-Prediction
-Hints
-How to verify
-Common mistakes
-Explanation
+Case ID | Behavior/requirement | Preconditions | Inputs and action
+        | Expected output/state/forbidden side effects | Happy/edge/failure
+        | Test level | Real components | Mocks | What remains unproved
 ```
 
-Do not read the cumulative solution until you have attempted the tasks.
+### Prerequisites and execution order
+
+Know Java 21, Maven, constructor injection, REST, JPA, transactions and the application's session security. Docker is needed only for database tasks. Read the production files named in each task.
+
+W1–W3 appear first to teach small cases before framework tests. For their first execution, complete **Task 2's toolchain setup once**; the current JUnit 4 setup cannot run their Jupiter examples. You can design them before that setup. Do not install an unrelated project.
+
+Task 9 introduces a security concept before the shared database fixture is built in Tasks 10–12. Design Task 9 in order, then run it after that fixture and the source-migration prerequisite are ready. The same helper is reused throughout; do not duplicate databases or configuration.
 
 ## Safety boundary
 
@@ -120,7 +144,222 @@ Full Spring integration ------------> Security + controller + service proxy
                                       + real login/session/CSRF/transactions
 ```
 
-## Exercise tasks — attempt before reading the solution
+## Beginner warm-up tasks
+
+<a id="w1"></a>
+
+### W1 — Assertions and exceptions with actual project classes
+
+**Objective**
+
+Observe constructor normalization and recognize an invalid unsaved-entity fixture.
+
+**Prerequisites**
+
+Task 2 toolchain for execution; read BookRequest, BookResponse and Book.
+
+**Related concepts**
+
+[Relevant theory](Testing_Essential_Concepts.md#junit).
+
+**Requirements / behavior to test**
+
+Use `BookRequest` to check trimmed text and unchanged price/stock. Separately call `BookResponse.from` with an unsaved `Book`: its null ID is unboxed into a primitive `long`, so the current code throws `NullPointerException`. This is a fixture limitation, not an intentional request-validation rule. Do not assert JVM-specific exception text.
+
+**Test case design**
+
+Create one case for normalization and one for the unsaved entity failure. Record the input object state, exact action, expected accessors/exception and boundary. Explain why nullability here differs from `@NotBlank` validation.
+
+**What to implement**
+
+Create `dto/AssertionsWarmupTest`. Use `assertAll`, `assertEquals`, and `assertThrows`. Keep the exception lambda limited to `BookResponse.from(unsaved)`.
+
+**Starter code with TODOs**
+
+```java
+class AssertionsWarmupTest {
+    @Test
+    void request_normalizesTextAndPreservesNumbers() {
+        // TODO: construct real BookRequest with padded text
+        // TODO: group assertions for text, price and stock
+    }
+
+    @Test
+    void response_unsavedBook_hasNoUsableId() {
+        // TODO: construct real Book without a database-generated ID
+        // TODO: assert the actual exception from BookResponse.from
+    }
+}
+```
+
+**Expected behavior prediction**
+
+Predict whether `BookRequest` construction evaluates Bean Validation and why the response conversion fails before any database exists.
+
+**Hints**
+
+Use a `BigDecimal` string constructor; no Spring annotation or mock is needed. Import project DTO/entity classes and Jupiter assertions. Complete imports are in the matching solution.
+
+**How to run and verify**
+
+```powershell
+mvn -Dtest=AssertionsWarmupTest test
+```
+
+**Common mistakes**
+
+Avoid adding Spring, expecting a validation exception during construction, or treating the observed null-ID failure as a desirable API contract.
+
+**What the test proves and does not prove**
+
+Proves Java normalization and the current unsaved-fixture failure for these objects. Does not prove HTTP validation, ID generation, persistence or domain rejection of an HTTP request.
+
+After attempting: [Solution W1](Testing_Solution.md#w1).
+
+<a id="w2"></a>
+
+### W2 — Parameterized normalization cases
+
+**Objective**
+
+Replace repeated assertions with independently designed data rows.
+
+**Prerequisites**
+
+Task 2 toolchain; W1; read BookRequest.normalize via its constructor.
+
+**Related concepts**
+
+[Relevant theory](Testing_Essential_Concepts.md#junit).
+
+**Requirements / behavior to test**
+
+The constructor uses `String.trim()` on non-null ISBN/title/author. Null is retained; blank strings can become empty. None of this automatically runs Bean Validation.
+
+**Test case design**
+
+Partition input into already trimmed, padded, empty, whitespace-only and null. Add at least one row per class. Choose expected values before writing a parameter source; consider tabs and spaces without assuming Unicode `strip()` semantics.
+
+**What to implement**
+
+Create `dto/ParameterizedBookRequestTest`. Use `@ParameterizedTest` with `@CsvSource` for input/expected pairs, plus `@NullAndEmptySource` and `@ValueSource` for null/blank behavior. Keep all numeric inputs valid.
+
+**Starter code with TODOs**
+
+```java
+class ParameterizedBookRequestTest {
+    @ParameterizedTest
+    @CsvSource({/* TODO: input and independent expected output */})
+    void title_normalizesEachInput(String input, String expected) {
+        // TODO: construct BookRequest and assert title
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {/* TODO: blank inputs */})
+    void title_nullOrBlank_remainsNullOrBecomesEmpty(String input) {
+        // TODO: distinguish null from empty in the assertion
+    }
+}
+```
+
+**Expected behavior prediction**
+
+Predict the report invocation count and the output of null, empty and tab-only inputs. Which constraint could still reject the normalized result later?
+
+**Hints**
+
+CSV quoting/empty semantics matter; use explicit quoted values. Use a nullable String parameter. Do not compute every expectation by calling the same production normalization algorithm.
+
+**How to run and verify**
+
+```powershell
+mvn -Dtest=ParameterizedBookRequestTest test
+```
+
+**Common mistakes**
+
+Do not attach both `@Test` and `@ParameterizedTest`, put null in `@ValueSource`, or assume normalization means validation success.
+
+**What the test proves and does not prove**
+
+Proves normalization for all supplied rows. Does not prove `@Valid`, nonblank acceptance or HTTP response mapping.
+
+After attempting: [Solution W2](Testing_Solution.md#w2).
+
+<a id="w3"></a>
+
+### W3 — Design partitions and boundaries before implementing them
+
+**Objective**
+
+Derive cases from a real DTO constraint, then verify them with a real Validator.
+
+**Prerequisites**
+
+Task 2 toolchain; W2; read BookRequest annotations and compact constructor.
+
+**Related concepts**
+
+[Relevant theory](Testing_Essential_Concepts.md#test-case-design).
+
+**Requirements / behavior to test**
+
+ISBN is normalized, then constrained by `@NotBlank` and `@Size(max=20)` when validation runs. Keep title, author, price and stock valid. A direct constructor can still contain invalid data until the Validator evaluates it.
+
+**Test case design**
+
+Build a matrix for null, empty, blank, nonblank lengths 1/19/20/21, and a padded 20-character value. Fill in expected ISBN validity and justify the representative and boundary choices. Explain why the normalized length is relevant. Also name the separate MVC test needed to prove HTTP rejection.
+
+**What to implement**
+
+Create `dto/BookRequestBoundaryTest`. Build/close a `ValidatorFactory`, use a parameterized `@MethodSource`, and examine violations for the `isbn` property. Keep a hand-written matrix beside the test during study.
+
+**Starter code with TODOs**
+
+```java
+class BookRequestBoundaryTest {
+    static Stream<Arguments> isbnCases() {
+        // TODO: supply case name, input and expected ISBN validity
+        throw new UnsupportedOperationException("TODO");
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("isbnCases")
+    void isbn_obeysDeclaredConstraints(String caseName, String input, boolean expectedValid) {
+        // TODO: create real request and explicitly validate it
+        // TODO: check ISBN property violations, not arbitrary other fields
+    }
+}
+```
+
+**Expected behavior prediction**
+
+Predict which cases pass construction but fail validation, and whether padding counts toward the final size limit.
+
+**Hints**
+
+Use `Validation.buildDefaultValidatorFactory()` and `validator.validate(request)`. Close the factory with try-with-resources or class cleanup. No Spring context, mock or database is required.
+
+**How to run and verify**
+
+```powershell
+mvn -Dtest=BookRequestBoundaryTest test
+```
+
+**Common mistakes**
+
+Do not vary every field simultaneously, test only length 21, or add an ISBN format/checksum rule absent from the annotations.
+
+**What the test proves and does not prove**
+
+Proves the actual ISBN constraints and normalization using the real validation provider. Does not prove MVC activates validation, error JSON, service behavior or database ISBN constraints.
+
+After attempting: [Solution W3](Testing_Solution.md#w3).
+
+## Core project tasks — original identifiers preserved
+
+<a id="task-1"></a>
 
 ### Task 1 — Inventory behavior and choose test boundaries
 
@@ -128,22 +367,34 @@ Full Spring integration ------------> Security + controller + service proxy
 
 Design before writing tests.
 
-**Concept**
+**Prerequisites**
 
-The smallest sufficient scope produces faster, clearer failures.
+Read the scope, application source and theory principles/design chapter.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#principles). The smallest sufficient scope produces faster, clearer failures.
+
+**Requirements / behavior to test**
+
+Inventory registration, validation, authorization, repository constraints, transaction outcomes and real login from source. Distinguish observed contracts from desirable changes.
+
+**Test case design**
+
+Create at least six behavior rows with preconditions, exact action, expected outcome, real components and mocks. Include one happy, edge and failure case where applicable.
 
 **What to implement**
 
 Inspect the POM, current test, controllers, DTOs, services, repositories, security classes, migrations, and transaction lab. Build a matrix for at least registration, controller validation, authorization, repository constraints, transaction rollback, and real login.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```text
 | Behavior | Test level | Spring? | PostgreSQL? | Mocked? |
 | TODO     | TODO       | TODO    | TODO        | TODO    |
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 Which behaviors require a Spring proxy? Which require PostgreSQL? Which can use plain Java?
 
@@ -153,9 +404,13 @@ Which behaviors require a Spring proxy? Which require PostgreSQL? Which can use 
 - A database constraint cannot be proved by a repository mock.
 - JSON/validation/advice can be proved without starting PostgreSQL.
 
-**How to verify**
+**How to run and verify**
 
-For each row, answer the ten boundary questions from the concepts guide.
+```powershell
+mvn --version
+```
+
+For each row, answer the boundary questions in the [theory architecture map](Testing_Essential_Concepts.md#architecture-map).
 
 **Common mistakes**
 
@@ -163,9 +418,15 @@ For each row, answer the ten boundary questions from the concepts guide.
 - Calling every Spring test an integration test without naming its boundary.
 - Treating mock identity as real authentication.
 
-**Explanation**
+**What the test proves and does not prove**
 
 The intended progression is pure Java → Mockito → MVC slice → security slice → JPA/PostgreSQL → full transaction/authentication integration.
+
+This is a design/build audit; it does not establish application behavior without executed assertions.
+
+After attempting: [Solution Task 1](Testing_Solution.md#task-1).
+
+<a id="task-2"></a>
 
 ### Task 2 — Modernize the Boot 4 test toolchain
 
@@ -173,15 +434,27 @@ The intended progression is pure Java → Mockito → MVC slice → security sli
 
 Replace the obsolete generated JUnit 4 setup with Boot-managed modern test support.
 
-**Concept**
+**Prerequisites**
 
-Boot 4.1 modularizes focused test support and manages compatible versions.
+Task 1 inventory; Maven using Java 21. This setup can be performed first to execute W1–W3.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#spring-testing). Boot 4.1 modularizes focused test support and manages compatible versions.
+
+**Requirements / behavior to test**
+
+The current build uses direct JUnit 4.11 and pins Surefire 2.22.1. The target reference uses Boot-managed Jupiter with modular testing support; no production dependency or behavior is redesigned.
+
+**Test case design**
+
+Predict discovery for the old AppTest and new *Test names. Record dependency/compiler/runner prerequisites separately from behavior assertions.
 
 **What to implement**
 
-Remove `junit:junit:4.11` and `src/test/java/com/example/AppTest.java`. Add the base, MVC, JPA, Security, Boot Testcontainers, and PostgreSQL Testcontainers dependencies with `test` scope and no versions. Remove stale plugin pins. Declare versionless Surefire only to set `user.timezone=UTC` for this environment.
+As a learner change, remove `junit:junit:4.11` and `src/test/java/com/example/AppTest.java`. Add the base, MVC, JPA, Security, Boot Testcontainers, and PostgreSQL Testcontainers dependencies with `test` scope and no versions. Remove stale plugin pins. Declare versionless Surefire only to set `user.timezone=UTC` for this environment.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```xml
 <!-- TODO: replace old JUnit 4 dependency -->
@@ -195,7 +468,7 @@ Remove `junit:junit:4.11` and `src/test/java/com/example/AppTest.java`. Add the 
 <!-- TODO: Testcontainers PostgreSQL 2.x module -->
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 Which versions will Maven select for Jupiter, Mockito, Testcontainers, and Surefire?
 
@@ -205,10 +478,11 @@ Which versions will Maven select for Jupiter, Mockito, Testcontainers, and Suref
 - Testcontainers 2 uses `testcontainers-postgresql`.
 - Do not add JUnit Vintage merely to retain `assertTrue(true)`.
 
-**How to verify**
+**How to run and verify**
 
 ```powershell
 mvn dependency:tree
+mvn help:effective-pom
 mvn test -DskipTests
 ```
 
@@ -220,9 +494,15 @@ Confirm JUnit Jupiter 6.0.3, Mockito 5.23.0, Testcontainers 2.0.5, and no direct
 - Hard-coding versions already managed by Boot.
 - Leaving Surefire 2.22.1 pinned.
 
-**Explanation**
+**What the test proves and does not prove**
 
 The Boot parent is a compatibility contract. The project chooses capabilities; Boot chooses the tested version set.
+
+This is a design/build audit; it does not establish application behavior without executed assertions.
+
+After attempting: [Solution Task 2](Testing_Solution.md#task-2).
+
+<a id="task-3"></a>
 
 ### Task 3 — Write the first pure JUnit test
 
@@ -230,15 +510,27 @@ The Boot parent is a compatibility contract. The project chooses capabilities; B
 
 Prove a real behavior without Spring or mocks.
 
-**Concept**
+**Prerequisites**
 
-`BookRequest`'s compact constructor normalizes three text values.
+Task 2; W1/W2; inspect BookRequest.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#junit). `BookRequest`'s compact constructor normalizes three text values.
+
+**Requirements / behavior to test**
+
+Non-null ISBN/title/author are trimmed; price and stock are passed through. Null text remains null. No constraint evaluation occurs during direct construction.
+
+**Test case design**
+
+Select padded, already trimmed and null inputs, with independent expected values. Decide which cases overlap W1/W2 and which assertion adds confidence.
 
 **What to implement**
 
-Create `dto/BookRequestTest` using Jupiter and AssertJ. Verify trimming while leaving price/stock as supplied.
+Create `dto/BookRequestTest` using Jupiter and AssertJ. Verify trimming while leaving price/stock as supplied; include null preservation.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 class BookRequestTest {
@@ -253,7 +545,7 @@ class BookRequestTest {
 }
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 Will Spring, validation, or PostgreSQL start?
 
@@ -261,7 +553,7 @@ Will Spring, validation, or PostgreSQL start?
 
 This test calls Java code directly. Record component constraints are not automatically evaluated.
 
-**How to verify**
+**How to run and verify**
 
 ```powershell
 mvn -Dtest=BookRequestTest test
@@ -273,9 +565,15 @@ mvn -Dtest=BookRequestTest test
 - Claiming this proves `@NotBlank` HTTP handling.
 - Testing trivial generated record accessors instead of normalization.
 
-**Explanation**
+**What the test proves and does not prove**
 
 The production record is real; everything outside it is absent. A fast test precisely proves constructor normalization.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 3](Testing_Solution.md#task-3).
+
+<a id="task-4"></a>
 
 ### Task 4 — Unit-test registration with Mockito
 
@@ -283,15 +581,27 @@ The production record is real; everything outside it is absent. A fast test prec
 
 Prove security-sensitive service decisions in isolation.
 
-**Concept**
+**Prerequisites**
 
-Mock collaborator boundaries, capture important output, and verify only meaningful interactions.
+Task 3; inspect RegistrationService and RegisterRequest.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#mockito). Mock collaborator boundaries, capture important output, and verify only meaningful interactions.
+
+**Requirements / behavior to test**
+
+Success encodes and saves a USER. Duplicate precheck and write-time integrity failure map to 409. Passwords over 72 UTF-8 bytes map to 400 before repository/encoder work, even if character count is within DTO bounds.
+
+**Test case design**
+
+Before mocking, tabulate success, precheck conflict, simulated write conflict, ASCII 72/73 bytes and multibyte 72/>72 bytes. Record whether lookup/encode/save may run. Explain character count versus byte count.
 
 **What to implement**
 
-Create `RegistrationServiceTest` with `@Mock`, `@InjectMocks`, stubbing, verification, and `ArgumentCaptor`. Cover success, duplicate precheck, and race-time database failure.
+Create `RegistrationServiceTest` with `@Mock`, `@InjectMocks`, stubbing, verification, and `ArgumentCaptor`. Cover success, duplicate precheck, simulated race-time database failure and the 72-byte password guard.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 @ExtendWith(MockitoExtension.class)
@@ -309,7 +619,7 @@ class RegistrationServiceTest {
 }
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 Could this test still pass if BCrypt configuration or the database unique constraint were broken?
 
@@ -319,7 +629,7 @@ Could this test still pass if BCrypt configuration or the database unique constr
 - Duplicate precheck should produce no encoder or save interaction.
 - `saveAndFlush` failure is translated to a 409 `ResponseStatusException`.
 
-**How to verify**
+**How to run and verify**
 
 ```powershell
 mvn -Dtest=RegistrationServiceTest test
@@ -331,9 +641,15 @@ mvn -Dtest=RegistrationServiceTest test
 - Mocking `RegisterRequest` or `AppUser`.
 - Verifying every internal call rather than the boundary contract.
 
-**Explanation**
+**What the test proves and does not prove**
 
 This unit test proves orchestration and server-side role assignment. Database and real encoder tests appear later.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 4](Testing_Solution.md#task-4).
+
+<a id="task-5"></a>
 
 ### Task 5 — Unit-test `AppUserDetailsService`
 
@@ -341,15 +657,27 @@ This unit test proves orchestration and server-side role assignment. Database an
 
 Verify conversion from the stored application user to Spring Security's `UserDetails`.
 
-**Concept**
+**Prerequisites**
 
-One collaborator (`AppUserRepository`) can be stubbed while authority mapping remains real Java behavior.
+Task 4; inspect AppUserDetailsService and AppUserRepository.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#mockito). One collaborator (`AppUserRepository`) can be stubbed while authority mapping remains real Java behavior.
+
+**Requirements / behavior to test**
+
+Stored username/hash are passed through and the stored role becomes a ROLE_ authority. An absent account raises UsernameNotFoundException with the generic message in source.
+
+**Test case design**
+
+Use a decision table for USER, ADMIN and missing account. Specify username/hash/authorities or exception and which repository lookup is expected.
 
 **What to implement**
 
 Cover a known ADMIN or USER and an unknown username. Assert username, stored hash propagation, `ROLE_` prefix, and generic missing-user message.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 @Test
@@ -364,7 +692,7 @@ void loadUserByUsername_knownAdmin_mapsStoredDataAndAuthority() {
 }
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 Does this prove `DaoAuthenticationProvider` calls the service during login?
 
@@ -372,7 +700,7 @@ Does this prove `DaoAuthenticationProvider` calls the service during login?
 
 `User.withUsername(...).roles("ADMIN")` creates authority `ROLE_ADMIN`.
 
-**How to verify**
+**How to run and verify**
 
 ```powershell
 mvn -Dtest=AppUserDetailsServiceTest test
@@ -384,9 +712,15 @@ mvn -Dtest=AppUserDetailsServiceTest test
 - Returning different messages that reveal whether an account exists.
 - Labeling this a full authentication test.
 
-**Explanation**
+**What the test proves and does not prove**
 
 It is a pure unit test. The repository is mocked; no AuthenticationManager, BCrypt, filter, or session runs.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 5](Testing_Solution.md#task-5).
+
+<a id="task-6"></a>
 
 ### Task 6 — Build an MVC controller slice
 
@@ -394,15 +728,27 @@ It is a pure unit test. The repository is mocked; no AuthenticationManager, BCry
 
 Test Book HTTP mapping, query parameters, JSON, status, content type, and `Location` without a database.
 
-**Concept**
+**Prerequisites**
 
-`@WebMvcTest` loads the web slice; `@MockitoBean` supplies its service boundary.
+Tasks 2–5; inspect BookController, BookResponse and advice.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#spring-testing). `@WebMvcTest` loads the web slice; `@MockitoBean` supplies its service boundary.
+
+**Requirements / behavior to test**
+
+GET /books normalizes author, accepts page/size and maps results to a JSON list. POST /books returns 201, Location and mapped JSON. Fixture entities require a non-null ID.
+
+**Test case design**
+
+List GET with filter/page/size, empty result and POST success. For each, specify expected JSON fields, normalization and service arguments. Mark which checks need no filters/database.
 
 **What to implement**
 
 Create `BookControllerWebMvcTest` with Boot 4 imports. Intentionally disable filters for this controller-contract class and explain why a separate class tests security. Cover list and create success.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 @WebMvcTest(BookController.class)
@@ -420,7 +766,7 @@ class BookControllerWebMvcTest {
 }
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 Which components are real, and which production failure could this test miss?
 
@@ -430,7 +776,7 @@ Which components are real, and which production failure could this test miss?
 - The entity has no public ID setter; `ReflectionTestUtils` is acceptable for test fixture identity.
 - MockMvc does not start a network server.
 
-**How to verify**
+**How to run and verify**
 
 ```powershell
 mvn -Dtest=BookControllerWebMvcTest test
@@ -438,13 +784,19 @@ mvn -Dtest=BookControllerWebMvcTest test
 
 **Common mistakes**
 
-- Using deprecated `@MockBean`.
+- Using the removed Boot `@MockBean` import.
 - Returning an unsaved `Book`; `BookResponse` unboxes its null ID.
 - Claiming mocked service output proves persistence.
 
-**Explanation**
+**What the test proves and does not prove**
 
 Real MVC mapping, conversion, and controller code run. `BookService`, AOP, JPA, Flyway, and PostgreSQL do not.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 6](Testing_Solution.md#task-6).
+
+<a id="task-7"></a>
 
 ### Task 7 — Test validation and global error mapping
 
@@ -452,15 +804,27 @@ Real MVC mapping, conversion, and controller code run. `BookService`, AOP, JPA, 
 
 Prove the checked-in 400, 404, and 409 HTTP contracts.
 
-**Concept**
+**Prerequisites**
 
-An exception unit test and an HTTP exception-mapping test answer different questions.
+Task 6; W3; inspect actual DTO/controller constraints and advice.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#spring-testing). An exception unit test and an HTTP exception-mapping test answer different questions.
+
+**Requirements / behavior to test**
+
+An invalid BookRequest is rejected before the service. Missing book and duplicate ISBN are mapped to 404 and 409 by the real advice. Preserve its actual placeholder validation wording.
+
+**Test case design**
+
+Select one-field invalid ISBN, price and stock cases; valid lower boundaries; size 0/1/1000/1001 and page -1/0/1000000/1000001; malformed JSON; missing ID; duplicate ISBN. Predict status, field errors and service non-interaction. Do not invent decimal-place or StockRequest constraints.
 
 **What to implement**
 
-Extend the MVC slice with invalid `BookRequest`, missing-book, and duplicate-ISBN scenarios. Assert selected actual `ProblemDetail` fields and no service call for invalid input.
+Extend the MVC slice with invalid `BookRequest`, missing-book, and duplicate-ISBN scenarios, plus your designed numeric/query boundaries and malformed JSON. Assert selected actual `ProblemDetail` fields and no service call for invalid input.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 mockMvc.perform(post("/books")
@@ -476,7 +840,7 @@ mockMvc.perform(post("/books")
 // TODO: verify service was not invoked
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 What exact title/detail does the current advice return, and does it include `instance`?
 
@@ -486,7 +850,11 @@ What exact title/detail does the current advice return, and does it include `ins
 - Use `contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON)`.
 - Do not assert JSON property order.
 
-**How to verify**
+**How to run and verify**
+
+```powershell
+mvn -Dtest=BookControllerWebMvcTest test
+```
 
 Run the slice and inspect only failures, not production secrets.
 
@@ -496,9 +864,15 @@ Run the slice and inspect only failures, not production secrets.
 - Writing a false negative-stock validation test for unconstrained `StockRequest`.
 - Calling the service and then accepting a 400 produced somewhere else.
 
-**Explanation**
+**What the test proves and does not prove**
 
 The test makes current behavior executable documentation and exposes design gaps without silently changing them.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 7](Testing_Solution.md#task-7).
+
+<a id="task-8"></a>
 
 ### Task 8 — Test the actual URL security policy
 
@@ -506,15 +880,27 @@ The test makes current behavior executable documentation and exposes design gaps
 
 Verify authentication, role, and CSRF decisions independently of persistence.
 
-**Concept**
+**Prerequisites**
 
-A security MVC slice keeps filters and imports the real `SecurityConfig`, handlers, and advice while service beans remain mocked.
+Tasks 6–7; inspect SecurityConfig, handlers and AuthController.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#security). A security MVC slice keeps filters and imports the real `SecurityConfig`, handlers, and advice while service beans remain mocked.
+
+**Requirements / behavior to test**
+
+Public GET is permitted; /auth/me needs authentication; writes need ADMIN and CSRF. Missing CSRF can reject before authentication, and ADMIN does not bypass CSRF.
+
+**Test case design**
+
+Write the anonymous/USER/ADMIN x read/write x valid/missing/invalid CSRF matrix. Mark irrelevant/impossible combinations and identify rejection precedence.
 
 **What to implement**
 
-Create `SecurityPolicyWebMvcTest` for anonymous public GET, anonymous `/auth/me`, anonymous write with/without CSRF, USER write with CSRF, and ADMIN write with/without CSRF.
+Create `SecurityPolicyWebMvcTest` for anonymous public GET, anonymous `/auth/me`, anonymous write with/without CSRF, USER write with CSRF, and ADMIN write with/without CSRF, plus an invalid token case.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 @WebMvcTest(controllers = {BookController.class, AuthController.class})
@@ -531,7 +917,7 @@ class SecurityPolicyWebMvcTest {
 }
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 Why does anonymous POST without CSRF return 403, while the same request with CSRF returns 401?
 
@@ -541,7 +927,7 @@ Why does anonymous POST without CSRF return 403, while the same request with CSR
 - `@WithMockUser(roles="ADMIN")` creates `ROLE_ADMIN`.
 - A valid admin response needs a stubbed `Book` with an ID.
 
-**How to verify**
+**How to run and verify**
 
 ```powershell
 mvn -Dtest=SecurityPolicyWebMvcTest test
@@ -553,9 +939,15 @@ mvn -Dtest=SecurityPolicyWebMvcTest test
 - Assuming an ADMIN bypasses CSRF.
 - Claiming `@WithMockUser` proves database login.
 
-**Explanation**
+**What the test proves and does not prove**
 
 This proves filter-chain policy using synthetic identities. Real authentication comes later.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 8](Testing_Solution.md#task-8).
+
+<a id="task-9"></a>
 
 ### Task 9 — Test method security through a Spring proxy
 
@@ -563,15 +955,27 @@ This proves filter-chain policy using synthetic identities. Real authentication 
 
 Prove the existing `@PreAuthorize` guard on `BookService.setStock`.
 
-**Concept**
+**Prerequisites**
 
-Method security is AOP. The call must pass through the injected proxy.
+Task 8 for concepts; design now, then execute after Tasks 10–12 provide the shared container/schema support. Source-migration prerequisite and Docker are required.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#transactions). Method security is AOP. The call must pass through the injected proxy.
+
+**Requirements / behavior to test**
+
+The real BookService.setStock method guard denies USER and allows ADMIN. Successful service calls must commit before a new read observes stock.
+
+**Test case design**
+
+Specify USER denial with unchanged stock and ADMIN success with a new committed value. Identify the method proxy and explain why an HTTP-only test would not isolate it.
 
 **What to implement**
 
 Create a Spring integration test using the real `BookService` and PostgreSQL. Seed a book. Assert USER is denied with unchanged stock; ADMIN reaches the transactional method and commits the new stock.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 @SpringBootTest
@@ -589,7 +993,7 @@ class BookServiceMethodSecurityIntegrationTest {
 }
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 What would happen if the test used `new BookService(repository)`?
 
@@ -598,7 +1002,11 @@ What would happen if the test used `new BookService(repository)`?
 - Do not annotate this class/test with `@Transactional` if the ADMIN case must prove commit.
 - URL authorization is not involved in a direct service call.
 
-**How to verify**
+**How to run and verify**
+
+```powershell
+mvn -Dtest=BookServiceMethodSecurityIntegrationTest test
+```
 
 Run with Docker available and compare stock after each invocation.
 
@@ -608,9 +1016,15 @@ Run with Docker available and compare stock after each invocation.
 - Testing only the HTTP rule and assuming the method rule ran.
 - Using USER authority `USER` instead of role `ROLE_USER` semantics.
 
-**Explanation**
+**What the test proves and does not prove**
 
 The Spring proxy applies method authorization, then the target's transaction interceptor/business code when permitted.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 9](Testing_Solution.md#task-9).
+
+<a id="task-10"></a>
 
 ### Task 10 — Add a PostgreSQL repository slice
 
@@ -618,15 +1032,27 @@ The Spring proxy applies method authorization, then the target's transaction int
 
 Test real entity mappings and derived queries against PostgreSQL 17.
 
-**Concept**
+**Prerequisites**
 
-Testcontainers supplies disposable infrastructure; Boot service connections publish dynamic JDBC details.
+Task 2 dependencies; actual migrations restored separately; Docker reachable. Create test profile and shared helper once.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#persistence). Testcontainers supplies disposable infrastructure; Boot service connections publish dynamic JDBC details.
+
+**Requirements / behavior to test**
+
+Real repositories/mappings run against disposable PostgreSQL 17 using dynamic connection details; MVC is absent. Source migrations must be restored separately before execution.
+
+**Test case design**
+
+Specify saved/reloaded values, existing/missing username, and author-query exact matching with sorted paging. Seed enough rows to cross a page boundary; control order explicitly.
 
 **What to implement**
 
-Create `TestPostgresConfiguration` with a Boot-managed `PostgreSQLContainer` bean. Create `RepositoryPostgresIntegrationTest` using Boot 4 `@DataJpaTest`, no database replacement, test profile, and explicit Flyway auto-configuration. Test a round trip and `findByUsername`.
+Create `TestPostgresConfiguration` with a Boot-managed `PostgreSQLContainer` bean. Create `RepositoryPostgresIntegrationTest` using Boot 4 `@DataJpaTest`, no database replacement, test profile, and explicit Flyway auto-configuration. Test a round trip and `findByUsername`, including an absent username, plus exact-author queries with stable paging.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 @TestConfiguration(proxyBeanMethods = false)
@@ -646,7 +1072,7 @@ class RepositoryPostgresIntegrationTest {
 }
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 Does this slice start MVC or the Security filter chain? Which persistence components are real?
 
@@ -656,9 +1082,13 @@ Does this slice start MVC or the Security filter chain? Which persistence compon
 - Use `Replace.NONE`.
 - Flush and clear before the database reread.
 
-**How to verify**
+**How to run and verify**
 
-Observe a dynamic JDBC port and PostgreSQL 17 in startup logs. Never print credentials.
+```powershell
+mvn -Dtest=RepositoryPostgresIntegrationTest test
+```
+
+Confirm PostgreSQL 17 from the image/container lifecycle and a mapped host port. Do not add diagnostic output for credentials.
 
 **Common mistakes**
 
@@ -666,9 +1096,15 @@ Observe a dynamic JDBC port and PostgreSQL 17 in startup logs. Never print crede
 - Hard-coding `localhost:5432` test settings.
 - Using the deprecated Testcontainers 1.x PostgreSQL class/package when a current class exists.
 
-**Explanation**
+**What the test proves and does not prove**
 
 The slice excludes MVC/services but runs DataSource, HikariCP, Hibernate, repositories, pgJDBC, Flyway (when imported), and real PostgreSQL.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 10](Testing_Solution.md#task-10).
+
+<a id="task-11"></a>
 
 ### Task 11 — Expose persistence-context and constraint behavior
 
@@ -676,15 +1112,27 @@ The slice excludes MVC/services but runs DataSource, HikariCP, Hibernate, reposi
 
 See why `save`, flush, clear, and exception-translation boundaries matter.
 
-**Concept**
+**Prerequisites**
 
-Managed state can look correct before SQL executes, and the first-level cache can hide database reads.
+Task 10; read entity mapping and inspected SQL constraints.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#persistence). Managed state can look correct before SQL executes, and the first-level cache can hide database reads.
+
+**Requirements / behavior to test**
+
+Flush synchronizes SQL; clear removes managed cached entities. A duplicate ISBN update fails at repository flush under the inspected SQL constraint. A failed transaction is not reused.
+
+**Test case design**
+
+Separate round-trip, duplicate ISBN update, duplicate username and invalid-role cases. Identify the intended SQL constraint and synchronization boundary for each.
 
 **What to implement**
 
-Test `saveAndFlush` + `clear` + reload. Then persist two valid books, mutate the second to duplicate the first ISBN, call `save(second)`, and assert failure when calling `books.flush()`.
+Test `saveAndFlush` + `clear` + reload. Then persist two valid books, mutate the second to duplicate the first ISBN, call `save(second)`, and assert failure when calling `books.flush()`. Add separate duplicate-username and invalid-role constraint cases.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 Book first = books.saveAndFlush(book("unique-isbn-1"));
@@ -696,7 +1144,7 @@ books.save(second);
 // TODO: force synchronization and assert Spring's translated exception
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 Why is this update experiment more deterministic than promising a new IDENTITY insert waits for flush?
 
@@ -705,7 +1153,11 @@ Why is this update experiment more deterministic than promising a new IDENTITY i
 - IDENTITY may execute INSERT during `save` to obtain an ID.
 - `BookRepository.flush()` crosses Spring repository exception translation; raw `EntityManager.flush()` can expose a Hibernate exception instead.
 
-**How to verify**
+**How to run and verify**
+
+```powershell
+mvn -Dtest=RepositoryPostgresIntegrationTest test
+```
 
 Temporarily inspect SQL: the duplicate UPDATE appears at flush and the test transaction rolls back.
 
@@ -715,9 +1167,15 @@ Temporarily inspect SQL: the duplicate UPDATE appears at flush and the test tran
 - Continuing database work after a constraint violation in the same transaction.
 - Saying flush committed data.
 
-**Explanation**
+**What the test proves and does not prove**
 
 Flush synchronizes the persistence context; clear forces future reads beyond its L1 cache; the test transaction still rolls back.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 11](Testing_Solution.md#task-11).
+
+<a id="task-12"></a>
 
 ### Task 12 — Prove Flyway owns the test schema
 
@@ -725,15 +1183,27 @@ Flush synchronizes the persistence context; clear forces future reads beyond its
 
 Verify the empty test database is migrated before Hibernate uses it.
 
-**Concept**
+**Prerequisites**
 
-The integration test must reproduce production schema ownership.
+Tasks 10–11; authoritative source migrations restored separately; Flyway enabled and Hibernate validation retained.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#persistence). The integration test must reproduce production schema ownership.
+
+**Requirements / behavior to test**
+
+After authoritative source migrations are restored separately, Flyway must apply V1–V6 before Hibernate validates the schema. Current target-only SQL is insufficient for a clean build.
+
+**Test case design**
+
+Predict six successful history versions and the presence of books, transaction_audits and app_users. List what fresh installation proves and what an upgrade test would still need.
 
 **What to implement**
 
-Import `FlywayAutoConfiguration`, keep `ddl-auto=validate`, and query `flyway_schema_history` for six successful migrations.
+Import `FlywayAutoConfiguration`, keep `ddl-auto=validate`, and query `flyway_schema_history` for the six successful versioned migrations and inspect their identities. Record the missing source prerequisite before attempting execution.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 @ImportAutoConfiguration(TODO.class)
@@ -747,16 +1217,20 @@ class RepositoryPostgresIntegrationTest {
 }
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 What failure appears if a migration and entity mapping disagree?
 
 **Hints**
 
 - Boot 4 class: `org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration`.
-- V1 already contains `version`; V2 logs that its idempotent add is skipped. Both history rows are still successful.
+- V1 already contains `version`; V2 logs that its idempotent add is skipped. Both history rows are still successful when those authoritative migrations run.
 
-**How to verify**
+**How to run and verify**
+
+```powershell
+mvn -Dtest=RepositoryPostgresIntegrationTest test
+```
 
 Look for the order: container → Flyway V1–V6 → Hibernate validation → test.
 
@@ -766,9 +1240,15 @@ Look for the order: container → Flyway V1–V6 → Hibernate validation → te
 - Assuming `@DataJpaTest` automatically imports every modular integration.
 - Merely asserting that a table exists while ignoring migration history.
 
-**Explanation**
+**What the test proves and does not prove**
 
 This test proves the checked-in migration chain builds a usable current schema from nothing.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 12](Testing_Solution.md#task-12).
+
+<a id="task-13"></a>
 
 ### Task 13 — Test real transaction boundaries
 
@@ -776,15 +1256,27 @@ This test proves the checked-in migration chain builds a usable current schema f
 
 Verify existing rollback, checked-exception, and `REQUIRES_NEW` behavior.
 
-**Concept**
+**Prerequisites**
 
-State after an exception is the transaction contract; a test-owned transaction can conceal it.
+Tasks 9–12; inspect all transaction services and propagation/rollback annotations.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#transactions). State after an exception is the transaction contract; a test-owned transaction can conceal it.
+
+**Requirements / behavior to test**
+
+Test existing success, runtime rollback, flush-then-rollback, checked default commit, checked rollbackFor, caught REQUIRED failure and REQUIRES_NEW audit, plus intentional delete rollback.
+
+**Test case design**
+
+Start stocks at 10 and 5; transfer 3. For all seven scenarios, predict returned/raised outcome, both final stocks, audit event/count and whether SQL can have executed. Add the delete row-survival case.
 
 **What to implement**
 
-Create `TransactionBehaviorIntegrationTest` with no test `@Transactional`. Explicitly clean/seed. Cover runtime rollback, checked default commit, independently committed audit, and intentional delete rollback.
+Create `TransactionBehaviorIntegrationTest` with no test `@Transactional`. Explicitly clean/seed. Cover all seven transaction scenarios in the design matrix plus intentional delete rollback. Preserve the original runtime, checked-default and independent-audit cases.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 @Test
@@ -798,7 +1290,7 @@ void requiresNewAudit_outerFailureRollsBackStockButAuditSurvives() {
 }
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 For each scenario, write expected stock and audit rows before running.
 
@@ -808,7 +1300,11 @@ For each scenario, write expected stock and audit rows before running.
 - `flushThenRuntimeRollback` would still roll back emitted SQL.
 - `BookService.delete` is intentionally not a normal successful delete.
 
-**How to verify**
+**How to run and verify**
+
+```powershell
+mvn -Dtest=TransactionBehaviorIntegrationTest test
+```
 
 Run the class alone and map transaction logs to begin/suspend/resume/commit/rollback.
 
@@ -818,9 +1314,15 @@ Run the class alone and map transaction logs to begin/suspend/resume/commit/roll
 - Asserting only exception type.
 - “Fixing” the checked-default-commit demonstration.
 
-**Explanation**
+**What the test proves and does not prove**
 
 The real service proxies decide rollback rules. Repository rereads observe durable outcomes after those boundaries complete.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 13](Testing_Solution.md#task-13).
+
+<a id="task-14"></a>
 
 ### Task 14 — Test real database-backed authentication
 
@@ -828,15 +1330,27 @@ The real service proxies decide rollback rules. Repository rereads observe durab
 
 Go beyond mock identities and exercise the complete login path.
 
-**Concept**
+**Prerequisites**
 
-Form login is handled by Spring Security filters and persists a `SecurityContext` in the session.
+Tasks 8–13; shared database support; inspect registration and form-login configuration.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#security). Form login is handled by Spring Security filters and persists a `SecurityContext` in the session.
+
+**Requirements / behavior to test**
+
+Registration always persists USER with an encoded password. Real form login returns 204; the same session can access /auth/me. Wrong credentials return 401 without authentication.
+
+**Test case design**
+
+Model anonymous -> registered-but-anonymous -> authenticated -> later authenticated request, plus wrong-login remaining anonymous. Specify which state/response proves each transition.
 
 **What to implement**
 
 Create a full-context MockMvc test with PostgreSQL. Register a disposable USER, obtain a CSRF token/session, submit form parameters to `/auth/login`, retain the session, then call `/auth/me`. Add a wrong-password test.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 MvcResult login = mockMvc.perform(post("/auth/login")
@@ -850,7 +1364,7 @@ MvcResult login = mockMvc.perform(post("/auth/login")
 // TODO: GET /auth/me with the returned session
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 Which real components run that `@WithMockUser` bypasses?
 
@@ -860,7 +1374,11 @@ Which real components run that `@WithMockUser` bypasses?
 - Registration is `permitAll` but still needs CSRF.
 - Assert encoder matching without logging the raw value/hash.
 
-**How to verify**
+**How to run and verify**
+
+```powershell
+mvn -Dtest=AuthenticationFlowIntegrationTest test
+```
 
 Assert saved role `USER`, stored value differs from raw, login is 204, and `/auth/me` returns `ROLE_USER` with the same session.
 
@@ -870,9 +1388,15 @@ Assert saved role `USER`, stored value differs from raw, login is 204, and `/aut
 - Posting JSON credentials to `/auth/login`.
 - Printing security artifacts to diagnose failure.
 
-**Explanation**
+**What the test proves and does not prove**
 
 This path runs the login filter, authentication manager/provider, application `UserDetailsService`, repository, BCrypt, SecurityContext, and session.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 14](Testing_Solution.md#task-14).
+
+<a id="task-15"></a>
 
 ### Task 15 — Complete CSRF, ADMIN write, session, and logout flow
 
@@ -880,15 +1404,27 @@ This path runs the login filter, authentication manager/provider, application `U
 
 Prove an authenticated session survives requests and logout invalidates it.
 
-**Concept**
+**Prerequisites**
 
-CSRF token state and authentication state both participate; roles remain separate.
+Task 14; inspect CSRF endpoint and logout configuration.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#security). CSRF token state and authentication state both participate; roles remain separate.
+
+**Requirements / behavior to test**
+
+An ADMIN seeded directly can log in and create a persisted book using a fresh CSRF token. Logout returns 204 and invalidates the USER session; later anonymous /auth/me is 401.
+
+**Test case design**
+
+Extend the state model through refreshed CSRF, authorized persisted write and logout invalidation. Explain which session/token must travel with each request.
 
 **What to implement**
 
 Create a helper that calls `GET /auth/csrf` and returns session, parameter name, header name, and token. Seed an ADMIN directly, log in, obtain a fresh token, create a book, and prove persistence. In the USER flow, refresh the token, log out, assert invalidation, then verify anonymous `/auth/me` is 401.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```java
 private CsrfData csrf(MockHttpSession existingSession) throws Exception {
@@ -903,7 +1439,7 @@ private record CsrfData(
         String token) { }
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 Why can registration not create the ADMIN used for the successful book write?
 
@@ -913,7 +1449,11 @@ Why can registration not create the ADMIN used for the successful book write?
 - Fetch a token after login before an unsafe write/logout.
 - MockMvc uses `MockHttpSession`; assert it becomes invalid.
 
-**How to verify**
+**How to run and verify**
+
+```powershell
+mvn -Dtest=AuthenticationFlowIntegrationTest test
+```
 
 Assert ADMIN create returns 201 and the repository has the book. Assert logout returns 204, `unauthenticated()`, and an invalidated session.
 
@@ -923,9 +1463,15 @@ Assert ADMIN create returns 201 and the repository has the book. Assert logout r
 - Replacing real login with request `user(...)`.
 - Logging tokens/cookies/session IDs.
 
-**Explanation**
+**What the test proves and does not prove**
 
 This is the broadest core test: Security filters, MVC, service proxies, JPA, Flyway-built PostgreSQL, BCrypt, session, and CSRF are real.
+
+Its evidence is limited to the declared cases and real boundary; it does not establish behavior of components excluded or replaced by mocks.
+
+After attempting: [Solution Task 15](Testing_Solution.md#task-15).
+
+<a id="task-16"></a>
 
 ### Task 16 — Run the Maven suite and explain every boundary
 
@@ -933,15 +1479,27 @@ This is the broadest core test: Security filters, MVC, service proxies, JPA, Fly
 
 Make the suite reproducible outside the IDE and audit its value.
 
-**Concept**
+**Prerequisites**
 
-A green suite is useful only if you understand what each test proves and omits.
+All attempted tasks; for full runtime verification the migration prerequisite and Docker must be ready.
+
+**Related concepts**
+
+[Theory](Testing_Essential_Concepts.md#delivery). A green suite is useful only if you understand what each test proves and omits.
+
+**Requirements / behavior to test**
+
+A clean source build must discover and execute the intended tests. Record passed, failed, skipped and blocked work separately; no runtime claim follows from compilation alone.
+
+**Test case design**
+
+Trace every important requirement to a test. Identify at least one meaningful gap that line coverage could miss, and review a hypothetical AI-generated test for an invented rule or mocked-away integration.
 
 **What to implement**
 
 Run clean Maven verification with Docker available. Build a final matrix containing test level, context, database, mocks, security identity, transaction, proven behavior, and limitation.
 
-**Starter code**
+**Starter code with TODOs**
 
 ```powershell
 # TODO: cleanly compile and run every test
@@ -951,7 +1509,7 @@ mvn TODO
 mvn TODO
 ```
 
-**Prediction**
+**Expected behavior prediction**
 
 Which classes should dominate runtime, and why?
 
@@ -961,9 +1519,14 @@ Which classes should dominate runtime, and why?
 - `verify` does not imply Failsafe separation unless configured.
 - Context caching can reuse identical configurations; different slices need different contexts.
 
-**How to verify**
+**How to run and verify**
 
-Expect all tests green and no connection to the configured developer database. Inspect the dynamic Testcontainers JDBC port, migration count, and Maven summary.
+```powershell
+mvn clean test
+mvn verify
+```
+
+After the source-migration prerequisite is fixed separately, expect all tests green and no connection to the configured developer database. Inspect the dynamic Testcontainers JDBC port, migration count, and Maven summary.
 
 **Common mistakes**
 
@@ -971,1343 +1534,40 @@ Expect all tests green and no connection to the configured developer database. I
 - Treating a missing Docker daemon as a reason to use H2.
 - Adding test order to hide leaked state.
 
-**Explanation**
+**What the test proves and does not prove**
 
 Maven is the reproducible entry point. The final matrix prevents false claims about what a green test means.
 
-## Optional advanced extensions
+This is a design/build audit; it does not establish application behavior without executed assertions.
 
-After the core suite is stable, consider parameterized DTO tests, `@Nested` scenario grouping, an optimistic-lock test with two persistence contexts, a custom fixture builder, a `RANDOM_PORT` full HTTP test, or deliberate Surefire/Failsafe separation. These are not required to complete this lesson.
+After attempting: [Solution Task 16](Testing_Solution.md#task-16).
 
-============================================================
-STOP — ATTEMPT THE EXERCISE BEFORE READING THE SOLUTION
-============================================================
+## Optional next steps
 
-Do not continue until you have written predictions for all 16 tasks and attempted each core layer.
+After the core suite works, consider `@Nested`, a small fixture builder, optimistic locking with two persistence contexts, a random-port HTTP test or separate Surefire/Failsafe lifecycles. Coverage and CI configuration remain optional study examples in the theory; this update installs neither.
 
-## Complete cumulative reference solution
+<a id="competency-checklist"></a>
 
-The following solution is cumulative. Paths are relative to `Spring_Security/book-catalog-api`.
+## Final learning competency checklist
 
-### Design choices
+Mark a row complete only when you can demonstrate it from a blank test file and explain its boundary without copying the reference.
 
-- Production code and migrations are unchanged.
-- JUnit 4 and the generated no-op test are removed.
-- Boot manages every library/plugin version.
-- Boot 4 modular test starters provide current annotation packages.
-- A Boot-managed PostgreSQL 17 container supplies both JDBC and Flyway connection details.
-- JPA slice tests roll back; full transaction/authentication tests explicitly clean data and do not have an outer test transaction.
-- MVC contract tests intentionally omit filters; a separate MVC security class imports and tests the real filter chain.
-- Full authentication tests never use mock identities.
-- Test JVM timezone is UTC because the inspected legacy local zone ID is rejected by PostgreSQL.
-
-### Change manifest
-
-Modify:
-
-```text
-pom.xml
-```
-
-Remove:
-
-```text
-src/test/java/com/example/AppTest.java
-```
-
-Add only test source/configuration under `src/test`; do not edit `src/main`.
-
-### Final `pom.xml`
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-
-  <parent>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.1.1</version>
-    <relativePath/>
-  </parent>
-
-  <groupId>com.example</groupId>
-  <artifactId>book-catalog-api</artifactId>
-  <version>1.0-SNAPSHOT</version>
-  <name>book-catalog-api</name>
-  <url>http://www.example.com</url>
-
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.release>21</maven.compiler.release>
-  </properties>
-
-  <dependencies>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-webmvc</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-devtools</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-validation</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-flyway</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.flywaydb</groupId>
-      <artifactId>flyway-database-postgresql</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-security</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-webmvc-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-data-jpa-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-security-test</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-testcontainers</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.testcontainers</groupId>
-      <artifactId>testcontainers-postgresql</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <systemPropertyVariables>
-            <user.timezone>UTC</user.timezone>
-          </systemPropertyVariables>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-</project>
-```
-
-There are no hard-coded test-library/plugin versions. The Boot parent manages them. The Surefire declaration changes configuration only.
-
-### Final project structure
-
-```text
-book-catalog-api/
-├── pom.xml
-├── compose.yaml
-└── src/
-    ├── main/                                  # unchanged
-    └── test/
-        ├── java/com/example/bookcatalog/
-        │   ├── dto/
-        │   │   └── BookRequestTest.java
-        │   ├── service/
-        │   │   └── RegistrationServiceTest.java
-        │   ├── web/
-        │   │   └── BookControllerWebMvcTest.java
-        │   ├── security/
-        │   │   ├── AppUserDetailsServiceTest.java
-        │   │   ├── SecurityPolicyWebMvcTest.java
-        │   │   └── BookServiceMethodSecurityIntegrationTest.java
-        │   ├── repository/
-        │   │   └── RepositoryPostgresIntegrationTest.java
-        │   ├── integration/
-        │   │   ├── TransactionBehaviorIntegrationTest.java
-        │   │   └── AuthenticationFlowIntegrationTest.java
-        │   └── support/
-        │       └── TestPostgresConfiguration.java
-        └── resources/
-            └── application-test.yaml
-```
-
-Naming uses `*Test`, so Surefire executes every class during `mvn test`. `IntegrationTest` in a name documents scope; this reference does not add Failsafe complexity.
-
-## Complete test files
-
-### `src/test/resources/application-test.yaml`
-
-```yaml
-spring:
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        jdbc:
-          time_zone: UTC
-  flyway:
-    enabled: true
-    clean-disabled: true
-
-logging:
-  level:
-    org.hibernate.SQL: WARN
-    org.springframework.transaction: WARN
-    org.springframework.orm.jpa.JpaTransactionManager: WARN
-    org.springframework.security: WARN
-```
-
-This profile contains no URL or credentials. `@ServiceConnection` supplies them dynamically. It also cannot activate `LocalAdminBootstrap`, which is restricted to profile `local`.
-
-### `src/test/java/com/example/bookcatalog/support/TestPostgresConfiguration.java`
-
-```java
-package com.example.bookcatalog.support;
-
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.annotation.Bean;
-import org.testcontainers.postgresql.PostgreSQLContainer;
-
-@TestConfiguration(proxyBeanMethods = false)
-public class TestPostgresConfiguration {
-
-    @Bean
-    @ServiceConnection
-    PostgreSQLContainer postgresContainer() {
-        return new PostgreSQLContainer("postgres:17")
-                .withDatabaseName("book_catalog_test");
-    }
-}
-```
-
-Boot starts/stops the container bean with the test context. Its JDBC and Flyway connection-details factories configure the real application infrastructure.
-
-
-### `src/test/java/com/example/bookcatalog/dto/BookRequestTest.java`
-
-```java
-package com.example.bookcatalog.dto;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.math.BigDecimal;
-import org.junit.jupiter.api.Test;
-
-class BookRequestTest {
-
-    @Test
-    void constructor_textValues_trimsThem() {
-        BookRequest request = new BookRequest(
-                "  isbn-1  ", "  Clean Code  ", "  Robert Martin  ",
-                new BigDecimal("19.99"), 3);
-
-        assertThat(request.isbn()).isEqualTo("isbn-1");
-        assertThat(request.title()).isEqualTo("Clean Code");
-        assertThat(request.author()).isEqualTo("Robert Martin");
-    }
-}
-```
-
-
-### `src/test/java/com/example/bookcatalog/service/RegistrationServiceTest.java`
-
-```java
-package com.example.bookcatalog.service;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-
-import com.example.bookcatalog.dto.RegisterRequest;
-import com.example.bookcatalog.model.AppUser;
-import com.example.bookcatalog.repository.AppUserRepository;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.server.ResponseStatusException;
-
-@ExtendWith(MockitoExtension.class)
-class RegistrationServiceTest {
-
-    private static final String RAW_PASSWORD = "test-password-123";
-
-    @Mock
-    AppUserRepository users;
-
-    @Mock
-    PasswordEncoder encoder;
-
-    @InjectMocks
-    RegistrationService service;
-
-    @Test
-    void register_newUsername_encodesPasswordAndAssignsUserRole() {
-        RegisterRequest request = new RegisterRequest("alice", RAW_PASSWORD);
-        when(users.existsByUsername("alice")).thenReturn(false);
-        when(encoder.encode(RAW_PASSWORD)).thenReturn("encoded-test-value");
-
-        service.register(request);
-
-        ArgumentCaptor<AppUser> saved = ArgumentCaptor.forClass(AppUser.class);
-        verify(users).saveAndFlush(saved.capture());
-        verify(encoder).encode(RAW_PASSWORD);
-        assertThat(saved.getValue().getUsername()).isEqualTo("alice");
-        assertThat(saved.getValue().getPasswordHash())
-                .isEqualTo("encoded-test-value")
-                .isNotEqualTo(RAW_PASSWORD);
-        assertThat(saved.getValue().getRole()).isEqualTo("USER");
-    }
-
-    @Test
-    void register_existingUsername_returnsConflictWithoutEncodingOrSaving() {
-        RegisterRequest request = new RegisterRequest("alice", RAW_PASSWORD);
-        when(users.existsByUsername("alice")).thenReturn(true);
-
-        assertThatThrownBy(() -> service.register(request))
-                .isInstanceOfSatisfying(ResponseStatusException.class,
-                        exception -> assertThat(exception.getStatusCode())
-                                .isEqualTo(HttpStatus.CONFLICT));
-
-        verifyNoInteractions(encoder);
-        verify(users, never()).saveAndFlush(any(AppUser.class));
-    }
-
-    @Test
-    void register_concurrentDuplicate_translatesDatabaseFailureToConflict() {
-        RegisterRequest request = new RegisterRequest("alice", RAW_PASSWORD);
-        when(users.existsByUsername("alice")).thenReturn(false);
-        when(encoder.encode(RAW_PASSWORD)).thenReturn("encoded-test-value");
-        when(users.saveAndFlush(any(AppUser.class)))
-                .thenThrow(new DataIntegrityViolationException("duplicate"));
-
-        assertThatThrownBy(() -> service.register(request))
-                .isInstanceOfSatisfying(ResponseStatusException.class,
-                        exception -> assertThat(exception.getStatusCode())
-                                .isEqualTo(HttpStatus.CONFLICT));
-    }
-}
-```
-
-
-### `src/test/java/com/example/bookcatalog/security/AppUserDetailsServiceTest.java`
-
-```java
-package com.example.bookcatalog.security;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
-
-import com.example.bookcatalog.model.AppUser;
-import com.example.bookcatalog.repository.AppUserRepository;
-import java.util.Optional;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-
-@ExtendWith(MockitoExtension.class)
-class AppUserDetailsServiceTest {
-
-    @Mock
-    AppUserRepository users;
-
-    @InjectMocks
-    AppUserDetailsService service;
-
-    @Test
-    void loadUserByUsername_knownAdmin_mapsStoredDataAndAuthority() {
-        when(users.findByUsername("admin"))
-                .thenReturn(Optional.of(
-                        new AppUser("admin", "stored-hash", "ADMIN")));
-
-        UserDetails details = service.loadUserByUsername("admin");
-
-        assertThat(details.getUsername()).isEqualTo("admin");
-        assertThat(details.getPassword()).isEqualTo("stored-hash");
-        assertThat(details.getAuthorities())
-                .extracting(GrantedAuthority::getAuthority)
-                .containsExactly("ROLE_ADMIN");
-    }
-
-    @Test
-    void loadUserByUsername_unknownUser_throwsGenericCredentialError() {
-        when(users.findByUsername("missing")).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> service.loadUserByUsername("missing"))
-                .isInstanceOf(UsernameNotFoundException.class)
-                .hasMessage("Invalid credentials");
-    }
-}
-```
-
-
-### `src/test/java/com/example/bookcatalog/web/BookControllerWebMvcTest.java`
-
-```java
-package com.example.bookcatalog.web;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import com.example.bookcatalog.exception.BookNotFoundException;
-import com.example.bookcatalog.exception.DuplicateIsbnException;
-import com.example.bookcatalog.model.Book;
-import com.example.bookcatalog.service.BookService;
-import java.math.BigDecimal;
-import java.util.List;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.test.web.servlet.MockMvc;
-
-@WebMvcTest(BookController.class)
-@AutoConfigureMockMvc(addFilters = false)
-class BookControllerWebMvcTest {
-
-    @Autowired
-    MockMvc mockMvc;
-
-    @MockitoBean
-    BookService bookService;
-
-    @Test
-    void findAll_withQueryParameters_returnsMappedJson() throws Exception {
-        when(bookService.findAll("Ursula Le Guin", 0, 2))
-                .thenReturn(List.of(book(7L, "isbn-7")));
-
-        mockMvc.perform(get("/books")
-                        .param("author", "  Ursula Le Guin  ")
-                        .param("page", "0")
-                        .param("size", "2"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(
-                        MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$[0].id").value(7))
-                .andExpect(jsonPath("$[0].isbn").value("isbn-7"));
-    }
-
-    @Test
-    void create_validBody_returnsCreatedLocationAndBody() throws Exception {
-        when(bookService.create("isbn-8", "Title", "Author",
-                new BigDecimal("12.50"), 4))
-                .thenReturn(book(8L, "isbn-8"));
-
-        mockMvc.perform(post("/books")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validBookJson("isbn-8")))
-                .andExpect(status().isCreated())
-                .andExpect(header().string("Location", "/books/8"))
-                .andExpect(jsonPath("$.id").value(8))
-                .andExpect(jsonPath("$.isbn").value("isbn-8"));
-    }
-
-    @Test
-    void create_invalidBody_returnsActualValidationProblemAndSkipsService()
-            throws Exception {
-        String invalid = """
-                {
-                  "isbn": "   ",
-                  "title": "Title",
-                  "author": "Author",
-                  "price": 12.50,
-                  "stock": 4
-                }
-                """;
-
-        mockMvc.perform(post("/books")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(invalid))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().contentTypeCompatibleWith(
-                        MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.title")
-                        .value("some fields failed (title)"))
-                .andExpect(jsonPath("$.detail")
-                        .value("some field failed (detail)"))
-                .andExpect(jsonPath("$.fieldErrors.isbn[0]")
-                        .value("isbn must not be blank"));
-
-        verifyNoInteractions(bookService);
-    }
-
-    @Test
-    void findById_missingBook_returnsActualNotFoundProblem() throws Exception {
-        when(bookService.findById(99L))
-                .thenThrow(new BookNotFoundException(99L));
-
-        mockMvc.perform(get("/books/{id}", 99))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.title").value("Book not found"))
-                .andExpect(jsonPath("$.detail")
-                        .value("Book with id: 99 is not found"));
-    }
-
-    @Test
-    void create_duplicateIsbn_returnsActualConflictProblem() throws Exception {
-        when(bookService.create(anyString(), anyString(), anyString(),
-                any(BigDecimal.class), anyInt()))
-                .thenThrow(new DuplicateIsbnException(
-                        new IllegalStateException("test cause")));
-
-        mockMvc.perform(post("/books")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validBookJson("duplicate")))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.title").value("ISBN conflict"))
-                .andExpect(jsonPath("$.detail").value("Isbn is duplicated"));
-    }
-
-    private static Book book(long id, String isbn) {
-        Book book = new Book(isbn, "Title", "Author",
-                new BigDecimal("12.50"), 4);
-        ReflectionTestUtils.setField(book, "id", id);
-        return book;
-    }
-
-    private static String validBookJson(String isbn) {
-        return """
-                {
-                  "isbn": "%s",
-                  "title": "Title",
-                  "author": "Author",
-                  "price": 12.50,
-                  "stock": 4
-                }
-                """.formatted(isbn);
-    }
-}
-```
-
-
-### `src/test/java/com/example/bookcatalog/security/SecurityPolicyWebMvcTest.java`
-
-```java
-package com.example.bookcatalog.security;
-
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import com.example.bookcatalog.model.Book;
-import com.example.bookcatalog.service.BookService;
-import com.example.bookcatalog.service.RegistrationService;
-import com.example.bookcatalog.web.AuthController;
-import com.example.bookcatalog.web.BookController;
-import com.example.bookcatalog.web.GlobalExceptionHandler;
-import java.math.BigDecimal;
-import java.util.List;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.test.web.servlet.MockMvc;
-
-@WebMvcTest(controllers = {BookController.class, AuthController.class})
-@Import({SecurityConfig.class, RestAuthenticationEntryPoint.class,
-        RestAccessDeniedHandler.class, GlobalExceptionHandler.class})
-class SecurityPolicyWebMvcTest {
-
-    @Autowired
-    MockMvc mockMvc;
-
-    @MockitoBean
-    BookService bookService;
-
-    @MockitoBean
-    RegistrationService registrationService;
-
-    @MockitoBean
-    UserDetailsService userDetailsService;
-
-    @Test
-    void booksGet_anonymous_isPermitted() throws Exception {
-        when(bookService.findAll(null, 0, 20)).thenReturn(List.of());
-
-        mockMvc.perform(get("/books"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void me_anonymous_returnsUnauthorizedProblem() throws Exception {
-        mockMvc.perform(get("/auth/me"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.title").value("Unauthorized"));
-    }
-
-    @Test
-    void create_anonymousWithoutCsrf_returnsForbidden() throws Exception {
-        mockMvc.perform(post("/books")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validBookJson()))
-                .andExpect(status().isForbidden());
-
-        verifyNoInteractions(bookService);
-    }
-
-    @Test
-    void create_anonymousWithCsrf_returnsUnauthorized() throws Exception {
-        mockMvc.perform(post("/books")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validBookJson()))
-                .andExpect(status().isUnauthorized());
-
-        verifyNoInteractions(bookService);
-    }
-
-    @Test
-    @WithMockUser(roles = "USER")
-    void create_userWithCsrf_returnsForbidden() throws Exception {
-        mockMvc.perform(post("/books")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validBookJson()))
-                .andExpect(status().isForbidden());
-
-        verifyNoInteractions(bookService);
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    void create_adminWithoutCsrf_returnsForbidden() throws Exception {
-        mockMvc.perform(post("/books")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validBookJson()))
-                .andExpect(status().isForbidden());
-
-        verifyNoInteractions(bookService);
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    void create_adminWithCsrf_reachesController() throws Exception {
-        when(bookService.create("security-isbn", "Title", "Author",
-                new BigDecimal("12.50"), 4))
-                .thenReturn(book(31L));
-
-        mockMvc.perform(post("/books")
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validBookJson()))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(31));
-    }
-
-    private static Book book(long id) {
-        Book book = new Book("security-isbn", "Title", "Author",
-                new BigDecimal("12.50"), 4);
-        ReflectionTestUtils.setField(book, "id", id);
-        return book;
-    }
-
-    private static String validBookJson() {
-        return """
-                {
-                  "isbn": "security-isbn",
-                  "title": "Title",
-                  "author": "Author",
-                  "price": 12.50,
-                  "stock": 4
-                }
-                """;
-    }
-}
-```
-
-
-### `src/test/java/com/example/bookcatalog/repository/RepositoryPostgresIntegrationTest.java`
-
-```java
-package com.example.bookcatalog.repository;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import com.example.bookcatalog.model.AppUser;
-import com.example.bookcatalog.model.Book;
-import com.example.bookcatalog.support.TestPostgresConfiguration;
-import jakarta.persistence.EntityManager;
-import java.math.BigDecimal;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.context.annotation.Import;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
-
-@DataJpaTest
-@AutoConfigureTestDatabase(
-        replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(TestPostgresConfiguration.class)
-@ImportAutoConfiguration(FlywayAutoConfiguration.class)
-@ActiveProfiles("test")
-class RepositoryPostgresIntegrationTest {
-
-    @Autowired
-    BookRepository books;
-
-    @Autowired
-    AppUserRepository users;
-
-    @Autowired
-    EntityManager entityManager;
-
-    @Autowired
-    JdbcTemplate jdbc;
-
-    @Test
-    void startup_flywayAppliedAllSixMigrations() {
-        Integer count = jdbc.queryForObject(
-                "select count(*) from flyway_schema_history where success",
-                Integer.class);
-
-        assertThat(count).isEqualTo(6);
-    }
-
-    @Test
-    void save_flushClearAndFind_roundTripsThroughPostgres() {
-        Book saved = books.saveAndFlush(book("round-trip-isbn", "Author A"));
-        Long id = saved.getId();
-        entityManager.clear();
-
-        Book reloaded = books.findById(id).orElseThrow();
-
-        assertThat(reloaded.getIsbn()).isEqualTo("round-trip-isbn");
-        assertThat(reloaded.getStock()).isEqualTo(10);
-    }
-
-    @Test
-    void findByUsername_existingUser_usesRealMappingAndDerivedQuery() {
-        users.saveAndFlush(new AppUser(
-                "repository-user", "stored-hash", "USER"));
-        entityManager.clear();
-
-        AppUser found = users.findByUsername("repository-user")
-                .orElseThrow();
-
-        assertThat(found.getPasswordHash()).isEqualTo("stored-hash");
-        assertThat(found.getRole()).isEqualTo("USER");
-    }
-
-    @Test
-    void flush_dirtyEntityWithDuplicateIsbn_exposesDatabaseConstraint() {
-        Book first = books.saveAndFlush(book("unique-isbn-1", "Author A"));
-        Book second = books.saveAndFlush(book("unique-isbn-2", "Author B"));
-        second.replace(first.getIsbn(), second.getTitle(), second.getAuthor(),
-                second.getPrice(), second.getStock());
-        books.save(second);
-
-        assertThatThrownBy(books::flush)
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
-    void flush_invalidRole_exposesPostgresCheckConstraint() {
-        assertThatThrownBy(() -> users.saveAndFlush(
-                new AppUser("bad-role-user", "stored-hash", "SUPERUSER")))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    private static Book book(String isbn, String author) {
-        return new Book(isbn, "Repository Test", author,
-                new BigDecimal("20.00"), 10);
-    }
-}
-```
-
-
-### `src/test/java/com/example/bookcatalog/security/BookServiceMethodSecurityIntegrationTest.java`
-
-```java
-package com.example.bookcatalog.security;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import com.example.bookcatalog.model.Book;
-import com.example.bookcatalog.repository.BookRepository;
-import com.example.bookcatalog.service.BookService;
-import com.example.bookcatalog.support.TestPostgresConfiguration;
-import java.math.BigDecimal;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ActiveProfiles;
-
-@SpringBootTest
-@Import(TestPostgresConfiguration.class)
-@ActiveProfiles("test")
-class BookServiceMethodSecurityIntegrationTest {
-
-    @Autowired
-    BookService service;
-
-    @Autowired
-    BookRepository books;
-
-    private Long bookId;
-
-    @BeforeEach
-    void setUp() {
-        books.deleteAllInBatch();
-        bookId = books.saveAndFlush(new Book(
-                "method-security-isbn", "Title", "Author",
-                new BigDecimal("15.00"), 5)).getId();
-    }
-
-    @Test
-    @WithMockUser(roles = "USER")
-    void setStock_user_isDeniedByMethodProxy() {
-        assertThatThrownBy(() -> service.setStock(bookId, 9))
-                .isInstanceOf(AccessDeniedException.class);
-
-        assertThat(books.findById(bookId).orElseThrow().getStock())
-                .isEqualTo(5);
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
-    void setStock_admin_reachesTransactionalBusinessMethod() {
-        service.setStock(bookId, 9);
-
-        assertThat(books.findById(bookId).orElseThrow().getStock())
-                .isEqualTo(9);
-    }
-}
-```
-
-
-### `src/test/java/com/example/bookcatalog/integration/TransactionBehaviorIntegrationTest.java`
-
-```java
-package com.example.bookcatalog.integration;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
-import com.example.bookcatalog.exception.TransactionLabCheckedException;
-import com.example.bookcatalog.model.Book;
-import com.example.bookcatalog.repository.BookRepository;
-import com.example.bookcatalog.repository.TransactionAuditRepository;
-import com.example.bookcatalog.service.BookService;
-import com.example.bookcatalog.service.StockTransferService;
-import com.example.bookcatalog.support.TestPostgresConfiguration;
-import java.math.BigDecimal;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
-
-@SpringBootTest
-@Import(TestPostgresConfiguration.class)
-@ActiveProfiles("test")
-class TransactionBehaviorIntegrationTest {
-
-    @Autowired
-    StockTransferService transfers;
-
-    @Autowired
-    BookService bookService;
-
-    @Autowired
-    BookRepository books;
-
-    @Autowired
-    TransactionAuditRepository audits;
-
-    private Long fromId;
-    private Long toId;
-
-    @BeforeEach
-    void setUp() {
-        audits.deleteAllInBatch();
-        books.deleteAllInBatch();
-        fromId = books.saveAndFlush(book("tx-from", 10)).getId();
-        toId = books.saveAndFlush(book("tx-to", 5)).getId();
-    }
-
-    @Test
-    void runtimeFailure_rollsBackStockAndRequiredAudit() {
-        assertThatThrownBy(() ->
-                transfers.transferThenRuntimeRollback(fromId, toId, 3))
-                .isInstanceOf(IllegalStateException.class);
-
-        assertStocks(10, 5);
-        assertThat(audits.count()).isZero();
-    }
-
-    @Test
-    void checkedFailureWithDefaultRules_commitsStockAndAudit() {
-        assertThatThrownBy(() ->
-                transfers.checkedFailureDefault(fromId, toId, 3))
-                .isInstanceOf(TransactionLabCheckedException.class);
-
-        assertStocks(7, 8);
-        assertThat(audits.findAll())
-                .singleElement()
-                .satisfies(audit -> assertThat(audit.getEventType())
-                        .isEqualTo("CHECKED_DEFAULT_COMMITTED"));
-    }
-
-    @Test
-    void requiresNewAudit_outerFailureRollsBackStockButAuditSurvives() {
-        assertThatThrownBy(() ->
-                transfers.requiresNewAuditThenFail(fromId, toId, 3))
-                .isInstanceOf(IllegalStateException.class);
-
-        assertStocks(10, 5);
-        assertThat(audits.findAll())
-                .singleElement()
-                .satisfies(audit -> assertThat(audit.getEventType())
-                        .isEqualTo("TRANSFER_ATTEMPT"));
-    }
-
-    @Test
-    void delete_intentionalCheckedFailure_rollsBackFlushedDelete() {
-        assertThatThrownBy(() -> bookService.delete(fromId))
-                .isInstanceOf(TransactionLabCheckedException.class)
-                .hasMessage("Intentional failure after flush");
-
-        assertThat(books.existsById(fromId)).isTrue();
-    }
-
-    private void assertStocks(int expectedFrom, int expectedTo) {
-        assertThat(books.findById(fromId).orElseThrow().getStock())
-                .isEqualTo(expectedFrom);
-        assertThat(books.findById(toId).orElseThrow().getStock())
-                .isEqualTo(expectedTo);
-    }
-
-    private static Book book(String isbn, int stock) {
-        return new Book(isbn, "Transaction Test", "Author",
-                new BigDecimal("10.00"), stock);
-    }
-}
-```
-
-
-### `src/test/java/com/example/bookcatalog/integration/AuthenticationFlowIntegrationTest.java`
-
-```java
-package com.example.bookcatalog.integration;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.authenticated;
-import static org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers.unauthenticated;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import com.example.bookcatalog.model.AppUser;
-import com.example.bookcatalog.repository.AppUserRepository;
-import com.example.bookcatalog.repository.BookRepository;
-import com.example.bookcatalog.repository.TransactionAuditRepository;
-import com.example.bookcatalog.support.TestPostgresConfiguration;
-import com.jayway.jsonpath.JsonPath;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.springframework.mock.web.MockHttpSession;
-
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(TestPostgresConfiguration.class)
-@ActiveProfiles("test")
-class AuthenticationFlowIntegrationTest {
-
-    private static final String TEST_PASSWORD = "integration-password-123";
-
-    @Autowired
-    MockMvc mockMvc;
-
-    @Autowired
-    AppUserRepository users;
-
-    @Autowired
-    BookRepository books;
-
-    @Autowired
-    TransactionAuditRepository audits;
-
-    @Autowired
-    PasswordEncoder encoder;
-
-    @BeforeEach
-    void cleanDatabase() {
-        audits.deleteAllInBatch();
-        books.deleteAllInBatch();
-        users.deleteAllInBatch();
-    }
-
-    @Test
-    void registerLoginMeAndLogout_usesRealDatabaseBackedSessionFlow()
-            throws Exception {
-        CsrfData registrationCsrf = csrf(null);
-
-        mockMvc.perform(post("/auth/register")
-                        .session(registrationCsrf.session())
-                        .param(registrationCsrf.parameterName(),
-                                registrationCsrf.token())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "username": "session-user",
-                                  "password": "integration-password-123"
-                                }
-                                """))
-                .andExpect(status().isCreated());
-
-        AppUser stored = users.findByUsername("session-user").orElseThrow();
-        assertThat(stored.getRole()).isEqualTo("USER");
-        assertThat(stored.getPasswordHash()).isNotEqualTo(TEST_PASSWORD);
-        assertThat(encoder.matches(TEST_PASSWORD, stored.getPasswordHash()))
-                .isTrue();
-
-        CsrfData loginCsrf = csrf(registrationCsrf.session());
-        MvcResult login = mockMvc.perform(post("/auth/login")
-                        .session(loginCsrf.session())
-                        .param(loginCsrf.parameterName(), loginCsrf.token())
-                        .param("username", "session-user")
-                        .param("password", TEST_PASSWORD))
-                .andExpect(status().isNoContent())
-                .andExpect(authenticated().withUsername("session-user"))
-                .andReturn();
-        MockHttpSession session = (MockHttpSession)
-                login.getRequest().getSession(false);
-
-        mockMvc.perform(get("/auth/me").session(session))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("session-user"))
-                .andExpect(jsonPath("$.authorities[0]").value("ROLE_USER"));
-
-        CsrfData logoutCsrf = csrf(session);
-        mockMvc.perform(post("/auth/logout")
-                        .session(session)
-                        .param(logoutCsrf.parameterName(), logoutCsrf.token()))
-                .andExpect(status().isNoContent())
-                .andExpect(unauthenticated());
-
-        assertThat(session.isInvalid()).isTrue();
-        mockMvc.perform(get("/auth/me"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void login_wrongPassword_returnsUnauthorizedWithoutAuthentication()
-            throws Exception {
-        users.saveAndFlush(new AppUser("wrong-password-user",
-                encoder.encode(TEST_PASSWORD), "USER"));
-        CsrfData csrf = csrf(null);
-
-        mockMvc.perform(post("/auth/login")
-                        .session(csrf.session())
-                        .param(csrf.parameterName(), csrf.token())
-                        .param("username", "wrong-password-user")
-                        .param("password", "definitely-wrong-password"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(unauthenticated())
-                .andExpect(jsonPath("$.title").value("Unauthorized"));
-    }
-
-    @Test
-    void databaseAdminLogin_withFreshCsrf_canCreateBook() throws Exception {
-        users.saveAndFlush(new AppUser("integration-admin",
-                encoder.encode(TEST_PASSWORD), "ADMIN"));
-        CsrfData loginCsrf = csrf(null);
-        MvcResult login = mockMvc.perform(post("/auth/login")
-                        .session(loginCsrf.session())
-                        .param(loginCsrf.parameterName(), loginCsrf.token())
-                        .param("username", "integration-admin")
-                        .param("password", TEST_PASSWORD))
-                .andExpect(status().isNoContent())
-                .andExpect(authenticated().withRoles("ADMIN"))
-                .andReturn();
-        MockHttpSession session = (MockHttpSession)
-                login.getRequest().getSession(false);
-        CsrfData writeCsrf = csrf(session);
-
-        mockMvc.perform(post("/books")
-                        .session(session)
-                        .header(writeCsrf.headerName(), writeCsrf.token())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "isbn": "integration-isbn",
-                                  "title": "Integration Book",
-                                  "author": "Test Author",
-                                  "price": 25.00,
-                                  "stock": 6
-                                }
-                                """))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.isbn").value("integration-isbn"));
-
-        assertThat(books.findAll())
-                .singleElement()
-                .satisfies(book -> assertThat(book.getStock()).isEqualTo(6));
-    }
-
-    private CsrfData csrf(MockHttpSession existingSession) throws Exception {
-        MockHttpServletRequestBuilder request = get("/auth/csrf");
-        if (existingSession != null) {
-            request.session(existingSession);
-        }
-
-        MvcResult result = mockMvc.perform(request)
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").isString())
-                .andReturn();
-        String body = result.getResponse().getContentAsString();
-        MockHttpSession session = (MockHttpSession)
-                result.getRequest().getSession(false);
-        return new CsrfData(
-                session,
-                JsonPath.read(body, "$.parameterName"),
-                JsonPath.read(body, "$.headerName"),
-                JsonPath.read(body, "$.token"));
-    }
-
-    private record CsrfData(
-            MockHttpSession session,
-            String parameterName,
-            String headerName,
-            String token) {
-    }
-}
-```
-
-The helper returns sensitive values to the caller but never logs them. MockMvc holds a mock servlet session; it does not expose a real browser cookie jar.
-
-## Verification matrix
-
-| Test class | Level | Spring context? | Real PostgreSQL / Flyway? | Mocked collaborators | Security | Transaction behavior proved |
-|---|---|---:|---:|---|---|---|
-| `BookRequestTest` | pure Java unit | no | no | none | absent | none |
-| `RegistrationServiceTest` | Mockito unit | no | no | repository, encoder | absent | none; annotation is inert |
-| `AppUserDetailsServiceTest` | Mockito unit | no | no | user repository | maps authorities only | none |
-| `BookControllerWebMvcTest` | MVC slice | partial | no | `BookService` | filters deliberately out of scope | none |
-| `SecurityPolicyWebMvcTest` | security MVC slice | partial | no | application service boundaries | real filter chain, synthetic users | none |
-| `RepositoryPostgresIntegrationTest` | JPA/database slice | partial | yes / V1–V6 | none | absent | test transaction rolls back each method |
-| `BookServiceMethodSecurityIntegrationTest` | full service integration | full | yes / V1–V6 | none | real method interceptor, synthetic identity | service transaction commits/denies |
-| `TransactionBehaviorIntegrationTest` | transaction integration | full | yes / V1–V6 | none | not the behavior under test | real commit, rollback, and `REQUIRES_NEW`; no outer test transaction |
-| `AuthenticationFlowIntegrationTest` | full MVC/security integration | full + MockMvc | yes / V1–V6 | none | real repository/BCrypt/login/session/CSRF | real service/repository transactions |
-
-### What each infrastructure component owns
-
-| Component | Defined/provided by | Called by | Calls/uses | Starts Spring? | Uses real DB here? |
-|---|---|---|---|---:|---:|
-| Jupiter `@Test` | JUnit | Surefire/JUnit Platform | developer test method | no | no |
-| Mockito mocks | Mockito | developer test | prepared collaborator behavior | no | no |
-| `@MockitoBean` | Spring Framework TestContext | context customization | Mockito mock inserted as bean | yes, partial | no in MVC slices |
-| `@WebMvcTest` | Spring Boot | TestContext bootstrapper | focused MVC auto-configuration | yes, partial | no |
-| MockMvc | Spring Test + Boot config | test method | filters/DispatcherServlet/MVC chain | requires web context | depends on context |
-| `@DataJpaTest` | Spring Boot | TestContext bootstrapper | focused JDBC/JPA/repository config | yes, partial | yes in this suite |
-| `@SpringBootTest` | Spring Boot | TestContext bootstrapper | full `ApplicationContext` | yes, full | yes when container imported |
-| `@ServiceConnection` | Spring Boot Testcontainers | connection-details auto-config | container JDBC/Flyway metadata | participates in context | yes |
-| PostgreSQLContainer | Testcontainers | Boot bean lifecycle | Docker-compatible runtime | no by itself | is the real DB engine |
-| Flyway | Flyway + Boot | context startup | V1–V6 through JDBC | inside DB context | yes |
-| HikariCP | Boot/Hikari | repositories/Flyway infrastructure | pooled pgJDBC connections | inside DB context | yes |
-
-## Commands to run
-
-From `Spring_Security/book-catalog-api`:
-
-```powershell
-# Confirm the effective dependency graph and managed versions.
-mvn dependency:tree
-
-# Fast focused feedback while developing.
-mvn -Dtest=BookRequestTest,RegistrationServiceTest test
-mvn -Dtest=BookControllerWebMvcTest,SecurityPolicyWebMvcTest test
-
-# Requires a working Docker-compatible runtime.
-mvn -Dtest=RepositoryPostgresIntegrationTest test
-mvn -Dtest=TransactionBehaviorIntegrationTest test
-mvn -Dtest=AuthenticationFlowIntegrationTest test
-
-# Final reproducible runs.
-mvn clean test
-mvn verify
-```
-
-This reference keeps all tests in Surefire. `mvn verify` runs the `test` phase on the way to `verify`; it does not run a second Failsafe suite because none is configured.
-
-### Expected full-run evidence
-
-```text
-Surefire selects JUnit Platform
-  -> pure/Mockito/MVC tests run
-  -> Boot starts PostgreSQL 17 on a dynamic host port
-  -> Flyway validates and applies V1–V6
-  -> Hibernate validates the migrated schema
-  -> repository, method-security, transaction, and auth tests run
-  -> all tests pass
-```
-
-On the inspected environment, the compiled reference suite contains 32 tests. Runtime can vary with Docker image/cache speed. The number is evidence of the supplied reference, not a target to inflate.
-
-## Failure diagnosis
-
-| Symptom | Likely boundary | What to inspect |
+| Done | Competency | Successful completion evidence |
 |---|---|---|
-| Jupiter tests are not discovered | Maven test runner | old JUnit/Surefire pin, dependency tree, test names |
-| Boot 4 annotation import does not compile | test dependency/package | modular starter and exact `org.springframework.boot.webmvc.test.autoconfigure` / `org.springframework.boot.data.jpa.test.autoconfigure` package |
-| `No qualifying bean` in MVC slice | slice boundary | missing `@MockitoBean` for a controller collaborator |
-| controller test gets 401/403 unexpectedly | Security filter | whether this is the contract slice or security slice; identity and CSRF |
-| anonymous unsafe request is 403 rather than 401 | CSRF/filter order | missing token may be rejected before authorization |
-| Hibernate says a table is missing | schema startup | Flyway import, active profile, `ddl-auto=validate`, migration logs |
-| test tries configured port 5432 | connection details | missing `@Import(TestPostgresConfiguration.class)` / service connection |
-| PostgreSQL rejects `Asia/Saigon` | test JVM environment | versionless Surefire `user.timezone=UTC` configuration |
-| constraint test sees no failure | persistence context | flush boundary and actual migration constraint |
-| raw Hibernate constraint exception appears | exception-translation boundary | use repository `flush()` when asserting Spring's translated exception |
-| transaction test reports wrong durable state | transaction boundary | remove test `@Transactional`; call injected proxy; reread after completion |
-| `REQUIRES_NEW` audit disappears | propagation/proxy | outer test transaction, self-invocation, or wrong bean call |
-| login returns 403 | CSRF | obtain/use token with the same session |
-| login returns 401 | authentication | form field names, saved hash, `UserDetailsService`, wrong password |
-| `/auth/me` is 401 after successful login | session | reuse the returned `MockHttpSession` |
-| logout test cannot reuse session | expected invalidation | assert `isInvalid()` and issue a new anonymous request |
+| [ ] | Derive cases from requirements | Produce a matrix tracing each important criterion to preconditions, inputs/action, expected state/output and a test level; flag ambiguity instead of inventing it. |
+| [ ] | Identify partitions and boundaries | Choose valid/invalid classes and values at/around the real limits; explain normalized characters versus UTF-8 bytes where relevant. |
+| [ ] | Write JUnit tests | Write grouped assertions, narrow exception assertions and parameterized cases; predict invocations and explain lifecycle isolation. |
+| [ ] | Use Mockito properly | Keep the subject real, stub only relevant collaborators, capture saved data and verify meaningful forbidden calls; explain why the test cannot prove persistence. |
+| [ ] | Write service tests | Cover registration success, duplicate paths and byte-limit rejection, asserting role/hash and side effects. |
+| [ ] | Test controllers with MockMvc | Prove mapping, selected JSON/status/Location, invalid-body rejection and advice; explain the effect of enabled/disabled filters. |
+| [ ] | Test repositories | Use real mappings and derived queries, stable sort/paging, flush/clear/reread and independent constraint cases. |
+| [ ] | Use PostgreSQL/Testcontainers | Supply dynamic connection details and source-owned migrations; explain the difference between a container-runtime failure and an assertion failure. |
+| [ ] | Verify commit/rollback | Call real proxies without an outer test transaction and explain final stocks/audits for every transaction scenario, including flushed rollback and REQUIRES_NEW. |
+| [ ] | Test authorization | Execute anonymous/USER/ADMIN and CSRF decisions, and invoke method security directly through its proxy. |
+| [ ] | Test real authentication | Register/seed a real account, perform form login with CSRF, retain the session, check /auth/me, wrong credentials and logout invalidation without mock users. |
+| [ ] | Diagnose failures | Read Surefire/root causes, locate the failing layer, compare fixture/configuration/runtime and reproduce one failing class through Maven. |
+| [ ] | Understand coverage limits | Explain a case with full statement coverage but incomplete branches, and a requirement bug missed even at full branch coverage. Interpret a JaCoCo report without adding meaningless assertions. |
+| [ ] | Run reliably through Maven | Show a clean source build, actual discovered/executed counts and no hidden dependence on target artifacts, IDE state, test order or developer databases. Record blocked integration runs honestly. |
+| [ ] | Review AI-generated tests | Identify invented APIs/rules, tautological expectations, over-mocking, disabled protections and missing negative cases; repair the design manually before accepting code. |
 
-## Common mistakes and interview checks
-
-### Mistakes this solution deliberately avoids
-
-- It does not create another Spring Boot project.
-- It does not add H2 or a developer-database fallback.
-- It does not let Hibernate create/update the schema.
-- It does not globally disable Spring Security or CSRF.
-- It does not use deprecated `@MockBean` or Testcontainers' deprecated PostgreSQL class.
-- It does not pretend `StockRequest` has validation.
-- It does not expect DELETE success when the service intentionally rolls back.
-- It does not put transaction-boundary tests inside a test-owned transaction.
-- It does not assume IDENTITY inserts always wait for flush.
-- It does not assert an exact BCrypt encoding.
-- It does not expose security artifacts in logs/assertion messages.
-- It does not use `Thread.sleep`, test order, production credentials, or a production database.
-
-### Retrieval questions with concise answers
-
-1. **Why is `BookRequestTest` not an integration test?** It directly invokes one Java record with no framework or collaborator boundary.
-2. **Why use `@MockitoBean` in the MVC slice?** The controller is created by Spring and needs its service dependency inside that context.
-3. **Why are filters disabled in one MVC class but enabled in another?** One isolates HTTP/controller contracts; the separate class explicitly proves the security contract.
-4. **What does the Security policy slice not prove?** User repository lookup, BCrypt verification, login provider, and session persistence.
-5. **Why does the JPA slice use PostgreSQL?** Dialect, migrations, constraints, identity, locking, and transaction semantics are database behavior.
-6. **Why explicitly import Flyway in the Boot 4 JPA slice?** Focused Boot 4 slices do not load every modular integration automatically.
-7. **Why keep `ddl-auto=validate`?** Flyway owns schema changes; Hibernate only checks compatibility.
-8. **Why call `clear()` after flush?** To avoid returning the already managed L1-cached entity and force a database-backed lookup.
-9. **Why can `save()` execute an INSERT immediately here?** `GenerationType.IDENTITY` may require the database-generated ID.
-10. **Why use repository `flush()` for `DataIntegrityViolationException`?** The Spring repository proxy translates persistence-provider exceptions.
-11. **Why is the transaction test not annotated `@Transactional`?** It must observe actual service commit/rollback and `REQUIRES_NEW` boundaries.
-12. **What proves method security rather than URL security?** Calling the injected `BookService` proxy as USER and ADMIN.
-13. **What proves real authentication?** Form login using a database user, real encoder/provider, and a later request with the same session.
-14. **Why does `permitAll` not remove the need for `csrf()`?** Authorization and CSRF protection are separate controls.
-15. **Why seed ADMIN directly?** Registration intentionally and correctly assigns only `USER`.
-16. **What does Testcontainers solve?** Isolated, disposable access to the real database engine with dynamic connection details.
-17. **Is using Testcontainers the Docker deployment lesson?** No; it is ephemeral test infrastructure, not packaging/deploying the application.
-18. **Why run Maven after IDE tests?** Maven is the reproducible build/runner used outside one IDE configuration.
-
-## Final mental model
-
-```text
-Choose a behavior
-  -> choose the narrowest observable boundary
-  -> make real only what that boundary requires
-  -> control everything nondeterministic
-  -> exercise success and important failure
-  -> assert output, interaction, and/or durable state
-  -> state what the test still cannot prove
-```
-
-The completed suite is intentionally layered. A failure in `BookRequestTest` points to Java normalization; a failure in the MVC slice points to HTTP mapping/validation/advice; a failure in the JPA slice points to migrations/mapping/SQL/constraints; a failure in the authentication flow points to the integrated security/session/database path. That diagnostic precision is the practical value of test architecture.
+Successful completion means independently producing and explaining a meaningful layered suite. If database prerequisites are unresolved, mark those execution competencies pending even if your code compiles. A passing historical report or copied reference is not evidence of your current suite.
