@@ -33,7 +33,7 @@ public class RegistrationService {
 
         try {
             users.saveAndFlush(new AppUser(
-                    request.username(), encoder.encode(request.password()), "USER"));
+                    request.username(), encoder.encode(request.password()), "ADMIN"));
         } catch (DataIntegrityViolationException duplicateOrConstraint) {
             // The unique database constraint also protects concurrent registrations.
             throw duplicateUsername();

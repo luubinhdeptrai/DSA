@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS transaction_audits (
+CREATE TABLE transaction_audits (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     event_type VARCHAR(80) NOT NULL,
     details VARCHAR(500) NOT NULL,

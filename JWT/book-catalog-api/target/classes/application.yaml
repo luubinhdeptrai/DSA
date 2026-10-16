@@ -41,3 +41,11 @@ logging:
 server:
   address: 127.0.0.1
   port: 8080
+
+app:
+  jwt:
+    issuer: book-catalog-api-local
+    audience: book-catalog-api
+    access-token-ttl-seconds: 900
+    private-key: ${JWT_PRIVATE_KEY_RESOURCE:file:./local-secrets/jwt-private.pem}
+    public-key: ${JWT_PUBLIC_KEY_RESOURCE:file:./local-secrets/jwt-public.pem}
