@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.example.bookcatalog.integration.TransactionBehaviorIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 5.113 s -- in com.example.bookcatalog.integration.TransactionBehaviorIntegrationTest
