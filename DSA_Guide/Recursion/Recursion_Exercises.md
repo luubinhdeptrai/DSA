@@ -200,6 +200,12 @@ root: t2(3)
 
 **Deliverable:** C, D, root value, the live chain at each base, and a recurrence reflecting the two actual child sizes.
 
+| Invocation ID | n | Entry order | left after return | right after return | Completion order / result |
+| --- | --- | --- | --- | --- | --- |
+| Root | 3 | 1 | | | |
+| | | | | | |
+| … | | | | | |
+
 <details>
 <summary>Hint 1</summary>
 
@@ -243,6 +249,12 @@ static int t3(int[] a, int i) {
 ```
 
 **Deliverable:** a final scalar result, final R contents, mutation order, and C/D. Add a `Shared R` column to the common table; a reference copied into a frame is not an array clone.
+
+| Step | Current i | Saved before | Returned rest | Shared R now | Action / return |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 0 | Unassigned | Unassigned | [2,-1,3] | Enter root |
+| | | | | | |
+| … | | | | | |
 
 <details>
 <summary>Hint 1</summary>
@@ -288,6 +300,13 @@ static void t4(int x, int[] a, ListNode node, int remaining) {
 ```
 
 **Deliverable:** frame-to-object arrows before and after each reassignment, object contents after return, allocation count, C/D, and a precise statement of Java pass-by-value. Do not equate the name `a` with one permanent object.
+
+| Frame / caller | x slot | a refers to | node refers to | Referent contents at this step |
+| --- | --- | --- | --- | --- |
+| Caller before call | 3 | R | A | R=[7], A.val=5, A.next=null |
+| Root after first mutation | | | | |
+| Root after reassignment | | | | |
+| … | | | | |
 
 <details>
 <summary>Hint 1</summary>
@@ -2339,6 +2358,10 @@ The official LeetCode pages linked in Section 11 support the external problem ti
 
 ### Author validation
 
-Validation is in progress; this paragraph will be replaced with completed checks before delivery. Starter TODOs remain learner work, and no complete coding solutions or separate solutions file are included.
+Completed **2026-10-28**. All **43 Java blocks** were assembled with the shared declarations and compiled using Java 21 with `--release 21 -Xlint:all -Werror`. The 19 starter methods represent 18 coding exercises; they compile as TODO stubs and have not been mistaken for completed learner implementations.
+
+All **135 coding-example rows**, expanded into **148 cases**, were checked against independent mathematical or iterative reference calculations. Checks included rejection boundaries, long numeric results, UTF-16 units, unchanged input, retained/detached node identities, fresh outputs, and event order. The executable tracing, complexity, and defective-code subjects passed **11,783 runtime assertions** across **1,093 exhaustively generated small array cases** and other bounded cases. Instrumentation checked **418,260 logical invocations**, recorded **14 selected executions**, and compared call/depth and modeled allocation totals with independent recurrences. Allocation-unit checks describe the stated source model, not measured JVM heap bytes.
+
+Six deliberately failing recursion scenarios were executed in isolated JVMs with timeouts and produced the expected StackOverflowError. Wrong values, array-bound failure, persistent state, cyclic output, recomputation, and overflow were also reproduced. The **61 local links** were checked against actual files and heading anchors. SHA-256 comparison confirmed that all **26 pre-existing files** in the guide directory remained unchanged; independently added files were left untouched. No complete coding solutions or separate solutions file were added to the repository.
 
 
