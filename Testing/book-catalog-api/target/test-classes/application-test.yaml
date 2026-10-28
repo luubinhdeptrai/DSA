@@ -1,0 +1,20 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    clean-disabled: true
+
+logging:
+  level:
+    root: WARN
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
+    org.springframework.transaction: WARN
+    org.springframework.orm.jpa.JpaTransactionManager: WARN
+    org.springframework.security: WARN

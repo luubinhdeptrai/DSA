@@ -1,0 +1,8 @@
+com\example\bookcatalog\service\RegistrationServiceTest.class
+com\example\bookcatalog\dto\ParameterizedBookRequestTest.class
+com\example\bookcatalog\dto\BookRequestBoundaryTest.class
+com\example\bookcatalog\dto\BookRequestTest.class
+com\example\bookcatalog\security\AppUserDetailsServiceTest.class
+com\example\bookcatalog\security\SecurityPolicyWebMvcTest.class
+com\example\bookcatalog\web\BookControllerWebMvcTest.class
+com\example\bookcatalog\dto\AssertionsWarmupTest.class

@@ -1,0 +1,31 @@
+-------------------------------------------------------------------------------
+Test set: com.example.bookcatalog.integration.AuthenticationFlowIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 3, Errors: 0, Skipped: 0, Time elapsed: 16.52 s <<< FAILURE! -- in com.example.bookcatalog.integration.AuthenticationFlowIntegrationTest
+com.example.bookcatalog.integration.AuthenticationFlowIntegrationTest.login_wrongPassword_returnsUnauthorizedWithoutAuthentication -- Time elapsed: 1.132 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<200> but was:<401>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:62)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:129)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$0(StatusResultMatchers.java:600)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:212)
+	at com.example.bookcatalog.integration.AuthenticationFlowIntegrationTest.csrf(AuthenticationFlowIntegrationTest.java:179)
+	at com.example.bookcatalog.integration.AuthenticationFlowIntegrationTest.login_wrongPassword_returnsUnauthorizedWithoutAuthentication(AuthenticationFlowIntegrationTest.java:119)
+
+com.example.bookcatalog.integration.AuthenticationFlowIntegrationTest.registerLoginMeAndLogout_usesRealDatabaseBackedSessionFlow -- Time elapsed: 0.024 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<200> but was:<401>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:62)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:129)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$0(StatusResultMatchers.java:600)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:212)
+	at com.example.bookcatalog.integration.AuthenticationFlowIntegrationTest.csrf(AuthenticationFlowIntegrationTest.java:179)
+	at com.example.bookcatalog.integration.AuthenticationFlowIntegrationTest.registerLoginMeAndLogout_usesRealDatabaseBackedSessionFlow(AuthenticationFlowIntegrationTest.java:64)
+
+com.example.bookcatalog.integration.AuthenticationFlowIntegrationTest.databaseAdminLogin_withFreshCsrf_canCreateBook -- Time elapsed: 0.122 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<200> but was:<401>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:62)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:129)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$0(StatusResultMatchers.java:600)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:212)
+	at com.example.bookcatalog.integration.AuthenticationFlowIntegrationTest.csrf(AuthenticationFlowIntegrationTest.java:179)
+	at com.example.bookcatalog.integration.AuthenticationFlowIntegrationTest.databaseAdminLogin_withFreshCsrf_canCreateBook(AuthenticationFlowIntegrationTest.java:135)
+
