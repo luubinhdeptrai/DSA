@@ -36,9 +36,50 @@ Addresses in worked examples and command outputs are illustrative. IPv4 blocks `
 | [8. TCP](#net-08) | [17. WSL2 and Docker preview](#net-17) |
 | [9. UDP](#net-09) | [18. Troubleshooting](#net-18) |
 
+## Study Priority Overview
+
+| Part | Topic | Priority | Recommended Study Approach | Why |
+| --- | --- | --- | --- | --- |
+| [Part 1](#net-01) | Introduction to Computer Networking | ★★★☆☆ (3/5) — Medium | Get comfortable with the basic terms | Describe a request path and the kind of slowdown. |
+| [Part 2](#net-02) | OSI and TCP/IP Models | ★★★☆☆ (3/5) — Medium | Use the stack as a diagnostic map | Ask which protocol stage produced the evidence. |
+| [Part 3](#net-03) | IP Addresses and Network Interfaces | ★★★★★ (5/5) — Critical | Verify binds and address scope | Prevent localhost and address-family failures. |
+| [Part 4](#net-04) | Subnets and CIDR | ★★★★☆ (4/5) — High | Practice reading prefixes and membership | Interpret VPC address ranges, routes, and source scopes. |
+| [Part 5](#net-05) | MAC Addresses, Ethernet, ARP and Neighbor Discovery | ★★☆☆☆ (2/5) — Low | Skim the local next-hop model | Understand how a router first receives a remote-bound packet. |
+| [Part 6](#net-06) | Routing, Gateways and NAT | ★★★★☆ (4/5) — High | Read a route and follow the reply | Trace AWS and Docker paths across network boundaries. |
+| [Part 7](#net-07) | Ports and Sockets | ★★★★★ (5/5) — Critical | Verify the listener and client endpoint | Recognize binding conflicts and incorrect service ports. |
+| [Part 8](#net-08) | TCP | ★★★★☆ (4/5) — High | Interpret handshake and failure evidence | Tell refusal, reset, and stalled responses apart. |
+| [Part 9](#net-09) | UDP | ★★☆☆☆ (2/5) — Low | Recognize UDP's role and move on | Place DNS and HTTP/3 in the right transport context. |
+| [Part 10](#net-10) | DNS | ★★★★★ (5/5) — Critical | Diagnose name resolution from the caller | Separate name lookup from the TCP connection. |
+| [Part 11](#net-11) | HTTP Fundamentals | ★★★★☆ (4/5) — High | Practice HTTP and proxy diagnostics | Identify a route error, upstream error, or absent HTTP response. |
+| [Part 12](#net-12) | HTTPS and TLS | ★★★★★ (5/5) — Critical | Diagnose certificates and termination | Secure ingress and distinguish TLS failure from HTTP auth. |
+| [Part 13](#net-13) | Firewalls and Network Security | ★★★★★ (5/5) — Critical | Reason about permitted paths | Plan backend ingress and private PostgreSQL access. |
+| [Part 14](#net-14) | Networking Diagnostic Tools | ★★★★★ (5/5) — Critical | Practice layer-specific probes | Verify the right listener and separate lookup, TCP, and HTTP. |
+| [Part 15](#net-15) | Networking in Java and Spring Boot | ★★★★☆ (4/5) — High | Run one Java HTTP diagnostic lab | Relate Java errors to listeners, timeouts, and database pools. |
+| [Part 16](#net-16) | End-to-End Networking Flows | ★★★★★ (5/5) — Critical | Trace app ingress, database, and provider calls | Locate the first failed stage in both directions. |
+| [Part 17](#net-17) | WSL2 and Docker Networking Preview | ★★★☆☆ (3/5) — Medium | Check which stack owns localhost | Carry the caller and listener model into Docker. |
+| [Part 18](#net-18) | Network Troubleshooting | ★★★★★ (5/5) — Critical | Diagnose common deployment failures hands-on | Recover with evidence instead of changing several layers. |
+
+## Recommended Study Strategy
+
+Read Parts 1–2 for the terms you will use to explain a failure. Work through address scope in Part 3, then learn enough CIDR and neighbor delivery in Parts 4–5 to follow the route examples in Part 6. Practice socket binding and read the TCP failure cases in Parts 7–8. Skim Part 9 for its DNS and HTTP/3 context before moving to DNS.
+
+Master the name, TLS, and access checks in Parts 10 and 12–13. Use your REST experience in Part 11 to focus on identifying the responding endpoint, HTTP errors, and safe retries. Practice the tools in Part 14 against the loopback server in Part 15. Then trace the full app, database, and external-provider flows in Part 16 and use Part 18 to locate and recover from the first failing stage.
+
+Use Part 17 when Windows and WSL disagree about a listener. Defer frame and TCP sequence-number details, packet capture, and QUIC internals until the normal probes leave a question unanswered. Carry the caller, listening socket, and destination model into Docker and practice service DNS, the container bind, and port publication there. [Docker networking](../03_Docker/Docker_Theory.md#docker-08)
+
 <a id="net-01"></a>
 
 ## Part 1 — Introduction to Computer Networking
+
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** A few basic terms let you describe where a request travels and whether the symptom is delay, transfer rate, or loss.
+
+**Recommended study depth:** Learn the client/server and performance distinctions. Use the database round-trip example to explain latency.
+
+**Focus on:** Interfaces, client versus server, switch versus router, and latency versus throughput.
+
+**Can defer:** Transmission media details and repeated link-speed calculations.
 
 ### Start with two computers
 
@@ -90,6 +131,16 @@ For an illustrative calculation, `10 MB` is `80 Mbit` using decimal units. A `10
 <a id="net-02"></a>
 
 ## Part 2 — OSI and TCP/IP Models
+
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** A layer model helps you separate route, TCP, TLS, and HTTP evidence before choosing a troubleshooting tool.
+
+**Recommended study depth:** Trace the HTTP request diagram once and explain what changes as bytes pass down the stack.
+
+**Focus on:** Encapsulation and the link, IP, transport, and application responsibilities.
+
+**Can defer:** Memorizing all seven OSI layer names or forcing TLS into a single layer number.
 
 ### Why software divides the work
 
@@ -150,6 +201,16 @@ A single HTTP request can occupy several TCP segments. A segment can also carry 
 
 ## Part 3 — IP Addresses and Network Interfaces
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** The bind address, destination address, and caller's network decide whether a Spring Boot listener is reachable or accidentally exposed.
+
+**Recommended study depth:** Inspect local interfaces and predict which clients can reach loopback, wildcard, and private interface binds.
+
+**Focus on:** `127.0.0.1`, `::1`, `0.0.0.0`, IPv4 versus IPv6, and the actual listening interface.
+
+**Can defer:** DHCP negotiation and detailed IPv6 assignment mechanisms.
+
 ### Addresses tell the stack where traffic belongs
 
 If your laptop is connected to both Wi-Fi and a virtual network, on which one should it send a request? An **IP address** identifies an interface or logical endpoint at the Internet layer. Hosts often have several interfaces and several addresses per interface. An address can change when a laptop moves, be reassigned when a lease expires, or be shared externally by many devices through NAT. A router forwards toward a destination address using the routes available to it.
@@ -191,6 +252,16 @@ eth0     UP             192.168.1.20/24
 <a id="net-04"></a>
 
 ## Part 4 — Subnets and CIDR
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** CIDR is needed to read AWS subnet boundaries and access scopes, and helps explain whether a client uses a local link or gateway.
+
+**Recommended study depth:** Check membership in a `/24` and one non-octet-aligned example before reading routes.
+
+**Focus on:** Prefix length, address membership, default route `/0`, host route `/32`, and usable ranges in context.
+
+**Can defer:** Repeated binary drills, special point-to-point ranges, and detailed IPv6 subnet arithmetic.
 
 ### Divide an address into prefix and host bits
 
@@ -259,6 +330,16 @@ Assigning an address and prefix to an interface commonly creates a **connected r
 
 ## Part 5 — MAC Addresses, Ethernet, ARP and Neighbor Discovery
 
+**Study Priority: ★★☆☆☆ (2/5) — Low**
+
+**Why it matters:** Local next-hop delivery supports the routing model, but most Java deployment faults are diagnosed at the listener, route, DNS, or application layer.
+
+**Recommended study depth:** Skim the diagram and explain why an off-subnet packet first reaches the gateway.
+
+**Focus on:** MAC versus IP, switching versus routing, and ARP or Neighbor Discovery for the next hop.
+
+**Can defer:** Frame layout, detailed switch learning, and Neighbor Discovery message mechanics.
+
 ### IP finds the destination network. Ethernet finds the next receiver.
 
 Host A knows that it wants to send an IP packet to B. If both are on the same Ethernet LAN, A still needs the destination address for the Ethernet frame. A **MAC address** identifies an interface at the Ethernet link layer. A common representation is six hexadecimal bytes, as in `02:00:00:00:00:0a`. Interfaces can have hardware-assigned or software-assigned addresses. Ethernet frames carry source and destination MAC addresses, a type identifying the payload protocol, the payload, and an error-detection trailer.
@@ -293,6 +374,16 @@ IPv6 uses **Neighbor Discovery**, carried in ICMPv6 messages. A host normally us
 <a id="net-06"></a>
 
 ## Part 6 — Routing, Gateways and NAT
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** Routing and NAT explain private subnet reachability, how a reply gets back, and what a published or forwarded endpoint represents.
+
+**Recommended study depth:** Work the route table and follow one translated conversation in both directions.
+
+**Focus on:** Connected, specific, and default routes, next hop, return path, NAT versus filtering, and destination port forwarding.
+
+**Can defer:** Detailed policy-routing selection and translation lifetime edge cases.
 
 ### Select the next hop
 
@@ -346,6 +437,16 @@ Home routers often perform all three functions. Existing NAT mappings influence 
 <a id="net-07"></a>
 
 ## Part 7 — Ports and Sockets
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Spring Boot, PostgreSQL, and Docker all depend on the intended local listener and the correct endpoint from each client.
+
+**Recommended study depth:** Observe a listening socket and a client connection. Reproduce an address or port mismatch on the lab.
+
+**Focus on:** Bind, listen and accept, local versus peer endpoints, ephemeral ports, and port conflicts.
+
+**Can defer:** Memorizing registered port ranges or kernel queue internals beyond reading ordinary listener state.
 
 ### One host can serve several applications
 
@@ -413,6 +514,16 @@ A **port conflict** occurs when a program asks for a local address and port comb
 
 ## Part 8 — TCP
 
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** Refused, reset, and timed-out TCP connections point to different checks. TCP success still leaves the application response in question.
+
+**Recommended study depth:** Explain the handshake and test how a refused connection differs from a delayed HTTP response.
+
+**Focus on:** Handshake, ordered byte streams, message boundaries, resets, and connect versus post-connect failure.
+
+**Can defer:** Sequence-number arithmetic, less common teardown states, and congestion algorithm details.
+
 ### Coordinate before exchanging bytes
 
 Imagine sending a file over a path where packets can arrive late, out of order, or be lost. **Transmission Control Protocol (TCP)** supplies an ordered, reliable byte stream in each direction while the connection is usable. The endpoints exchange control information and keep state about what has arrived. The application can send bytes without implementing retransmission itself.
@@ -470,6 +581,16 @@ An application can impose a shorter deadline than the OS's retransmission schedu
 
 ## Part 9 — UDP
 
+**Study Priority: ★★☆☆☆ (2/5) — Low**
+
+**Why it matters:** UDP is useful context for DNS and HTTP/3, while the Spring Boot, JDBC, and SSH workflows in this roadmap largely use TCP.
+
+**Recommended study depth:** Skim the comparison table and recognize which parts of the stack use datagrams.
+
+**Focus on:** Datagram boundaries, best-effort delivery, DNS over UDP and TCP, and QUIC as an HTTP/3 transport.
+
+**Can defer:** UDP socket behavior, buffer edge cases, and QUIC stream internals until a real need arises.
+
 ### Send an independent datagram
 
 A voice call often benefits from playing the next available audio packet when a previous one is too late. **User Datagram Protocol (UDP)** carries discrete messages called **datagrams**. An application can send a datagram without a transport handshake. An IP packet carries it with a header containing source port, destination port, length, and checksum. The checksum helps detect corruption. It does not request another copy.
@@ -493,6 +614,16 @@ DNS often sends a query over UDP, where the client can time out and retry. A UDP
 <a id="net-10"></a>
 
 ## Part 10 — DNS
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** A wrong, stale, or scope-specific name answer can break app, database, and external API connections even when their services are healthy.
+
+**Recommended study depth:** Compare system lookup with a DNS query. Explain a missing name, wrong record type, and successful resolution with a refused connection.
+
+**Focus on:** A, AAAA, and CNAME records, TTL and cache, resolver view, and lookup from the caller's environment.
+
+**Can defer:** Mail and zone delegation details and encrypted resolver transports beyond recognizing them.
 
 ### Give a service a name independent of its address
 
@@ -582,6 +713,16 @@ Conventional DNS can use UDP or TCP, commonly port `53`. **DNS over TLS** and **
 <a id="net-11"></a>
 
 ## Part 11 — HTTP Fundamentals
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** Your REST background covers HTTP basics. Deployment adds the need to identify which app or proxy answered and evaluate retries safely.
+
+**Recommended study depth:** Probe a known route and a missing path with curl. Interpret the status, headers, and whether the request reached an HTTP endpoint.
+
+**Focus on:** URL authority and path, redirects, `404`, `502`, `504`, and idempotency after a timeout.
+
+**Can defer:** Version framing and detailed cache directives during the first deployment pass.
 
 ### Turn bytes into a request the server can route
 
@@ -695,6 +836,16 @@ In PowerShell, use `curl.exe` with the same arguments. `--noproxy '*'` makes the
 
 ## Part 12 — HTTPS and TLS
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Real deployments must protect traffic and correctly verify peer identity. Certificate failures can occur even when DNS and TCP work.
+
+**Recommended study depth:** Read TLS error evidence and identify where verification failed or where TLS terminates before checking HTTP auth.
+
+**Focus on:** Hostname and SAN, chain and trust roots, validity, SNI, and front-end versus upstream TLS.
+
+**Can defer:** Handshake message and key-derivation details, resumption, and mutual TLS until required.
+
 ### Protect the path between the peers
 
 Ordinary HTTP over TCP sends application bytes without transport encryption. Someone able to read or change traffic along the path can see or alter it. **Transport Layer Security (TLS)** protects a channel using cryptography. **HTTPS** is HTTP carried over a protected transport, such as HTTP over TLS and TCP or HTTP/3 over QUIC with TLS integrated. Protection depends on correctly authenticating the peer and maintaining sound endpoints and configuration.
@@ -755,6 +906,16 @@ Inspect the explicit TLS error and the URL before retrying. In an authorized ses
 
 ## Part 13 — Firewalls and Network Security
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** An app needs narrowly scoped ingress and database access. A listener alone does not establish permitted client reachability.
+
+**Recommended study depth:** Read a sample policy and justify the allowed app and database paths alongside route and listener evidence.
+
+**Focus on:** Inbound and outbound rules, stateful replies, segmentation, source scope, and keeping database ports private.
+
+**Can defer:** Host firewall rule syntax and vendor-specific policy administration until you use that platform.
+
 ### Decide who can reach a listening service
 
 Suppose a backend and a database listen on the same machine. Users need the web service, and the database is intended for the backend. A **firewall** enforces rules about which network traffic can enter, leave, or pass through a system. A **host firewall** applies decisions at a machine. A **network firewall** can apply policy between networks or segments. Both can consider protocol, addresses, ports, direction, and connection state.
@@ -781,6 +942,16 @@ In the labs, inspect loopback listeners and use supplied policy snapshots for re
 <a id="net-14"></a>
 
 ## Part 14 — Networking Diagnostic Tools
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Deployments are easier to troubleshoot when you can choose the right command from either Windows or Linux and read the evidence.
+
+**Recommended study depth:** Inspect one listener and make separate name, TCP, and HTTP checks from the matching environment.
+
+**Focus on:** `ss`, `ip route get`, `getent`, `curl`, `Get-NetTCPConnection`, and `Test-NetConnection`.
+
+**Can defer:** Optional packet capture and detailed traceroute interpretation until simpler probes run out of evidence.
 
 Start by asking a specific question. An address list, a socket table, an ICMP probe, and an HTTP response offer different kinds of evidence. Examples below either read local state or send a loopback probe. Sample fields and timing are illustrative. Inspect real address and route information locally and redact it before sharing.
 
@@ -895,6 +1066,16 @@ sudo tcpdump -i lo -nn -c 6 'host 127.0.0.1 and tcp port 18080'
 <a id="net-15"></a>
 
 ## Part 15 — Networking in Java and Spring Boot
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** The Java lab makes timeouts and response status observable and shows where Spring Boot, the JDBC driver, and HikariCP fit.
+
+**Recommended study depth:** Run `HttpLab` or its Java client for a successful response, `404`, and a delay. Relate each to the deployed app.
+
+**Focus on:** Boot bind settings, returned status versus exception, connect/read/request deadlines, and pool acquisition.
+
+**Can defer:** Implementing TCP line framing or the optional Python server after the HTTP lab supplies the needed evidence.
 
 ### See the addresses Java can use
 
@@ -1178,6 +1359,16 @@ A PostgreSQL JDBC URL such as `jdbc:postgresql://127.0.0.1:5432/labdb` selects a
 
 ## Part 16 — End-to-End Networking Flows
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** A single route trace combines everything you need to locate faults across frontend requests, PostgreSQL, and outbound API calls.
+
+**Recommended study depth:** Trace the local request, app-to-database, and HTTPS flows in order. Rehearse them with the earlier lab or later Compose stack.
+
+**Focus on:** Caller environment, DNS to TCP to TLS and HTTP, JDBC pool versus login and SQL, and safe retry decisions.
+
+**Can defer:** Detailed LAN frame tracing after you can locate the failing boundary in each deployment flow.
+
 ### A — Postman reaches Spring Boot in the same environment
 
 Suppose Postman and the backend both run on Windows. The same reasoning applies to two programs in the same Ubuntu networking environment.
@@ -1248,6 +1439,16 @@ An error can occur at each stage. A failed DNS lookup gives no destination. A co
 
 ## Part 17 — WSL2 and Docker Networking Preview
 
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** Your Windows and WSL sessions can report different listeners. The namespace model prepares you for Docker port publishing.
+
+**Recommended study depth:** Learn the direction and loopback rules. Run one same-environment probe and revisit if a cross-boundary case fails.
+
+**Focus on:** Caller and listener stack, NAT versus mirrored WSL behavior, and host versus container endpoint.
+
+**Can defer:** WSL mode changes and broader Desktop integration options until a concrete issue needs them.
+
 ### Locate the client and server before interpreting localhost
 
 A **virtual network interface** is a software-created attachment to a network. It can move packets between virtual machines, network namespaces, and physical interfaces. A **network namespace** is an isolated view of interfaces, addresses, routes, and sockets. WSL2 runs a Linux kernel in a Windows-managed VM, so Windows and the Linux guest can have distinct networking state and loopbacks.
@@ -1279,6 +1480,16 @@ Keep track of where each client runs and whether it is using an internal or host
 <a id="net-18"></a>
 
 ## Part 18 — Network Troubleshooting
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Common network symptoms overlap. A staged investigation shows whether the failure is name resolution, transport, TLS, HTTP, or a database operation.
+
+**Recommended study depth:** Reproduce refusal, wrong port, `404`, and a delayed response. Work one DNS, TLS, or database scenario from the supplied evidence.
+
+**Focus on:** First unverified boundary, actual caller, bind and route evidence, bounded probes, and before/after verification.
+
+**Can defer:** Live network policy changes and packet-level diagnosis unless routine checks cannot localize the fault.
 
 Write down the caller, target name or address, port, protocol, path, time, and exact error. A check from your laptop answers a question about your laptop. Reproduce from the application's environment when possible. Read the first stage for which you lack evidence, change one relevant input, and rerun the same check. Probe only lab or authorized endpoints.
 

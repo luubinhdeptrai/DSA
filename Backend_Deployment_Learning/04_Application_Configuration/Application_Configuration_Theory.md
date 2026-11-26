@@ -38,9 +38,51 @@ Run `powershell` fences in **Windows PowerShell** and `bash` fences in **Ubuntu 
 | [9. @Value](#config-09) | [19. Complete walkthrough](#config-19) |
 | [10. @ConfigurationProperties](#config-10) | [Readiness](#readiness-checklist) |
 
+## Study Priority Overview
+
+| Part | Topic | Priority | Recommended Study Approach | Why |
+| --- | --- | --- | --- | --- |
+| [Part 1](#config-01) | Introduction to Application Configuration | ★★★★☆ (4/5) — High | Define what should vary at runtime | Build once and keep environment settings and credentials separate. |
+| [Part 2](#config-02) | Configuration Sources | ★★★☆☆ (3/5) — Medium | Learn the source trade-offs | Choose a delivery path and predict who can see the value. |
+| [Part 3](#config-03) | Environment Variables | ★★★★☆ (4/5) — High | Verify the PowerShell-to-Java handoff | Prove the process inherited the value you intended. |
+| [Part 4](#config-04) | Configuration in Core Java | ★★★☆☆ (3/5) — Medium | Trace the input paths once | Understand what the JVM receives before Boot resolves it. |
+| [Part 5](#config-05) | Spring Boot Externalized Configuration | ★★★★★ (5/5) — Critical | Prove which documents Boot loads | Find external settings and required config imports during startup. |
+| [Part 6](#config-06) | application.properties and application.yml | ★★★★☆ (4/5) — High | Practice equivalent files and overrides | Prevent silent changes while editing structured settings. |
+| [Part 7](#config-07) | Spring Profiles | ★★★★★ (5/5) — Critical | Activate and verify the intended mode | Prevent a deployment from inheriting a local default. |
+| [Part 8](#config-08) | Configuration Precedence | ★★★★★ (5/5) — Critical | Reproduce a precedence collision | Find and remove the setting that actually overrides deployment intent. |
+| [Part 9](#config-09) | @Value | ★★★☆☆ (3/5) — Medium | Recognize placeholder behavior | Interpret missing or unexpected injected scalar values. |
+| [Part 10](#config-10) | @ConfigurationProperties | ★★★★★ (5/5) — Critical | Bind and verify a typed settings contract | Catch incorrect names, units, and nested configuration early. |
+| [Part 11](#config-11) | Validation and Fail-Fast Startup | ★★★★★ (5/5) — Critical | Cause startup failures and verify the fix | Fail early on bad settings and check live dependencies separately. |
+| [Part 12](#config-12) | Secrets Management | ★★★★★ (5/5) — Critical | Deliver and verify secrets safely | Avoid credential leaks and understand what must change during rotation. |
+| [Part 13](#config-13) | Multi-Environment Configuration | ★★★★★ (5/5) — Critical | Verify one artifact across modes | Carry the same tested JAR through deployment stages. |
+| [Part 14](#config-14) | Docker and Docker Compose Configuration | ★★★★☆ (4/5) — High | Trace Compose values into Spring | Prove runtime overrides and secret files reach the intended consumer. |
+| [Part 15](#config-15) | Spring Boot Infrastructure Configuration | ★★★★★ (5/5) — Critical | Configure and verify real dependencies | Make the app reachable and diagnose database or upstream failures. |
+| [Part 16](#config-16) | Feature Flags | ★★★☆☆ (3/5) — Medium | Recognize optional integration states | Keep core routes working when a provider is disabled or unavailable. |
+| [Part 17](#config-17) | Configuration Testing | ★★★★☆ (4/5) — High | Run isolated configuration tests | Catch misconfiguration in CI and verify wiring at runtime. |
+| [Part 18](#config-18) | Configuration Troubleshooting | ★★★★★ (5/5) — Critical | Diagnose broken launches and verify recovery | Fix the failing config or dependency layer without exposing secrets. |
+| [Part 19](#config-19) | End-to-End Spring Boot Walkthrough | ★★★★★ (5/5) — Critical | Run the complete configuration capstone | Prove the same artifact starts safely with different runtime inputs. |
+
+## Recommended Study Strategy
+
+Start with Parts 1–4 to distinguish the artifact, operating-system environment, JVM options, and app arguments. Reuse the Bash material from Linux and practice the PowerShell-to-Java handoff here. When an early exercise needs the packaged app, assemble the Part 19 reference project as a fixture and save the full walkthrough for the end. [Linux environment and quoting](../01_Linux/Linux_Theory.md#part-08)
+
+Work through Parts 5–8 in order and prove one property collision. Learn the placeholder essentials in Part 9, then master the typed contract, fail-fast validation, and secret handling in Parts 10–12. Practice changing one value while keeping the artifact and other inputs stable. In Parts 13–15 apply that to profile promotion, mounted settings, listener and JDBC configuration, and timeout evidence. Use Docker's interpolation lesson as background and follow the value into Spring's resolver here. [Docker environment and configuration](../03_Docker/Docker_Theory.md#docker-11)
+
+Learn the off and failure states in Part 16. Defer the stub or deeper rollout work until an optional integration is relevant. Run the normal tests in Part 17 before preparing CI. Skim the alternate JUnit setup unless you need it. Finish with the fault isolation and full exercise in Parts 18–19. Prove the same JAR runs in multiple modes, rejects a missing secret, and reaches PostgreSQL. The Docker walkthrough is the place to practice migrations and prove row persistence. [Docker backend walkthrough](../03_Docker/Docker_Theory.md#docker-19)
+
 <a id="config-01"></a>
 
 ## Part 1 — Introduction to Application Configuration
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** Separating runtime inputs from application behavior lets CI and deployment promote one artifact while still selecting safe values in each environment.
+
+**Recommended study depth:** Read the refactor and classify a few CapsuleAI inputs as settings, required secrets, or application data.
+
+**Focus on:** Externalized settings, safe defaults, immutable artifacts, and configuration drift.
+
+**Can defer:** Designing dynamic refresh until a deployment genuinely needs live changes.
 
 ### See the cost of a fixed input
 
@@ -108,6 +150,16 @@ The Twelve-Factor App's config principle separates deploy-varying values from co
 
 ## Part 2 — Configuration Sources
 
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** A value's source controls who sets it, who can see it, and when it may override another source.
+
+**Recommended study depth:** Use the comparison to choose sources for a nonsecret timeout, database endpoint, and database credential.
+
+**Focus on:** Files, process environment, JVM and CLI options, required keys, and credential visibility.
+
+**Can defer:** External provider selection and integration until your target environment supplies one.
+
 A JVM needs both a connection timeout and a database password. They could be delivered through the same mechanism, but the access, audit, and change needs differ. A **source** is where the application obtains a candidate value. A loader decides which sources exist and a precedence policy decides which candidate wins.
 
 | Source | Useful for | Costs and risks |
@@ -127,6 +179,16 @@ Use an intentional default and explicit overrides for ordinary settings. Use a s
 <a id="config-03"></a>
 
 ## Part 3 — Environment Variables
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** The PowerShell session that launches the JVM determines what Java receives. A local shell variable or a later edit cannot fix a missed input.
+
+**Recommended study depth:** Run `EnvProbe` from a clean PowerShell session and verify absent, present, and removed values. Reuse the Bash model from Linux.
+
+**Focus on:** `$env:`, parent and child scope, `System.getenv`, missing versus empty, and restarting the actual launcher.
+
+**Can defer:** Repeating the Bash inheritance exercise and persistent user settings you do not use.
 
 ### Follow a launch across the process boundary
 
@@ -194,6 +256,16 @@ Environment variables are convenient delivery inputs. They can be visible to pri
 <a id="config-04"></a>
 
 ## Part 4 — Configuration in Core Java
+
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** Plain Java makes launcher flags, program arguments, file loading, and validation visible before Spring handles them.
+
+**Recommended study depth:** Run `InputProbe` and one `PlainConfig` failure. Explain the policy used by the sample loader.
+
+**Focus on:** Placement of `-D`, `main` arguments, current working directory, and a required or invalid value.
+
+**Can defer:** Reimplementing a custom file loader or argument parser for a Spring Boot app.
 
 ### Distinguish three routes into the same program
 
@@ -359,6 +431,16 @@ In a clean shell the limits are `8`, `12`, and `5` for the first three runs. The
 
 ## Part 5 — Spring Boot Externalized Configuration
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Boot must discover the correct files and import sources before a key can win. The same packaged app can be launched from a different directory.
+
+**Recommended study depth:** Predict which documents are eligible, then test a packaged default and an added external directory with the same JAR.
+
+**Focus on:** Config Data, Environment versus Binder, cwd, early config selection, and `location`, `additional-location`, and `import`.
+
+**Can defer:** Rare `@PropertySource` timing and format cases once you can prove which files load.
+
 The handwritten Java loader made three choices: where to look, which value to use, and when to turn text into typed settings. Spring Boot makes those choices visible in a reusable startup pipeline. It gives application and infrastructure beans access to the same effective configuration.
 
 ### Environment, PropertySource, and Config Data
@@ -425,6 +507,16 @@ For a path or activation problem, run an isolated launch with `--logging.level.o
 
 ## Part 6 — application.properties and application.yml
 
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** Properties and YAML can bind different values through indentation, escaping, or collection overrides even when the inputs appear equivalent.
+
+**Recommended study depth:** Convert a nested example, inspect `/config`, and predict what happens when both formats exist in the same location.
+
+**Focus on:** Flattened keys, YAML indentation, explicit duration units, list replacement, map merge, and format precedence.
+
+**Can defer:** Unusual map key quoting and literal escapes until your configuration uses them.
+
 Spring Boot flattens both formats into property keys. Choose a format by how people read and review it. Flat keys make single-setting edits and searches easy. YAML visually groups nested integrations and collections. Both can back the same application.
 
 Here are equivalent documents for the capstone's configuration contract. Use one as `overrides/application.properties` or the other as `overrides/application.yml` in a disposable directory. Pass `--spring.config.additional-location=file:./overrides/`, then inspect `GET /config`. The timeout is 750 milliseconds and the buffer is 786,432 bytes.
@@ -474,6 +566,16 @@ In a map, brackets preserve a key containing characters such as `/`. In YAML, qu
 <a id="config-07"></a>
 
 ## Part 7 — Spring Profiles
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** A wrong or implicit profile can select the wrong datasource, feature settings, or startup guard. Deployed mode needs verification.
+
+**Recommended study depth:** Run the same JAR under dev and test and confirm the active profiles and winning values. Then explain what activates the production-like guard.
+
+**Focus on:** Active versus default profiles, profile-specific files, order, document activation, and `@Profile`.
+
+**Can defer:** Complex profile-group and include combinations beyond the lab's example.
 
 A profile is a named Spring configuration selection. It lets the same application assemble an appropriate combination of profile-specific documents and beans. A deployment environment is broader. It includes its network, dependencies, identities, access control, and operational policies. A local JVM can select `prod-sim`, and a container in a production network can accidentally select `dev`. Selecting a profile grants no permissions.
 
@@ -549,6 +651,16 @@ lab:
 
 ## Part 8 — Configuration Precedence
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** You need to explain why a deployed value beat the file you changed before you can correct an override safely.
+
+**Recommended study depth:** Predict the `lab.label` winner, remove one source at a time, and confirm the effect at each launch.
+
+**Focus on:** Packaged versus external Config Data, profile-specific documents, OS environment, JVM `-D`, and CLI arguments.
+
+**Can defer:** JNDI, servlet initialization, Devtools, and unusual test source collisions until they are present.
+
 For a single key, list the sources the particular launch actually has. Move from the highest eligible source downward until the key resolves. A packaged profile file can win over the packaged base file and still lose to an external base file. Adding one source can affect a single key without erasing lower sources for other keys.
 
 ### Spring Boot 4.0.10 source order
@@ -613,6 +725,16 @@ The diagram omits sources absent in this launch, such as JSON and tests. To prov
 
 ## Part 9 — @Value
 
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** `@Value` is common in existing beans, and a missing required placeholder can abort startup before a service listens.
+
+**Recommended study depth:** Read the banner example and predict one required, optional, and blank outcome. Try the optional demo if needed.
+
+**Focus on:** Constructor injection, a key with a fallback, missing versus blank values, and conversion.
+
+**Can defer:** SpEL and the separate demonstration controller once you understand scalar injection.
+
 `@Value` is a concise way to inject an individual value into a bean. Boot normally installs placeholder resolution during bean creation. `${key:fallback}` looks up a property and uses the fallback if unresolved. `${key}` expresses a required property in this Boot context and can abort creation of the bean if no source supplies it. An empty resolved value can still require application validation. Spring converts the resolved text to the declared type where a converter exists.
 
 This optional experiment uses the capstone's same package and POM. Create it only in a separate copy of the capstone. It requires a nonsecret `export.channel` and uses a typed fallback of `3` for `export.retry-count`. Its bean is created only with the `value-demo` profile, so the normal lab tests remain independent.
@@ -664,6 +786,16 @@ Constructor injection makes dependencies explicit, allows fields to be final, an
 <a id="config-10"></a>
 
 ## Part 10 — @ConfigurationProperties
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Typed settings make integration URLs, durations, and collections consistent across the launcher, app, tests, and deployed environment.
+
+**Recommended study depth:** Bind a settings record and verify a nested value from an environment variable, including an invalid spelling or unit case.
+
+**Focus on:** `@ConfigurationProperties`, registration, canonical relaxed names, explicit units, nested values and defaults, and strict binding.
+
+**Can defer:** Metadata processor details and alternative registration styles once the record pattern works.
 
 An integration needs several values that must agree. A base address, timeout, and enablement switch become easier to reason about when they are modeled together. `@ConfigurationProperties(prefix = "lab")` gives a type responsibility for the property subtree. Code consuming that type receives the same bound configuration snapshot.
 
@@ -719,6 +851,16 @@ A value like `750ms` becomes a `Duration`, `768KB` becomes `DataSize`, and `http
 <a id="config-11"></a>
 
 ## Part 11 — Validation and Fail-Fast Startup
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Successful conversion is insufficient when a required credential is absent, a deadline is outside bounds, or a dependency cannot be reached.
+
+**Recommended study depth:** Trigger a conversion error and a validation failure, then distinguish each from a runtime dependency probe.
+
+**Focus on:** `@Validated`, `@Valid`, range and conditional constraints, required secrets, safe errors, and readiness as separate evidence.
+
+**Can defer:** Custom validation framework internals beyond the supplied field and cross-property checks.
 
 A default is a policy decision. `5` is a reasonable page size if no one chose one. A signing key with a fallback shared by every deployment would undermine trust in every token. Required values must come from an allowed launch source and must meet a documented invariant.
 
@@ -783,6 +925,16 @@ Use messages that name the missing key and expected form. Avoid interpolating th
 
 ## Part 12 — Secrets Management
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** A database password, API key, or JWT signing key in logs, Git, or an image can expose every runtime that trusts it.
+
+**Recommended study depth:** Deliver a disposable credential through a restricted source, test readability without displaying it, and explain how rotation reaches consumers.
+
+**Focus on:** Secret source and access scope, process and image exposure, mount permissions, and rotation of database and signing credentials.
+
+**Can defer:** AWS provider integration and elaborate rotation automation until you know the deployment target.
+
 Secrets are configuration inputs whose disclosure grants access, impersonation, or decryption. Treat PostgreSQL passwords, API keys, SMTP credentials, signing keys, private keys, and bearer/refresh tokens as credentials. A hostname usually changes behavior without granting access. Its exposure may still reveal information about internal topology. Classify each input by consequence of exposure.
 
 | Where a secret might leak | How it gets there | Safer handling |
@@ -826,6 +978,16 @@ AWS Secrets Manager is designed for managed secrets and supports rotation workfl
 
 ## Part 13 — Multi-Environment Configuration
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Artifact promotion relies on running the bytes you tested while applying the right settings, dependencies, and identity in each environment.
+
+**Recommended study depth:** Run two configurations against one JAR and compare its hash, active mode, and nonsecret effective settings.
+
+**Focus on:** Build once, credential and dependency isolation, explicit profile, configuration revision, and smoke checks.
+
+**Can defer:** Automating promotion and drift detection until you learn delivery pipelines.
+
 A runtime environment combines configuration, infrastructure, and identity. Rebuilding for each environment puts code and configuration changes in the same promotion step. Shipping one measured artifact lets you promote the exact bytes that passed testing while changing only the authorized runtime inputs.
 
 ```mermaid
@@ -868,6 +1030,16 @@ Expect `True`. Use `/config` on ports `18094` and `18096` respectively to verify
 <a id="config-14"></a>
 
 ## Part 14 — Docker and Docker Compose Configuration
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** Docker already explains interpolation and creation-time environment. Here the key new step is how those values and mounted files enter Boot.
+
+**Recommended study depth:** Trace one Compose value through recreation to `/config`, and follow a mounted file through `configtree:`.
+
+**Focus on:** Compose model versus process input, Spring property keys, read-only overrides, and mounted secrets.
+
+**Can defer:** Rerunning basic `.env` and `env_file` comparisons after Docker Part 11 is understood.
 
 An image contains the application filesystem and image defaults. Container creation chooses the process environment, mounts, networking, and command. Compose adds a separate earlier step: interpolation while reading the Compose model.
 
@@ -950,6 +1122,16 @@ A read-only bind mount can hold nonsecret deployment files. A service can mount 
 
 ## Part 15 — Spring Boot Infrastructure Configuration
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Spring Boot's listener, PostgreSQL endpoint, migration identity, and timeouts determine whether the backend starts and handles real requests.
+
+**Recommended study depth:** Check a listener and database connection from their intended callers. Explain a pool wait, refused connection, and migration failure.
+
+**Focus on:** `server.address` and port, JDBC host and HikariCP/driver deadlines, Flyway ownership, external HTTP limits, and scoped logging.
+
+**Can defer:** SMTP configuration if unused and deeper JWT algorithm or pool tuning details beyond your launch contract.
+
 Infrastructure settings describe how the process reaches dependencies and how long it waits. Confirm the meaning, units and ownership of each input. The following are bounded examples for a backend using the appropriate Spring Boot starter. The capstone uses JDBC and the JDK HTTP client.
 
 ### PostgreSQL, HikariCP, and Flyway
@@ -1013,6 +1195,16 @@ Use `logging.level.root=INFO` and a scoped logger such as `logging.level.learnin
 <a id="config-16"></a>
 
 ## Part 16 — Feature Flags
+
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** An optional external dependency can stay disabled until its settings are ready. This helps with rollout, especially for CapsuleAI integrations.
+
+**Recommended study depth:** Explain off, misconfigured, and unavailable states. Try the local stub when preparing an optional integration.
+
+**Focus on:** Default-off flag, conditional bean, typed validation agreement, startup evaluation, and runtime failure behavior.
+
+**Can defer:** Dynamic flag services and rollout infrastructure until an integration needs them.
 
 A feature flag is an input that controls whether code takes an optional product or operational path. It helps you ship a common artifact while keeping a dependency inactive until its settings and service are ready. The flag should have a named owner, a documented state in each deployment, and a plan for retiring it.
 
@@ -1086,6 +1278,16 @@ From a third terminal, run `curl.exe --noproxy '*' -fsS http://127.0.0.1:18094/h
 
 ## Part 17 — Configuration Testing
 
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** CI tests can catch invalid binding and accidental profile/source changes before deployment without relying on a developer's environment.
+
+**Recommended study depth:** Run the standard suite and identify which tests prove binding versus actual Boot loading. Add one representative invalid-input case.
+
+**Focus on:** `ApplicationContextRunner`, explicit test inputs, TestContext profiles and overrides, and a separate live smoke check.
+
+**Can defer:** The legacy JUnit 5 Maven profile unless compatibility is needed, and rare source conflicts beyond the example.
+
 A reliable configuration test asserts what the consumer receives or whether the context accepts the inputs. It controls sources so an arbitrary developer environment cannot make it pass by accident.
 
 | Harness | How it works | What the lab proves |
@@ -1115,6 +1317,16 @@ With the capstone files, expect six tests on the standard path and four on the J
 <a id="config-18"></a>
 
 ## Part 18 — Configuration Troubleshooting
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** A bad launch option, malformed value, missing secret, or unreachable JDBC host can look like the same startup or health problem.
+
+**Recommended study depth:** Reproduce a precedence fault and a missing or invalid input. Use a separate database probe to prove recovery.
+
+**Focus on:** Startup stage, expected source and profile, selective `/config` evidence, `/database` from Compose, and one change at a time.
+
+**Can defer:** Broad trace or full framework diagnostics until targeted source and runtime checks are exhausted.
 
 Start by reproducing one symptom against a disposable application. Write down the expected key, scope, and data type. Check the process invocation and establish the lowest-cost observation that can discriminate between a missing input and one that lost precedence.
 
@@ -1161,6 +1373,16 @@ For targeted recent app logs use `docker compose -p $ConfigProject logs --tail 4
 <a id="config-19"></a>
 
 ## Part 19 — End-to-End Spring Boot Walkthrough
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** This capstone rehearses promotion and operational proof with one JAR, several configurations, mounted credentials, and an actual PostgreSQL connection.
+
+**Recommended study depth:** Run dev, test, and production-like launches, show the missing-secret rejection, and verify the same artifact and real DB response.
+
+**Focus on:** Hash and active profile, one external override, non-root secret readability, configuration tests, and separate config and DB evidence.
+
+**Can defer:** Rewriting the Java fixtures or replaying the Docker CRUD and persistence work you already completed.
 
 ### What you will run
 

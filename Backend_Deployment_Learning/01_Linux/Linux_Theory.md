@@ -44,9 +44,46 @@ Run `cd --` followed by the printed path in quotes, then run `pwd` to confirm yo
 | [6. Input, Output, Pipes, and Redirection](#part-06) | [13. Linux for Java Backend Deployment](#part-13) |
 | [7. Linux Processes](#part-07) | [14. Linux Troubleshooting](#part-14) |
 
+## Study Priority Overview
+
+| Part | Topic | Priority | Recommended Study Approach | Why |
+| --- | --- | --- | --- | --- |
+| [Part 1](#part-01) | Introduction to Linux | ★★★☆☆ (3/5) — Medium | Explain the shell and kernel boundary | Distinguish shell errors from OS and application errors. |
+| [Part 2](#part-02) | Linux on Windows 11 with WSL2 | ★★★☆☆ (3/5) — Medium | Verify your practice environment once | Keep the shell, distro, and filesystem straight. |
+| [Part 3](#part-03) | Linux Filesystem | ★★★★☆ (4/5) — High | Practice path resolution and mounts | Prevent wrong-directory and missing-file failures. |
+| [Part 4](#part-04) | Essential Terminal Commands | ★★★★☆ (4/5) — High | Practice file and executable inspection | Find the actual artifact, executable, and logs. |
+| [Part 5](#part-05) | Users, Groups, and Permissions | ★★★★★ (5/5) — Critical | Diagnose access as the service user | Protect config and data while fixing access. |
+| [Part 6](#part-06) | Input, Output, Pipes, and Redirection | ★★★★☆ (4/5) — High | Capture logs and detect pipeline failures | Use the right stream and status in CI and diagnosis. |
+| [Part 7](#part-07) | Linux Processes | ★★★★★ (5/5) — Critical | Inspect and stop a process safely | Connect JVM and container exits to actual process state. |
+| [Part 8](#part-08) | Environment Variables and Shell Behavior | ★★★★★ (5/5) — Critical | Practice inheritance and quoting | Find settings that never reached the launched process. |
+| [Part 9](#part-09) | Processes, Services, and Logs | ★★★★★ (5/5) — Critical | Inspect service state and recent logs | Find failures under the real supervisor and account. |
+| [Part 10](#part-10) | Package Management | ★★★☆☆ (3/5) — Medium | Verify packages and install only what you need | Avoid changing a host when the right runtime already exists. |
+| [Part 11](#part-11) | SSH and Remote Linux Access | ★★★★☆ (4/5) — High | Verify remote identity and practice a login | Reach the right server and account during manual deployment. |
+| [Part 12](#part-12) | Introduction to Bash Scripting | ★★★★☆ (4/5) — High | Write and test a small fail-safe script | Make CI checks distinguish failure from an empty result. |
+| [Part 13](#part-13) | Linux for Java Backend Deployment | ★★★★★ (5/5) — Critical | Run and deliberately break the JAR | Prove startup, settings, and shutdown under the intended launch context. |
+| [Part 14](#part-14) | Linux Troubleshooting | ★★★★★ (5/5) — Critical | Diagnose and prove recovery | Fix a specific Linux failure without changing unrelated settings. |
+
+## Recommended Study Strategy
+
+Start with Parts 1–2 so you can tell which shell and filesystem you are using. Verify WSL2 once and skim the setup recovery cases that do not apply. Work through paths and terminal commands in Parts 3–4 before testing permissions in Part 5. Use Part 6 to capture the evidence you will need for the process, environment, and service labs in Parts 7–9.
+
+Practice Parts 5, 7–9, and 13–14 until you can explain and repair a failure from the service's own context. Focus your time in Parts 3–4 and 6 on finding paths, inspecting files, and collecting logs. Read Part 10 when you need the Linux JDK for Part 13. Practice the remote identity checks in Part 11 before your first AWS or VM login, and do the failure cases in Part 12 before writing CI shell steps.
+
+Defer inode bookkeeping, broad package maintenance, and custom systemd tuning until needed. Carry your process and signal model into Docker's lifecycle lab and your export and quoting skills into the configuration course. There, concentrate on what the container and the JVM add to the launch. [Docker lifecycle](../03_Docker/Docker_Theory.md#docker-05) · [Windows and Java environment variables](../04_Application_Configuration/Application_Configuration_Theory.md#config-03)
+
 <a id="part-01"></a>
 
 ## Part 1 — Introduction to Linux
+
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** Knowing which shell interprets a command and which kernel runs it prevents mistakes when moving between PowerShell, WSL, and a server.
+
+**Recommended study depth:** Learn the model, then identify one builtin and one external command with `type`.
+
+**Focus on:** Terminal versus shell, kernel versus distribution, command lookup through `PATH`, and exit status.
+
+**Can defer:** Linux history and detailed comparisons of distribution families.
 
 ### What the operating system does
 
@@ -117,6 +154,16 @@ ls -d /tmp
 <a id="part-02"></a>
 
 ## Part 2 — Linux on Windows 11 with WSL2
+
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** The local Ubuntu setup makes the exercises repeatable and explains why Windows and Linux paths or permissions can behave differently.
+
+**Recommended study depth:** Verify your installed distribution and run the path checks once. Use the install steps if Ubuntu is missing.
+
+**Focus on:** WSL2 distribution and shell selection, Linux home versus `/mnt/c`, LF line endings, and normal user access.
+
+**Can defer:** Installation recovery for errors you do not encounter and comparisons with conventional VMs.
 
 ### Why WSL2 fits this lab
 
@@ -203,6 +250,16 @@ If this is a managed device, follow its virtualization and software-install rule
 
 ## Part 3 — Linux Filesystem
 
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** Working directory and mount paths determine whether a deployed JAR finds its settings, data, and logs.
+
+**Recommended study depth:** Predict and verify how a relative path resolves from two directories. Examine one broken symlink.
+
+**Focus on:** Absolute and relative paths, case sensitivity, mounted paths, and the roles of `/etc`, `/var/lib`, and `/var/log`.
+
+**Can defer:** Inode numbering, link-count details, and access-time policy.
+
 ### One tree and a location inside it
 
 Suppose an application reports that `settings.txt` is missing even though you can see the file in your editor. A file is a named object that can hold bytes. A directory associates names with filesystem objects. A **path** tells Linux which names to follow to an object. The process's **current working directory** supplies the starting point for a relative path.
@@ -270,6 +327,16 @@ ls -l -- current-settings.txt
 <a id="part-04"></a>
 
 ## Part 4 — Essential Terminal Commands
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** These commands let you inspect an unfamiliar host, locate configuration and logs, and handle deployment files safely.
+
+**Recommended study depth:** Practice navigating, finding, and inspecting files in a scratch directory. Use help for flags you need.
+
+**Focus on:** `pwd`, `ls`, `cd`, `find`, `stat`, `tail`, safe `cp` and `mv`, and `type` to identify the executable.
+
+**Can defer:** Memorizing command switches and detailed classification output from `file`.
 
 You have just opened a terminal in an unfamiliar project. Orient yourself before moving or removing anything. The examples below continue in the same fresh lab directory for this chapter. Ubuntu user setups may omit `less`, `file`, or `man` on minimal images. Part 10 covers how to install an individual utility if needed.
 
@@ -369,6 +436,16 @@ The path is commonly `/usr/bin/ls`, and `type cd` identifies a builtin. `man [SE
 
 ## Part 5 — Users, Groups, and Permissions
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** A service can fail to read settings or write data even when your login can reach the same path. Broad permission fixes create exposure.
+
+**Recommended study depth:** Reproduce a denied access and restore only the access required by the intended identity.
+
+**Focus on:** Service UID/GID, owner and group selection, directory traversal, `chmod`, `umask`, and least-privilege `sudo`.
+
+**Can defer:** Advanced ACLs, capabilities, and special mode policies beyond recognizing their role.
+
 ### Identity and access
 
 Imagine a Java process needs to read its settings while only an administrator can change them. Linux assigns a process a user identity. A Linux **account** associates a username with a numeric user ID (UID) and other information such as a home directory and login shell. `root` has UID `0` and usually has broad administrative powers. A normal user has narrower access. A service can have its own account so its permissions and files are independent of a developer's account.
@@ -461,6 +538,16 @@ Parentheses run the commands in a **subshell**, a child shell context whose sett
 
 ## Part 6 — Input, Output, Pipes, and Redirection
 
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** Shell and CI output can look successful while an earlier pipeline stage failed or the diagnostic went to stderr.
+
+**Recommended study depth:** Redirect both streams separately, filter a log, and reproduce a failed pipeline with a plausible count.
+
+**Focus on:** `stdout`, `stderr`, `2>&1` order, `grep`, `tee`, and the pipeline exit status.
+
+**Can defer:** Extra `sort`, `uniq`, and `wc` modes beyond the log exercise.
+
 ### Three streams available when a program starts
 
 A log tool may print matching lines and also need to report an unreadable file. If it put both kinds of output in one stream, a downstream command could treat an error as a result. By convention programs start with three numbered **file descriptors**, handles in a process that refer to open I/O endpoints.
@@ -535,6 +622,16 @@ By default, Bash reports the status of the final command in a pipeline. `grep -F
 <a id="part-07"></a>
 
 ## Part 7 — Linux Processes
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** The process model explains startup exits, graceful JVM stops, and how a container's main process controls its lifecycle.
+
+**Recommended study depth:** Launch a child, verify its PID and owner, request TERM, and inspect the result with `wait`.
+
+**Focus on:** PID and PPID, inherited launch context, `ps`, exit status, and TERM versus KILL.
+
+**Can defer:** Interactive job-control shortcuts and uncommon process states after you can inspect and stop a verified process.
 
 ### From program on disk to running instance
 
@@ -633,6 +730,16 @@ javac HelloLinux.java &&
 
 ## Part 8 — Environment Variables and Shell Behavior
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Spring Boot, shell scripts, and CI can each receive a different environment even when a variable looks correct at your prompt.
+
+**Recommended study depth:** Prove what a fresh child inherits. Repeat with an unexported value, a one-command override, and a value with spaces.
+
+**Focus on:** `export`, per-command inputs, `PATH`, quoting, and the actual service or script launcher.
+
+**Can defer:** Memorizing Bash startup file order beyond knowing when an interactive file is read.
+
 ### What gets inherited
 
 Suppose your terminal prints an application label but the Java process says the label is missing. A **shell variable** is a named value inside Bash. An **environment variable** is a name/value string available in a process's environment. When Bash launches an external program, exported variables are included in its environment. The child inherits values as they were at launch. Later edits in your interactive shell do not change the child's copy. A Java local variable is scoped inside Java code, while environment variables cross process creation boundaries and can be read with `System.getenv("NAME")`.
@@ -692,6 +799,16 @@ An assignment typed at the prompt is temporary. Put a deliberate personal intera
 <a id="part-09"></a>
 
 ## Part 9 — Processes, Services, and Logs
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** A supervised service has its own identity, working directory, and restart policy. Its recent logs show why a start or recovery failed.
+
+**Recommended study depth:** Inspect one supervised service or use the file-log equivalent. Correlate the launch, status, and first error.
+
+**Focus on:** PID 1, `systemctl status`, start versus enable, `journalctl`, `tail -f`, and disk capacity checks.
+
+**Can defer:** Changing WSL boot settings if the equivalent exercise works, and custom unit tuning.
 
 ### Why supervise a process?
 
@@ -796,6 +913,16 @@ After saving all work in WSL, Microsoft's procedure uses `wsl --shutdown` from P
 
 ## Part 10 — Package Management
 
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** You may need a Linux JDK or a diagnostic utility for a manual deployment. Read the proposed package changes before applying them.
+
+**Recommended study depth:** Check which Java is installed and distinguish an index refresh from a package install or upgrade.
+
+**Focus on:** `type -a`, Java version checks, `apt show`, trusted repositories, and reviewing the install plan.
+
+**Can defer:** Routine system-wide upgrades and removal details until you manage the host.
+
 You need a Linux JDK for a Java lab. Downloading a binary by hand would leave you responsible for its version, dependencies, files, and updates. A **package** bundles software and metadata such as version and dependencies. A **repository** publishes packages and indexes. Ubuntu's package manager, **APT**, consults enabled repositories and computes which packages and dependencies need to change. APT authenticates repository metadata and checks packages against it. Choose trusted repositories because installed packages can make system-wide changes. [Ubuntu Server package-management documentation](https://ubuntu.com/server/docs/how-to/software/package-management/)
 
 ### Inspect first, then decide what to change
@@ -844,6 +971,16 @@ Check the three versions again afterward. A version may already exist alongside 
 <a id="part-11"></a>
 
 ## Part 11 — SSH and Remote Linux Access
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** Manual AWS or VM deployment often starts with remote access. Server verification and user authentication are separate failure points.
+
+**Recommended study depth:** Walk through `ssh -G` and practice a trusted login or an authorized lab transfer when a host is available.
+
+**Focus on:** Host fingerprint versus login key, username and endpoint, private-key handling, and identifying the remote working directory.
+
+**Can defer:** Detailed interactive SFTP commands if a verified SSH login and one transfer meet your needs.
 
 ### Connect from a terminal you already understand
 
@@ -906,6 +1043,16 @@ A login test and a transfer can fail at different points. A connection failure c
 <a id="part-12"></a>
 
 ## Part 12 — Introduction to Bash Scripting
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** Shell checks in GitHub Actions must stop on real failures and report evidence when paths or inputs are wrong.
+
+**Recommended study depth:** Run the log-scanning script against a match, no match, and a missing path. Test a path with spaces.
+
+**Focus on:** Shebang and LF, `"$@"`, explicit error handling, `pipefail`, and clear stderr and exit codes.
+
+**Can defer:** Extra control-flow forms and detailed tracing once you can diagnose common script failures.
 
 ### Turn a repeated check into a command
 
@@ -992,6 +1139,16 @@ A script can fail if the executable bit is absent, the interpreter in the sheban
 <a id="part-13"></a>
 
 ## Part 13 — Linux for Java Backend Deployment
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** This lab combines every Linux input that can make the same JAR work in your terminal and fail under a deployment launcher.
+
+**Recommended study depth:** Run the JAR, induce the missing variable and wrong directory failures, then stop it cleanly and verify the log.
+
+**Focus on:** Actual launcher identity, cwd, external config, stdout and stderr, and the JVM's TERM handling.
+
+**Can defer:** Repeating Java compilation mechanics you already know after the first successful build.
 
 Your JAR builds locally. How do you establish that the process started under the intended identity, read the right files, and stopped cleanly? This lab ties those questions together with a Java 21 program that reads one setting and emits a heartbeat. It has no external libraries or network listener.
 
@@ -1134,6 +1291,16 @@ On a server you administer remotely, use an authorized SSH login and confirm the
 <a id="part-14"></a>
 
 ## Part 14 — Linux Troubleshooting
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** A repeatable investigation limits the blast radius when the wrong account, path, environment, log target, or disk state prevents deployment.
+
+**Recommended study depth:** Reproduce several common failures and confirm recovery with the same check that originally failed.
+
+**Focus on:** Exact command and exit status, `id` and path permissions, `ps`, targeted logs, and `df` versus `du`.
+
+**Can defer:** Reproducing rare kernel-wait or filesystem capacity edge cases until the evidence points there.
 
 An application that worked yesterday exits immediately today. Before changing anything, find out which layer reported the failure. Record the exact command, time, and error. Capture the exit status immediately after a foreground command, or use `wait` for a child job. Gather context with `pwd`, `whoami`, `id`, and relevant logs. Change one variable at a time, then rerun the same check. Keep the failing output when the next run might overwrite it.
 

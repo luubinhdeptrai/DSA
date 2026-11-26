@@ -40,9 +40,51 @@ Initial image and Maven dependency downloads require Internet access. Public lab
 | [9. Storage](#docker-09) | [19. Complete Java backend](#docker-19) |
 | [10. Compose](#docker-10) | [Readiness](#readiness-checklist) |
 
+## Study Priority Overview
+
+| Part | Topic | Priority | Recommended Study Approach | Why |
+| --- | --- | --- | --- | --- |
+| [Part 1](#docker-01) | Introduction to Containers and Docker | ★★★☆☆ (3/5) — Medium | Explain what the image packages | Know which runtime dependencies still need a deployment decision. |
+| [Part 2](#docker-02) | Docker Architecture | ★★★★☆ (4/5) — High | Verify the engine and inspect one run | Catch wrong-context failures before acting on resources. |
+| [Part 3](#docker-03) | How Containers Work Internally | ★★★☆☆ (3/5) — Medium | Learn the isolation model | Understand separate localhost, PID, and mount views. |
+| [Part 4](#docker-04) | Docker Images | ★★★★☆ (4/5) — High | Inspect image identity and layers | Identify the released image and the state that belongs to a container. |
+| [Part 5](#docker-05) | Docker Container Lifecycle | ★★★★★ (5/5) — Critical | Practice lifecycle, exit, and stop behavior | Apply new settings and recover from failed container starts. |
+| [Part 6](#docker-06) | Dockerfiles | ★★★★★ (5/5) — Critical | Build a runnable Java image | Package a predictable artifact with explicit runtime defaults. |
+| [Part 7](#docker-07) | Docker Build Process, Layers, and Cache | ★★★★☆ (4/5) — High | Practice multi-stage builds and cache | Keep compiler tools out of the runtime and make CI builds predictable. |
+| [Part 8](#docker-08) | Docker Networking Fundamentals | ★★★★★ (5/5) — Critical | Prove both published and internal paths | Reach Spring Boot and PostgreSQL through the right endpoints. |
+| [Part 9](#docker-09) | Docker Storage and Volumes | ★★★★★ (5/5) — Critical | Prove persistence across recreation | Preserve PostgreSQL data and identify the correct volume. |
+| [Part 10](#docker-10) | Docker Compose Fundamentals | ★★★★★ (5/5) — Critical | Operate a scoped Compose project | Start and update an app and database without losing state. |
+| [Part 11](#docker-11) | Environment Variables and Configuration | ★★★★★ (5/5) — Critical | Trace build and runtime values | Prevent wrong inputs, stale containers, and credential leaks. |
+| [Part 12](#docker-12) | Docker and Java Spring Boot | ★★★★★ (5/5) — Critical | Prove startup, migrations, and a real request | Locate failures between the built JAR and successful SQL. |
+| [Part 13](#docker-13) | Docker Registries and Image Distribution | ★★★★☆ (4/5) — High | Practice versioned image references | Carry the same release from CI to the deployment host. |
+| [Part 14](#docker-14) | Docker Resource Management | ★★★☆☆ (3/5) — Medium | Recognize memory and resource failures | Distinguish an OOM kill from other abrupt exits. |
+| [Part 15](#docker-15) | Docker Security Fundamentals | ★★★★★ (5/5) — Critical | Apply minimum runtime privileges | Limit what the app can access and what callers can reach. |
+| [Part 16](#docker-16) | Logging, Health Checks, and Observability | ★★★★★ (5/5) — Critical | Practice health checks and log diagnosis | Verify service readiness with the actual request path. |
+| [Part 17](#docker-17) | Docker Development Workflows | ★★★☆☆ (3/5) — Medium | Choose a development and integration loop | Test the release environment when packaging or runtime wiring changes. |
+| [Part 18](#docker-18) | Docker Troubleshooting | ★★★★★ (5/5) — Critical | Diagnose several container faults | Recover the intended service and preserve its database. |
+| [Part 19](#docker-19) | End-to-End Containerized Backend Walkthrough | ★★★★★ (5/5) — Critical | Deploy, verify, recreate, and recover | Prove the artifact, private database path, and durable data work together. |
+
+## Recommended Study Strategy
+
+Learn the architecture in Parts 1–3 well enough to verify the engine and explain isolated process views. Practice the image, lifecycle, and Dockerfile work in Parts 4–6, then build the multi-stage example in Part 7. Reuse the Linux material on process identity, paths, and signals so you can focus on the container's main process, image, and mounts. [Linux permissions](../01_Linux/Linux_Theory.md#part-05) · [Linux processes](../01_Linux/Linux_Theory.md#part-07)
+
+Master Parts 8–12 together. First prove host-to-app and app-to-PostgreSQL connectivity, then test volume retention and apply one configuration change by recreation. Use your existing understanding of bind addresses and DNS for that work. Apply Parts 15–16 to the stack, rehearse the diagnostics in Part 18, and finish Part 19 with a verified migration, a real note write, and a successful read after recreation. [Ports and sockets](../02_Networking/Networking_Theory.md#net-07) · [DNS lookup and resolver views](../02_Networking/Networking_Theory.md#net-10)
+
+Study Part 13 before distributing an image from CI or pulling it to an AWS host. Learn the essentials of Parts 14 and 17 so you can recognize OOM evidence and choose a useful development loop. Skim the runtime internals in Part 3 after learning namespaces and cgroups. Defer multi-platform build tuning, advanced resource sizing, and live source mounts until needed. Reuse the Compose input model in Application Configuration and focus there on what Spring binds. [Compose-to-Spring settings](../04_Application_Configuration/Application_Configuration_Theory.md#config-14)
+
 <a id="docker-01"></a>
 
 ## Part 1 — Introduction to Containers and Docker
+
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** The shared-kernel and image model explains what Docker can reproduce and which inputs the deployment must still supply.
+
+**Recommended study depth:** Explain how a host JVM, a VM, and a container differ. Use the later labs for practical reinforcement.
+
+**Focus on:** Image versus running process, compatible kernel and platform, and external settings and data.
+
+**Can defer:** Container history and deeper hypervisor comparisons.
 
 ### Why the environment changes the result
 
@@ -103,6 +145,16 @@ Isolation is a mechanism, and security is a property of the whole setup. A share
 <a id="docker-02"></a>
 
 ## Part 2 — Docker Architecture
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** A Docker command operates on the selected engine. Choosing the wrong context can make a healthy service appear missing or target the wrong resources.
+
+**Recommended study depth:** Verify context, server reachability, and Linux mode, then inspect and clean up the scoped `hello-world` run.
+
+**Focus on:** CLI versus engine, `docker context show`, client/server output, and image, container, network, and volume identity.
+
+**Can defer:** OCI runtime component details beyond recognizing who launches the process.
 
 ### Follow a request from your terminal
 
@@ -188,6 +240,16 @@ docker rm "$DockerCourseId-hello"
 
 ## Part 3 — How Containers Work Internally
 
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** Namespaces explain the container's process, network, and filesystem views. Cgroups explain why limits can affect startup.
+
+**Recommended study depth:** Read the diagram and run the small PID 1 example once if the distinction is unfamiliar.
+
+**Focus on:** PID, network and mount namespaces, image user space versus host kernel, and visibility versus resource limits.
+
+**Can defer:** UID remapping internals and cgroup controller specifics until you diagnose a related issue.
+
 ### Give the same kernel several views
 
 A process in an Alpine container can see Alpine files at `/` and report itself as PID 1 while many other processes are running on the host. A Linux **namespace** gives processes a particular view of a kernel resource. Processes that share a namespace see related state for that resource. Docker chooses and configures namespaces when creating the container.
@@ -228,6 +290,16 @@ Some runtime modes deliberately share namespaces. For example, host networking o
 <a id="docker-04"></a>
 
 ## Part 4 — Docker Images
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** Image content and container writes have different lifecycles. Correct tag and digest reasoning helps you verify the artifact deployed by CI.
+
+**Recommended study depth:** Inspect an image's tag, ID, and published digest. Explain what stopping or removing a container does to its writes.
+
+**Focus on:** Immutable image layers, writable container layer, moving tags, digests, and a suitable Java runtime base.
+
+**Can defer:** Storage driver and copy-on-write implementation details.
 
 ### A starting filesystem and rules for launch
 
@@ -285,6 +357,16 @@ docker image rm "$DockerCourseId/nginx:study"
 <a id="docker-05"></a>
 
 ## Part 5 — Docker Container Lifecycle
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Lifecycle mistakes leave stale environment values running, hide exit evidence, or interrupt the JVM before it can shut down cleanly.
+
+**Recommended study depth:** Create, run, inspect, stop, and recreate a lab container. Explain its exit code and which settings persist.
+
+**Focus on:** `run` versus `start` and `exec`, logs from a stopped instance, restart versus recreate, and PID 1 and TERM.
+
+**Can defer:** Detailed orphan reaping and restart backoff internals after you can diagnose an exit loop.
 
 ### Creation, execution, and retention
 
@@ -370,6 +452,16 @@ Restart policies apply to exits and engine lifecycle. `no` is the default, `on-f
 <a id="docker-06"></a>
 
 ## Part 6 — Dockerfiles
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Dockerfiles control which Java artifact and defaults reach deployment. Context, entrypoint, and user mistakes often first appear at container startup.
+
+**Recommended study depth:** Build and run the Java sample with a different input. Inspect the resulting command and explain what reached the image.
+
+**Focus on:** Context and `.dockerignore`, `COPY`, `WORKDIR`, exec-form `ENTRYPOINT`, `CMD`, `USER`, and `EXPOSE` versus publication.
+
+**Can defer:** Specialized `ADD` behavior and detailed instruction options until needed.
 
 ### Describe the artifact once
 
@@ -461,6 +553,16 @@ The build compiles Java and packages an executable JAR with `LabHello` as its ma
 <a id="docker-07"></a>
 
 ## Part 7 — Docker Build Process, Layers, and Cache
+
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** Build-stage separation yields a lean Java runtime image, and properly ordered dependencies make CI rebuilds faster and easier to explain.
+
+**Recommended study depth:** Build the multi-stage example, change one source file, and identify the steps that reuse cache.
+
+**Focus on:** Stable POM before source, JDK build versus JRE runtime, `COPY --from`, `--pull` versus `--no-cache`, and safe build inputs.
+
+**Can defer:** Advanced Buildx and multi-platform assembly until you deploy across architectures.
 
 ### Learn what changes invalidate
 
@@ -558,6 +660,16 @@ For repeatability, record dependency versions, source revision, base-image diges
 
 ## Part 8 — Docker Networking Fundamentals
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** The main Docker connectivity errors come from using the wrong localhost, a host port for a peer service, or the wrong internal bind.
+
+**Recommended study depth:** Probe the service from both the host and a peer container. Predict and verify where a mistaken localhost points.
+
+**Focus on:** User-defined bridge and service DNS, private DB access, host publication versus app bind, and caller context.
+
+**Can defer:** Host network mode and native Linux container-to-host gateway options until you need them.
+
 ### Establish whose localhost you mean
 
 A Java app in a container uses `localhost:5432` and expects PostgreSQL in another container. The address targets the Java container's own loopback. Each container normally has a separate **network namespace** with its own interfaces, addresses, routes, and sockets. This lets many containers listen on port `8080` even on one machine.
@@ -650,6 +762,16 @@ Use a user-defined bridge for this course. [Host network driver and Desktop limi
 
 ## Part 9 — Docker Storage and Volumes
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Database rows must survive container replacement. The wrong mount or an unreviewed volume cleanup can hide or permanently remove data.
+
+**Recommended study depth:** Write through a named volume, read it from a new container, and verify the actual PostgreSQL mount before removing any lab data.
+
+**Focus on:** Writable layer versus mount, bind source and target, named volume lifetime, initialization inputs, and backup versus persistence.
+
+**Can defer:** Anonymous volume edge cases and major PostgreSQL upgrade procedures until they apply.
+
 ### Decide what should outlive an instance
 
 A PostgreSQL container can be replaced to upgrade the packaged program or apply a different setting. Its rows need a lifecycle independent of that container. Files written into a container's writable layer survive stop and start of the same instance. They disappear with that layer when the instance is removed. A **mount** lets the container use external storage at a specified path, such as `/var/lib/postgresql/data`.
@@ -720,6 +842,16 @@ A persistent volume is the primary data store, so it can still be corrupted, del
 <a id="docker-10"></a>
 
 ## Part 10 — Docker Compose Fundamentals
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Compose combines the app, private database, health checks, and storage into the runtime definition you can reproduce and inspect.
+
+**Recommended study depth:** Validate, start, probe, and reconcile a scoped project. Explain what `stop`, `down`, and volume deletion preserve or remove.
+
+**Focus on:** Service names and project scope, `up` and `logs`, `depends_on` health gating, readiness evidence, and named-volume retention.
+
+**Can defer:** Fixed container naming and scaling options beyond this two-service workflow.
 
 ### Describe a small application as a project
 
@@ -804,6 +936,16 @@ Read the [complete Spring Boot and PostgreSQL Compose file](#notes-compose) now.
 
 ## Part 11 — Environment Variables and Configuration
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** A value can appear in the shell or `.env` yet never reach the container. This boundary causes many wrong JDBC settings and stale deployments.
+
+**Recommended study depth:** Trace a nonsecret value from its source into a newly created container. Explain how to apply a later change.
+
+**Focus on:** `ARG` and `ENV`, Compose interpolation, service `env_file` and `environment`, required inputs, `$$`, and safe inspection.
+
+**Can defer:** Unusual interpolation combinations and detailed Spring binding rules until Application Configuration.
+
 ### One value can travel through several stages
 
 An image can run in two environments with different database addresses. The app should receive the address at launch. When built-in defaults and external settings disagree, identify who reads each value and at what time.
@@ -849,6 +991,16 @@ Inspect only disposable or explicitly non-sensitive keys. Full `docker inspect` 
 <a id="docker-12"></a>
 
 ## Part 12 — Docker and Java Spring Boot
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Spring Boot can fail at packaging, JDBC connection, migration, or shutdown. The same app needs evidence at each stage beyond a container ID.
+
+**Recommended study depth:** Trace the walkthrough startup sequence, then verify migrations, health, and a database-backed request during the capstone.
+
+**Focus on:** Executable JAR, service DNS and JDBC, HikariCP waits, Flyway startup, and graceful shutdown timing.
+
+**Can defer:** Detailed JVM memory tuning and Maven plugin internals.
 
 ### Decide what belongs in the build and the runtime
 
@@ -896,6 +1048,16 @@ By default the lab logs to stdout and stderr. Actuator's `/actuator/health` repo
 
 ## Part 13 — Docker Registries and Image Distribution
 
+**Study Priority: ★★★★☆ (4/5) — High**
+
+**Why it matters:** A later CI job or AWS host must pull the release you built. A recognizable tag alone does not prove the content is the same.
+
+**Recommended study depth:** Practice local tagging and record how you would identify the exact published artifact. Defer a live push until you have a registry.
+
+**Focus on:** Registry, repository, tag versus digest, authorized push and pull, and trusted base/source references.
+
+**Can defer:** Registry-specific authentication setup and advanced signing or provenance workflows until publication is required.
+
 ### Send one artifact to multiple environments
 
 A developer can build locally, but another engine needs a way to obtain the same image. A **registry** stores and returns image manifests and content. A **repository** groups related images, and a tag gives a readable reference to a release or line of builds. Public images may be readable without credentials under the registry's limits. Private repositories require approved authentication and permissions. Docker Hub is the default registry for short public references such as `nginx:alpine`.
@@ -927,6 +1089,16 @@ Trust concerns who built the image, what went into it, and whether it has been m
 <a id="docker-14"></a>
 
 ## Part 14 — Docker Resource Management
+
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** Small hosts can run out of resources. Reading OOM evidence and leaving JVM headroom matter more now than fine-tuning quotas.
+
+**Recommended study depth:** Learn to read `docker stats` and `OOMKilled`. Run the bounded memory demo once if the evidence is unfamiliar.
+
+**Focus on:** Heap versus total memory, CPU quota, Docker disk categories, and exit `137` versus a confirmed OOM kill.
+
+**Can defer:** Swap and cgroup tuning or load-based sizing until you have representative workload data.
 
 ### Set a boundary the kernel can enforce
 
@@ -970,6 +1142,16 @@ CPU throttling and memory pressure can lengthen startup and health probes. A res
 
 ## Part 15 — Docker Security Fundamentals
 
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Engine access, broad mounts, secrets in artifacts, and exposed database ports can turn a routine deployment into a serious security problem.
+
+**Recommended study depth:** Inspect the capstone for a non-root user, narrow mounts and ports, trusted bases, and deliberate runtime credential delivery.
+
+**Focus on:** Least privilege, Docker socket access, limited binds, private PostgreSQL, and keeping credentials out of builds and logs.
+
+**Can defer:** Per-capability tuning, rootless-engine setup, and user namespace policy until a target environment needs them.
+
 ### Reduce what a process can affect
 
 Every extra privilege, writable path, and listening endpoint expands what the process can reach. **Least privilege** grants only the operations the service needs. A typical backend can listen on a high port and read its JAR as a non-root user. A process running as UID 0 inside a rootful container can still have significant privileges, especially over writable mounts. A non-root `USER` reduces privileges inside the container. User namespace mapping and a rootless engine change other parts of the security model.
@@ -1000,6 +1182,16 @@ A read-only mount can still reveal sensitive host contents. Docker Desktop's Lin
 <a id="docker-16"></a>
 
 ## Part 16 — Logging, Health Checks, and Observability
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** A running JVM can still be unready, unhealthy, or unable to serve a database-backed request. Probe timing and scope change the evidence.
+
+**Recommended study depth:** Inspect state, logs, and health output, then reproduce a probe failure and compare an actual API request.
+
+**Focus on:** Internal health target and tool, start period and timeout, `docker logs`, and running versus healthy versus ready.
+
+**Can defer:** Logging driver internals and centralized observability design until you have a running service to operate.
 
 ### Ask separate questions about existence and service
 
@@ -1038,6 +1230,16 @@ Docker Engine can leave a running container unhealthy indefinitely. Its restart 
 
 ## Part 17 — Docker Development Workflows
 
+**Study Priority: ★★★☆☆ (3/5) — Medium**
+
+**Why it matters:** It helps to choose when you want fast IDE feedback and when you need a test of the exact deployment image.
+
+**Recommended study depth:** Compare a host JVM with a containerized database to the full Compose workflow. Choose which one proves the current change.
+
+**Focus on:** Dependency endpoint from each caller, rebuild versus recreate, and isolated test projects and data.
+
+**Can defer:** Live source mounts, WSL file-watching tuning, and Testcontainers setup until they solve a need.
+
 ### Use different loops for editing and integration
 
 During a Java edit you may want the IDE debugger and fast restarts. When verifying the release artifact you want to exercise the exact image, service addresses, and mounts. Both workflows can use Docker.
@@ -1067,6 +1269,16 @@ The PowerShell CLI, an integrated Ubuntu CLI, and a shell in the container can u
 <a id="docker-18"></a>
 
 ## Part 18 — Docker Troubleshooting
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** Engine, build, runtime, network, configuration, and storage errors need different evidence. Broad changes can destroy diagnostic clues or data.
+
+**Recommended study depth:** Induce a bad build input and a bad database hostname, then diagnose and verify recovery without deleting the volume.
+
+**Focus on:** Context and the first failed boundary, startup logs and state, port mapping, service DNS, and mount ownership.
+
+**Can defer:** Rare architecture and resource-limit cases until their evidence appears.
 
 Start with the intended engine and the exact command that failed. Identify a single container or project and keep its logs and inspect record until you have an explanation. If an app is unavailable, follow the stages shown below. Depending on the symptom, you may start directly at a later stage.
 
@@ -1125,6 +1337,16 @@ The workflow narrows evidence from engine to process to service. A running proce
 <a id="docker-19"></a>
 
 ## Part 19 — End-to-End Containerized Backend Walkthrough
+
+**Study Priority: ★★★★★ (5/5) — Critical**
+
+**Why it matters:** The complete Java and PostgreSQL deployment proves that a healthy process, migration, real SQL write, and surviving data are distinct outcomes.
+
+**Recommended study depth:** Run the walkthrough independently. Verify health and a note write, recreate both services, then recover from the JDBC host fault.
+
+**Focus on:** Multi-stage build, Flyway, service DNS, readiness, row persistence, and scoped cleanup.
+
+**Can defer:** Reimplementing the REST controller or repeating Java syntax you already know.
 
 Build a small notes service that proves more than an HTTP health response. The service writes a row to PostgreSQL, reads it back after restarting the app, and finds it again after both containers are recreated. Use this walkthrough as a reference for the workbook's final project.
 
